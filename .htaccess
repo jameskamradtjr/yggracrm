@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Permite acesso direto à pasta tema (assets)
+    RewriteCond %{REQUEST_URI} ^/sistemabase26/tema/
+    RewriteRule ^ - [L]
+    
+    # Não redireciona arquivos que existem na raiz (test.php, info.php, etc)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+    
+    # Não redireciona diretórios que existem
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Redireciona tudo mais para a pasta public
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+

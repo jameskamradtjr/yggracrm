@@ -1,0 +1,69 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * CLI de Migrations
+ * 
+ * Uso:
+ *   php migrate apply              - Executa migrations pendentes
+ *   php migrate rollback           - Reverte última batch
+ *   php migrate rollback --all     - Reverte todas as migrations
+ *   php migrate create nome        - Cria nova migration
+ */
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Core\Application;
+use Core\Migrator;
+
+// Inicializa aplicação
+$app = Application::getInstance(__DIR__);
+
+// Cria instância do migrator
+$migrator = new Migrator();
+
+// Processa argumentos
+$command = $argv[1] ?? 'help';
+$arg = $argv[2] ?? null;
+
+try {
+    switch ($command) {
+        case 'apply':
+            echo "Executando migrations...\n\n";
+            $migrator->apply();
+            break;
+
+        case 'rollback':
+            $all = ($arg === '--all');
+            echo $all ? "Revertendo todas as migrations...\n\n" : "Revertendo última batch de migrations...\n\n";
+            $migrator->rollback($all);
+            break;
+
+        case 'create':
+            if (!$arg) {
+                echo "Erro: Nome da migration é obrigatório.\n";
+                echo "Uso: php migrate create nome_da_migration\n";
+                exit(1);
+            }
+            $migrator->create($arg);
+            break;
+
+        case 'help':
+        default:
+            echo "SistemaBase - Gerenciador de Migrations\n\n";
+            echo "Uso:\n";
+            echo "  php migrate apply              - Executa migrations pendentes\n";
+            echo "  php migrate rollback           - Reverte última batch de migrations\n";
+            echo "  php migrate rollback --all     - Reverte todas as migrations\n";
+            echo "  php migrate create nome        - Cria nova migration\n";
+            echo "  php migrate help               - Exibe esta ajuda\n";
+            break;
+    }
+} catch (\Throwable $e) {
+    echo "\n✗ Erro: {$e->getMessage()}\n";
+    if (config('app.debug')) {
+        echo "\n{$e->getTraceAsString()}\n";
+    }
+    exit(1);
+}
+
