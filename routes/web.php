@@ -13,6 +13,8 @@ use App\Controllers\RoleController;
 use App\Controllers\SistemaLogController;
 use App\Controllers\NotificacaoController;
 use App\Controllers\SettingsController;
+use App\Controllers\LeadController;
+use App\Controllers\FinancialController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -24,6 +26,14 @@ $router->get('/', function() {
     } else {
         redirect('/login');
     }
+});
+
+// Rota pública do Quiz (aceita parâmetros ?u=USER_ID ou ?token=TOKEN)
+$router->get('/quiz', [LeadController::class, 'quiz']);
+
+// Rota para gerar link único do quiz (protegida)
+$router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], function($router) {
+    $router->get('/leads/generate-link', [LeadController::class, 'generateQuizLink']);
 });
 
 // Rotas de Autenticação
@@ -73,11 +83,58 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/settings', [SettingsController::class, 'index']);
     $router->post('/settings/layout', [SettingsController::class, 'saveLayout']);
     $router->post('/settings/email', [SettingsController::class, 'saveEmail']);
+    $router->post('/settings/integrations', [SettingsController::class, 'saveIntegrations']);
     $router->get('/settings/templates/create', [SettingsController::class, 'createTemplate']);
     $router->post('/settings/templates', [SettingsController::class, 'storeTemplate']);
     $router->get('/settings/templates/{id}/edit', [SettingsController::class, 'editTemplate']);
     $router->post('/settings/templates/{id}', [SettingsController::class, 'updateTemplate']);
     $router->post('/settings/templates/{id}/delete', [SettingsController::class, 'deleteTemplate']);
+    
+    // CRM de Leads
+    $router->get('/leads', [LeadController::class, 'index']);
+    $router->get('/leads/create', [LeadController::class, 'create']);
+    $router->post('/leads', [LeadController::class, 'store']);
+    $router->get('/leads/{id}', [LeadController::class, 'show']);
+    $router->post('/leads/update-status', [LeadController::class, 'updateStatus']);
+    $router->post('/leads/{id}/reanalyze', [LeadController::class, 'reanalyze']);
+    $router->post('/leads/generate-quiz-link', [LeadController::class, 'generateQuizLink']);
+    
+    // Módulo Financeiro
+    $router->get('/financial', [FinancialController::class, 'index']);
+    $router->get('/financial/create', [FinancialController::class, 'create']);
+    $router->post('/financial', [FinancialController::class, 'store']);
+    $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
+    $router->post('/financial/{id}', [FinancialController::class, 'update']);
+    $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
+    $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
+    
+    // Contas Bancárias
+    $router->get('/financial/bank-accounts', [FinancialController::class, 'bankAccounts']);
+    $router->get('/financial/bank-accounts/create', [FinancialController::class, 'createBankAccount']);
+    $router->post('/financial/bank-accounts', [FinancialController::class, 'storeBankAccount']);
+    
+    // Cartões de Crédito
+    $router->get('/financial/credit-cards', [FinancialController::class, 'creditCards']);
+    $router->get('/financial/credit-cards/create', [FinancialController::class, 'createCreditCard']);
+    $router->post('/financial/credit-cards', [FinancialController::class, 'storeCreditCard']);
+    
+    // Categorias
+    $router->get('/financial/categories', [FinancialController::class, 'categories']);
+    $router->get('/financial/categories/create', [FinancialController::class, 'createCategory']);
+    $router->post('/financial/categories', [FinancialController::class, 'storeCategory']);
+    $router->get('/financial/categories/{id}/edit', [FinancialController::class, 'editCategory']);
+    $router->post('/financial/categories/{id}', [FinancialController::class, 'updateCategory']);
+    $router->post('/financial/categories/{id}/delete', [FinancialController::class, 'deleteCategory']);
+    $router->post('/financial/categories/subcategories', [FinancialController::class, 'storeSubcategory']);
+    $router->post('/financial/categories/subcategories/update', [FinancialController::class, 'updateSubcategory']);
+    $router->post('/financial/categories/subcategories/delete', [FinancialController::class, 'deleteSubcategory']);
+    $router->get('/financial/categories/subcategories/info', [FinancialController::class, 'getSubcategoryInfo']);
+    
+    // Centros de Custo
+    $router->get('/financial/cost-centers', [FinancialController::class, 'costCenters']);
+    $router->get('/financial/cost-centers/create', [FinancialController::class, 'createCostCenter']);
+    $router->post('/financial/cost-centers', [FinancialController::class, 'storeCostCenter']);
+    $router->post('/financial/cost-centers/subcenters', [FinancialController::class, 'storeSubCostCenter']);
     
     // Notificações
     $router->get('/api/notificacoes', [NotificacaoController::class, 'index']);

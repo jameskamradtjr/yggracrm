@@ -64,6 +64,17 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                             Templates de Email
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link <?php echo $tab === 'integrations' ? 'active' : ''; ?>" 
+                                id="integrations-tab" 
+                                data-bs-toggle="tab" 
+                                data-bs-target="#integrations" 
+                                type="button" 
+                                role="tab">
+                            <i class="ti ti-plug me-2"></i>
+                            Integrações
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Conteúdo das Abas -->
@@ -278,6 +289,65 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                             </table>
                         </div>
                     </div>
+
+                    <!-- Aba Integrações -->
+                    <div class="tab-pane fade <?php echo $tab === 'integrations' ? 'show active' : ''; ?>" 
+                         id="integrations" 
+                         role="tabpanel">
+                        <form action="<?php echo url('/settings/integrations'); ?>" method="POST">
+                            <?php echo csrf_field(); ?>
+                            
+                            <h5 class="mb-3">Integrações com APIs Externas</h5>
+                            <p class="text-muted mb-4">
+                                Configure as chaves de API para integrações com serviços externos.
+                            </p>
+                            
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="gemini_api_key" class="form-label">
+                                        Google Gemini API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" 
+                                               class="form-control" 
+                                               id="gemini_api_key" 
+                                               name="gemini_api_key" 
+                                               value="" 
+                                               placeholder="<?php echo \App\Models\SystemSetting::get('gemini_api_key') ? 'Digite nova chave para alterar' : 'Digite sua API Key do Google Gemini'; ?>"
+                                               autocomplete="new-password">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKey" onclick="toggleApiKeyVisibility()">
+                                            <i class="ti ti-eye" id="toggleApiKeyIcon"></i>
+                                        </button>
+                                    </div>
+                                    <?php 
+                                    $currentKey = \App\Models\SystemSetting::get('gemini_api_key', '');
+                                    if ($currentKey): 
+                                    ?>
+                                        <div class="alert alert-info mt-2 mb-0">
+                                            <i class="ti ti-info-circle me-2"></i>
+                                            <strong>Chave configurada:</strong> 
+                                            <code><?php echo substr($currentKey, 0, 8); ?>...</code>
+                                            <br>
+                                            <small>Deixe o campo acima vazio para manter a chave atual, ou digite uma nova para alterar.</small>
+                                        </div>
+                                    <?php endif; ?>
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        Obtenha sua API Key em: 
+                                        <a href="https://makersuite.google.com/app/apikey" target="_blank">
+                                            Google AI Studio
+                                            <i class="ti ti-external-link ms-1"></i>
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ti ti-device-floppy me-2"></i>
+                                Salvar Configurações
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -314,6 +384,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// Função para mostrar/ocultar API Key
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('gemini_api_key');
+    const icon = document.getElementById('toggleApiKeyIcon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('ti-eye');
+        icon.classList.add('ti-eye-off');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('ti-eye-off');
+        icon.classList.add('ti-eye');
+    }
+}
 </script>
 
 <?php

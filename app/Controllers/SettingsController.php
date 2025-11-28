@@ -355,5 +355,51 @@ class SettingsController extends Controller
         session()->flash('success', 'Template deletado com sucesso!');
         $this->redirect('/settings?tab=templates');
     }
+
+    /**
+     * Salva configurações de integrações
+     */
+    public function saveIntegrations(): void
+    {
+        $this->checkAdminMaster();
+
+        // Valida CSRF
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/settings?tab=integrations');
+        }
+
+        // Obtém valor diretamente do request
+        $geminiApiKey = trim($this->request->input('gemini_api_key', ''));
+
+        // Obtém configuração anterior
+        $oldApiKey = SystemSetting::get('gemini_api_key');
+        
+        // Se o campo está vazio mas já existe uma chave salva, mantém a chave existente
+        // (isso acontece quando o campo é do tipo password e o usuário não preenche novamente)
+        if (empty($geminiApiKey) && !empty($oldApiKey)) {
+            // Mantém a chave existente, não atualiza
+            $geminiApiKey = $oldApiKey;
+        } else if (!empty($geminiApiKey)) {
+            // Salva a nova chave apenas se não estiver vazia
+            SystemSetting::set('gemini_api_key', $geminiApiKey, 'text', 'integrations', 'API Key do Google Gemini');
+        }
+
+        // Registra log (sem mostrar a chave completa)
+        $oldApiKeyLog = $oldApiKey ? substr($oldApiKey, 0, 8) . '...' : 'não configurada';
+        $newApiKeyLog = $geminiApiKey ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada';
+        
+        SistemaLog::registrar(
+            'system_settings',
+            'UPDATE',
+            null,
+            'Configurações de integrações atualizadas',
+            ['gemini_api_key' => $oldApiKeyLog],
+            ['gemini_api_key' => $newApiKeyLog]
+        );
+        
+        session()->flash('success', 'Configurações de integrações salvas com sucesso!');
+        $this->redirect('/settings?tab=integrations');
+    }
 }
 

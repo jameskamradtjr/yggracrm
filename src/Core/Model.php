@@ -317,9 +317,9 @@ abstract class Model
      */
     public function __set(string $name, mixed $value): void
     {
-        if (in_array($name, $this->fillable)) {
-            $this->attributes[$name] = $value;
-        }
+        // Permite definir propriedades dinâmicas (não apenas fillable)
+        // Isso é útil para relacionamentos e dados calculados
+        $this->attributes[$name] = $value;
     }
 
     /**

@@ -8,6 +8,8 @@
 
 // O router é injetado automaticamente pela Application
 
+use App\Controllers\LeadController;
+
 // Grupo de rotas API
 $router->group(['prefix' => '/api'], function($router) {
     
@@ -20,8 +22,7 @@ $router->group(['prefix' => '/api'], function($router) {
         ]);
     });
     
-    // TODO: Adicionar rotas API aqui
-    // Exemplo:
-    // $router->get('/users', [Api\UserController::class, 'index']);
+    // API de Leads (pública)
+    $router->post('/leads/new', [LeadController::class, 'newLead']);
 });
 

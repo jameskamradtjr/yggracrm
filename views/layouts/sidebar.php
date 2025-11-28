@@ -42,6 +42,58 @@
                     </a>
                 </li>
 
+                <!-- Financeiro -->
+                <?php if (auth()->check()): ?>
+                <li class="nav-small-cap">
+                    <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+                    <span class="hide-menu">Financeiro</span>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial'); ?>">
+                        <span><i class="ti ti-wallet"></i></span>
+                        <span class="hide-menu">Lançamentos</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/bank-accounts'); ?>">
+                        <span><i class="ti ti-building-bank"></i></span>
+                        <span class="hide-menu">Contas Bancárias</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/credit-cards'); ?>">
+                        <span><i class="ti ti-credit-card"></i></span>
+                        <span class="hide-menu">Cartões de Crédito</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/categories'); ?>">
+                        <span><i class="ti ti-tags"></i></span>
+                        <span class="hide-menu">Categorias</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/cost-centers'); ?>">
+                        <span><i class="ti ti-building"></i></span>
+                        <span class="hide-menu">Centros de Custo</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+
+                <!-- CRM de Leads -->
+                <?php if (auth()->check()): ?>
+                <li class="nav-small-cap">
+                    <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+                    <span class="hide-menu">CRM</span>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/leads'); ?>">
+                        <span><i class="ti ti-address-book"></i></span>
+                        <span class="hide-menu">Leads</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+
                 <!-- Usuários -->
                 <?php if (auth()->check()): ?>
                 <li class="nav-small-cap">
