@@ -185,12 +185,13 @@ class LeadController extends Controller
                 'nome' => 'required',
                 'email' => 'required|email',
                 'telefone' => 'required',
-                'faturamento' => 'required',
-                'investimento' => 'required',
-                'instagram' => 'nullable',
+                'tem_software' => 'nullable',
+                'investimento_software' => 'required',
+                'tipo_sistema' => 'required',
+                'plataforma_app' => 'required',
                 'ramo' => 'nullable',
                 'objetivo' => 'nullable',
-                'faz_trafego' => 'nullable'
+                'origem_conheceu' => 'nullable'
             ]);
 
             if (!$validator->passes()) {
@@ -222,12 +223,12 @@ class LeadController extends Controller
 
             // Prepara dados para Gemini
             $promptData = [
-                'faturamento' => $data['faturamento'],
-                'investimento' => $data['investimento'],
-                'instagram' => $data['instagram'] ?? '',
+                'tem_software' => $data['tem_software'] ?? false,
+                'investimento_software' => $data['investimento_software'] ?? '',
+                'tipo_sistema' => $data['tipo_sistema'] ?? '',
+                'plataforma_app' => $data['plataforma_app'] ?? '',
                 'ramo' => $data['ramo'] ?? '',
-                'objetivo' => $data['objetivo'] ?? '',
-                'faz_trafego' => $data['faz_trafego'] ?? 'não'
+                'objetivo' => $data['objetivo'] ?? ''
             ];
             
             // 3. Se ainda não tem, usa usuário autenticado
@@ -250,6 +251,47 @@ class LeadController extends Controller
             // Limpa a sessão após usar
             session()->forget('quiz_owner_id');
 
+            // VERIFICA SE JÁ EXISTE CLIENTE COM MESMO EMAIL OU TELEFONE
+            // Se não existir, CRIA AUTOMATICAMENTE um novo cliente
+            $existingClient = null;
+            if ($userId) {
+                $db = \Core\Database::getInstance();
+                
+                // Busca por email (se fornecido)
+                if (!empty($data['email'])) {
+                    $clientByEmail = $db->query(
+                        "SELECT * FROM clients WHERE user_id = ? AND email = ? LIMIT 1",
+                        [$userId, $data['email']]
+                    );
+                    if (!empty($clientByEmail)) {
+                        $existingClient = \App\Models\Client::newInstance($clientByEmail[0], true);
+                    }
+                }
+                
+                // Se não encontrou por email, busca por telefone (se fornecido)
+                if (!$existingClient && !empty($data['telefone'])) {
+                    $clientByPhone = $db->query(
+                        "SELECT * FROM clients WHERE user_id = ? AND (telefone = ? OR celular = ?) LIMIT 1",
+                        [$userId, $data['telefone'], $data['telefone']]
+                    );
+                    if (!empty($clientByPhone)) {
+                        $existingClient = \App\Models\Client::newInstance($clientByPhone[0], true);
+                    }
+                }
+                
+                // Se não encontrou cliente existente, CRIA UM NOVO automaticamente
+                if (!$existingClient) {
+                    $existingClient = \App\Models\Client::create([
+                        'user_id' => $userId,
+                        'tipo' => 'fisica', // Padrão: Pessoa Física
+                        'nome_razao_social' => $data['nome'],
+                        'email' => $data['email'] ?? null,
+                        'telefone' => $data['telefone'] ?? null,
+                        'score' => 50 // Score padrão
+                    ]);
+                }
+            }
+
             // Chama Gemini para classificação (usa API key do usuário dono do lead)
             $aiAnalysis = $this->analyzeWithGemini($promptData, $userId);
 
@@ -268,17 +310,19 @@ class LeadController extends Controller
                 'telefone' => $data['telefone'],
                 'instagram' => $data['instagram'] ?? null,
                 'ramo' => $data['ramo'] ?? null,
-                'faturamento_raw' => $data['faturamento'],
-                'faturamento_categoria' => $aiAnalysis['faturamento_categoria'] ?? null,
-                'invest_raw' => $data['investimento'],
-                'invest_categoria' => $aiAnalysis['invest_categoria'] ?? null,
                 'objetivo' => $data['objetivo'] ?? null,
-                'faz_trafego' => isset($data['faz_trafego']) && $data['faz_trafego'] === 'sim',
+                'tem_software' => isset($data['tem_software']) && ($data['tem_software'] === true || $data['tem_software'] === 'sim'),
+                'investimento_software' => $data['investimento_software'] ?? null,
+                'tipo_sistema' => $data['tipo_sistema'] ?? null,
+                'plataforma_app' => $data['plataforma_app'] ?? null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'tags_ai' => $tagsAi,
                 'score_potencial' => $aiAnalysis['score_potencial'] ?? 0,
                 'urgencia' => $aiAnalysis['urgencia'] ?? 'baixa',
                 'resumo' => $aiAnalysis['resumo'] ?? null,
-                'status_kanban' => $this->getStatusByFaturamento($aiAnalysis['faturamento_categoria'] ?? '0-10k')
+                'etapa_funil' => 'interessados',
+                'origem' => 'quiz',
+                'origem_conheceu' => $data['origem_conheceu'] ?? null
             ];
 
             // Adiciona user_id se encontrado
@@ -286,12 +330,30 @@ class LeadController extends Controller
                 $leadData['user_id'] = $userId;
             }
 
+            // Se encontrou cliente existente, vincula o lead a ele
+            if ($existingClient) {
+                $leadData['client_id'] = $existingClient->id;
+            }
+
             $lead = Lead::create($leadData);
+
+            $message = 'Lead cadastrado com sucesso!';
+            if ($existingClient) {
+                // Verifica se o cliente foi criado agora ou já existia
+                $clientCreated = strtotime($existingClient->created_at) > (time() - 5); // Criado há menos de 5 segundos
+                if ($clientCreated) {
+                    $message .= ' Cliente criado automaticamente: ' . $existingClient->nome_razao_social;
+                } else {
+                    $message .= ' Lead vinculado ao cliente existente: ' . $existingClient->nome_razao_social;
+                }
+            }
 
             json_response([
                 'success' => true,
-                'message' => 'Lead cadastrado com sucesso!',
-                'lead_id' => $lead->id
+                'message' => $message,
+                'lead_id' => $lead->id,
+                'client_id' => $existingClient ? $existingClient->id : null,
+                'client_linked' => $existingClient ? true : false
             ]);
 
         } catch (\Exception $e) {
@@ -398,8 +460,6 @@ class LeadController extends Controller
         if (empty($apiKey)) {
             // Retorna valores padrão se não houver API key
             return [
-                'faturamento_categoria' => $this->categorizeFaturamento($data['faturamento']),
-                'invest_categoria' => $this->categorizeInvestimento($data['investimento']),
                 'tags_ai' => [],
                 'score_potencial' => 50,
                 'urgencia' => 'media',
@@ -417,24 +477,29 @@ class LeadController extends Controller
         $model = $modelInfo['model'];
         $apiVersion = $modelInfo['apiVersion'];
 
-        $prompt = "Você é um assistente de qualificação de leads para uma agência de tráfego pago. Receba as respostas abaixo e devolva um JSON contendo:
+        $temSoftware = isset($data['tem_software']) ? ($data['tem_software'] ? 'Sim' : 'Não') : 'Não informado';
+        $investimento = $data['investimento_software'] ?? 'Não informado';
+        $tipoSistema = $data['tipo_sistema'] ?? 'Não informado';
+        $plataformaApp = $data['plataforma_app'] ?? 'Não informado';
+        $ramo = $data['ramo'] ?? 'Não informado';
+        $objetivo = $data['objetivo'] ?? 'Não informado';
 
-faturamento_categoria (0-10k, 10-50k, 50-200k, 200k+)
-invest_categoria (1k, 3k, 5k, 10k, 10k+)
-tags_ai = lista com insights do lead
-score_potencial (0-100)
-urgencia (baixa, média, alta)
-resumo = descrição curta do potencial do lead
+        $prompt = "Você é um assistente de qualificação de leads para uma empresa de desenvolvimento de software. Receba as respostas abaixo e devolva um JSON contendo:
 
-Responda apenas com JSON puro.
+tags_ai = lista com insights do lead (ex: ['alto investimento', 'saas', 'mobile', 'empresa estabelecida'])
+score_potencial (0-100) = pontuação baseada no potencial de fechamento
+urgencia (baixa, média, alta) = urgência do lead
+resumo = descrição curta do potencial do lead (máximo 200 caracteres)
+
+Responda apenas com JSON puro, sem markdown, sem explicações.
 
 Dados do lead:
-- Faturamento: {$data['faturamento']}
-- Investimento pretendido: {$data['investimento']}
-- Instagram: {$data['instagram']}
-- Ramo: {$data['ramo']}
-- Objetivo: {$data['objetivo']}
-- Já faz tráfego pago: {$data['faz_trafego']}";
+- Já possui software: {$temSoftware}
+- Investimento pretendido: {$investimento}
+- Tipo de sistema: {$tipoSistema}
+- Plataforma de aplicativo: {$plataformaApp}
+- Ramo da empresa: {$ramo}
+- Objetivo: {$objetivo}";
 
         $url = "https://generativelanguage.googleapis.com/{$apiVersion}/models/{$model}:generateContent?key=" . $apiKey;
 
@@ -618,7 +683,7 @@ Dados do lead:
     }
 
     /**
-     * Exibe CRM com Kanban
+     * Exibe CRM com Kanban baseado em etapas do funil
      */
     public function index(): string
     {
@@ -626,16 +691,61 @@ Dados do lead:
             $this->redirect('/login');
         }
 
+        $userId = auth()->getDataUserId();
+        
+        // Busca leads por etapa do funil
         $leads = [
-            'cold' => Lead::byStatus('cold'),
-            'morno' => Lead::byStatus('morno'),
-            'quente' => Lead::byStatus('quente'),
-            'ultra_quente' => Lead::byStatus('ultra_quente')
+            'interessados' => Lead::where('etapa_funil', 'interessados')
+                ->where('user_id', $userId)
+                ->orderBy('score_potencial', 'DESC')
+                ->get(),
+            'negociacao_proposta' => Lead::where('etapa_funil', 'negociacao_proposta')
+                ->where('user_id', $userId)
+                ->orderBy('score_potencial', 'DESC')
+                ->get(),
+            'fechamento' => Lead::where('etapa_funil', 'fechamento')
+                ->where('user_id', $userId)
+                ->orderBy('score_potencial', 'DESC')
+                ->get()
         ];
+        
+        // Busca usuários para atribuir responsáveis
+        $users = \App\Models\User::where('status', 'active')->get();
+        
+        // Calcula métricas
+        $totalLeads = count($leads['interessados']) + count($leads['negociacao_proposta']) + count($leads['fechamento']);
+        $metrics = [
+            'total' => $totalLeads,
+            'interessados' => [
+                'count' => count($leads['interessados']),
+                'percentage' => $totalLeads > 0 ? round((count($leads['interessados']) / $totalLeads) * 100, 1) : 0
+            ],
+            'negociacao_proposta' => [
+                'count' => count($leads['negociacao_proposta']),
+                'percentage' => $totalLeads > 0 ? round((count($leads['negociacao_proposta']) / $totalLeads) * 100, 1) : 0
+            ],
+            'fechamento' => [
+                'count' => count($leads['fechamento']),
+                'percentage' => $totalLeads > 0 ? round((count($leads['fechamento']) / $totalLeads) * 100, 1) : 0
+            ]
+        ];
+        
+        // Busca origens dos leads
+        $origens = \Core\Database::getInstance()->query(
+            "SELECT origem, COUNT(*) as total 
+             FROM leads 
+             WHERE user_id = ? AND origem IS NOT NULL 
+             GROUP BY origem 
+             ORDER BY total DESC",
+            [$userId]
+        );
 
         return $this->view('leads/index', [
             'title' => 'CRM de Leads',
-            'leads' => $leads
+            'leads' => $leads,
+            'users' => $users,
+            'metrics' => $metrics,
+            'origens' => $origens
         ]);
     }
 
@@ -648,8 +758,14 @@ Dados do lead:
             $this->redirect('/login');
         }
 
+        $userId = auth()->getDataUserId();
+        $clients = \App\Models\Client::where('user_id', $userId)
+            ->orderBy('nome_razao_social', 'ASC')
+            ->get();
+
         return $this->view('leads/create', [
-            'title' => 'Cadastrar Lead'
+            'title' => 'Cadastrar Lead',
+            'clients' => $clients
         ]);
     }
 
@@ -674,6 +790,7 @@ Dados do lead:
             'telefone' => 'required',
             'faturamento' => 'required',
             'investimento' => 'required',
+            'valor_oportunidade' => 'nullable|numeric|min:0',
             'instagram' => 'nullable',
             'ramo' => 'nullable',
             'objetivo' => 'nullable',
@@ -682,6 +799,54 @@ Dados do lead:
 
         try {
             $userId = auth()->getDataUserId();
+
+            // VERIFICA OU CRIA CLIENTE
+            $existingClient = null;
+            $clientIdFromForm = $this->request->input('client_id');
+            
+            if ($clientIdFromForm) {
+                // Se foi selecionado um cliente existente, busca ele
+                $existingClient = \App\Models\Client::where('id', $clientIdFromForm)
+                    ->where('user_id', $userId)
+                    ->first();
+            } else {
+                // Se não foi selecionado, verifica se já existe ou cria novo
+                $db = \Core\Database::getInstance();
+                
+                // Busca por email (se fornecido)
+                if (!empty($data['email'])) {
+                    $clientByEmail = $db->query(
+                        "SELECT * FROM clients WHERE user_id = ? AND email = ? LIMIT 1",
+                        [$userId, $data['email']]
+                    );
+                    if (!empty($clientByEmail)) {
+                        $existingClient = \App\Models\Client::newInstance($clientByEmail[0], true);
+                    }
+                }
+                
+                // Se não encontrou por email, busca por telefone (se fornecido)
+                if (!$existingClient && !empty($data['telefone'])) {
+                    $clientByPhone = $db->query(
+                        "SELECT * FROM clients WHERE user_id = ? AND (telefone = ? OR celular = ?) LIMIT 1",
+                        [$userId, $data['telefone'], $data['telefone']]
+                    );
+                    if (!empty($clientByPhone)) {
+                        $existingClient = \App\Models\Client::newInstance($clientByPhone[0], true);
+                    }
+                }
+                
+                // Se não encontrou cliente existente, CRIA UM NOVO automaticamente
+                if (!$existingClient) {
+                    $existingClient = \App\Models\Client::create([
+                        'user_id' => $userId,
+                        'tipo' => 'fisica', // Padrão: Pessoa Física
+                        'nome_razao_social' => $data['nome'],
+                        'email' => $data['email'] ?? null,
+                        'telefone' => $data['telefone'] ?? null,
+                        'score' => 50 // Score padrão
+                    ]);
+                }
+            }
 
             // Prepara dados para Gemini
             $promptData = [
@@ -715,6 +880,7 @@ Dados do lead:
                 'faturamento_categoria' => $aiAnalysis['faturamento_categoria'] ?? null,
                 'invest_raw' => $data['investimento'],
                 'invest_categoria' => $aiAnalysis['invest_categoria'] ?? null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'objetivo' => $data['objetivo'] ?? null,
                 'faz_trafego' => isset($data['faz_trafego']) && $data['faz_trafego'] === 'sim',
                 'tags_ai' => $tagsAi,
@@ -722,8 +888,15 @@ Dados do lead:
                 'urgencia' => $aiAnalysis['urgencia'] ?? 'baixa',
                 'resumo' => $aiAnalysis['resumo'] ?? null,
                 'status_kanban' => $this->getStatusByFaturamento($aiAnalysis['faturamento_categoria'] ?? '0-10k'),
+                'etapa_funil' => 'interessados',
+                'origem' => 'cadastro_manual',
                 'user_id' => $userId
             ];
+
+            // Vincula o lead ao cliente (existente ou recém-criado)
+            if ($existingClient) {
+                $leadData['client_id'] = $existingClient->id;
+            }
 
             $lead = Lead::create($leadData);
 
@@ -745,20 +918,221 @@ Dados do lead:
             $this->redirect('/login');
         }
 
-        $lead = Lead::find($params['id']);
+        $userId = auth()->getDataUserId();
+        $lead = Lead::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
 
         if (!$lead) {
             abort(404, 'Lead não encontrado.');
         }
+        
+        // Busca relacionamentos
+        $client = $lead->client();
+        $proposals = $lead->proposals();
+        $contacts = $lead->contacts();
+        $users = \App\Models\User::where('status', 'active')->get();
 
         return $this->view('leads/show', [
             'title' => 'Detalhes do Lead',
-            'lead' => $lead
+            'lead' => $lead,
+            'client' => $client,
+            'proposals' => $proposals,
+            'contacts' => $contacts,
+            'users' => $users
         ]);
+    }
+    
+    /**
+     * Retorna HTML do modal de edição (via AJAX)
+     */
+    public function editModal(array $params): void
+    {
+        if (!auth()->check()) {
+            http_response_code(401);
+            echo 'Não autenticado';
+            exit;
+        }
+
+        $userId = auth()->getDataUserId();
+        $lead = Lead::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$lead) {
+            http_response_code(404);
+            echo 'Lead não encontrado';
+            exit;
+        }
+        
+        $users = \App\Models\User::where('status', 'active')->get();
+        
+        // Renderiza apenas o conteúdo do modal
+        $viewFile = base_path('views/leads/_edit_modal.php');
+        if (file_exists($viewFile)) {
+            include $viewFile;
+        } else {
+            echo '<p>Erro ao carregar formulário de edição.</p>';
+        }
+        exit;
+    }
+    
+    /**
+     * Atualiza lead
+     */
+    public function update(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+
+        $userId = auth()->getDataUserId();
+        $lead = Lead::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$lead) {
+            json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
+            return;
+        }
+
+        $data = $this->validate([
+            'nome' => 'required',
+            'email' => 'required|email',
+            'telefone' => 'required',
+            'valor_oportunidade' => 'nullable|numeric|min:0',
+            'etapa_funil' => 'nullable|in:interessados,negociacao_proposta,fechamento',
+            'responsible_user_id' => 'nullable|numeric',
+            'origem' => 'nullable',
+            'observacoes' => 'nullable'
+        ]);
+
+        try {
+            $lead->update([
+                'nome' => $data['nome'],
+                'email' => $data['email'],
+                'telefone' => $data['telefone'],
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
+                'etapa_funil' => $data['etapa_funil'] ?? $lead->etapa_funil,
+                'responsible_user_id' => !empty($data['responsible_user_id']) ? (int)$data['responsible_user_id'] : null,
+                'origem' => $data['origem'] ?? $lead->origem
+            ]);
+
+            json_response([
+                'success' => true,
+                'message' => 'Lead atualizado com sucesso!'
+            ]);
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao atualizar lead: ' . $e->getMessage()
+            ], 400);
+        }
     }
 
     /**
-     * Atualiza status kanban via AJAX
+     * Atualiza etapa do funil via AJAX
+     */
+    public function updateEtapaFunil(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (empty($input)) {
+            $input = $this->request->all();
+        }
+
+        $validator = new \Core\Validator($input, [
+            'lead_id' => 'required|numeric',
+            'etapa_funil' => 'required'
+        ]);
+
+        if (!$validator->passes()) {
+            json_response([
+                'success' => false,
+                'message' => 'Dados inválidos',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        $etapa = $input['etapa_funil'];
+        if (!in_array($etapa, ['interessados', 'negociacao_proposta', 'fechamento'])) {
+            json_response(['success' => false, 'message' => 'Etapa inválida'], 400);
+        }
+
+        $lead = Lead::find($input['lead_id']);
+
+        if (!$lead) {
+            json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
+        }
+
+        $lead->updateEtapaFunil($etapa);
+
+        json_response([
+            'success' => true,
+            'message' => 'Etapa atualizada com sucesso'
+        ]);
+    }
+    
+    /**
+     * Atualiza responsável do lead via AJAX
+     */
+    public function updateResponsible(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (empty($input)) {
+            $input = $this->request->all();
+        }
+
+        $validator = new \Core\Validator($input, [
+            'lead_id' => 'required|numeric',
+            'responsible_user_id' => 'nullable|numeric'
+        ]);
+
+        if (!$validator->passes()) {
+            json_response([
+                'success' => false,
+                'message' => 'Dados inválidos',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        $lead = Lead::find($input['lead_id']);
+
+        if (!$lead) {
+            json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
+        }
+
+        $lead->update([
+            'responsible_user_id' => !empty($input['responsible_user_id']) ? (int)$input['responsible_user_id'] : null
+        ]);
+
+        json_response([
+            'success' => true,
+            'message' => 'Responsável atualizado com sucesso'
+        ]);
+    }
+    
+    /**
+     * Atualiza status kanban via AJAX (mantido para compatibilidade)
      */
     public function updateStatus(): void
     {
@@ -791,16 +1165,13 @@ Dados do lead:
             json_response(['success' => false, 'message' => 'Status inválido'], 400);
         }
 
-        $data = $validator->validated();
-        $data['status'] = $status;
-
-        $lead = Lead::find($data['lead_id']);
+        $lead = Lead::find($input['lead_id']);
 
         if (!$lead) {
             json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
         }
 
-        $lead->updateStatus($data['status']);
+        $lead->updateStatus($status);
 
         json_response([
             'success' => true,
@@ -867,6 +1238,135 @@ Dados do lead:
             json_response([
                 'success' => false,
                 'message' => 'Erro ao reanalisar: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API para buscar origens configuradas (pública, usa token)
+     */
+    public function getOrigens(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $token = $this->request->query('token');
+            $userId = null;
+
+            if ($token) {
+                $userId = $this->getUserIdFromToken($token);
+            }
+
+            if (!$userId) {
+                json_response([
+                    'success' => false,
+                    'message' => 'Token inválido',
+                    'origens' => []
+                ], 401);
+            }
+
+            // Busca origens ativas do usuário
+            $origens = \App\Models\LeadOrigin::getActiveOrigins($userId);
+
+            // Se não tem origens configuradas, retorna lista padrão
+            if (empty($origens)) {
+                $origens = [
+                    (object)['nome' => 'Google'],
+                    (object)['nome' => 'Facebook/Instagram'],
+                    (object)['nome' => 'Indicação'],
+                    (object)['nome' => 'LinkedIn'],
+                    (object)['nome' => 'YouTube'],
+                    (object)['nome' => 'Outro']
+                ];
+            }
+
+            json_response([
+                'success' => true,
+                'origens' => array_map(function($origem) {
+                    return [
+                        'id' => $origem->id ?? null,
+                        'nome' => is_string($origem) ? $origem : ($origem->nome ?? '')
+                    ];
+                }, $origens)
+            ]);
+
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao buscar origens: ' . $e->getMessage(),
+                'origens' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Converte lead em cliente
+     */
+    public function convertToClient(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $leadId = $params['id'] ?? null;
+
+            if (!$leadId) {
+                json_response(['success' => false, 'message' => 'ID do lead não informado'], 400);
+            }
+
+            // Busca lead
+            $lead = Lead::where('id', $leadId)
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$lead) {
+                json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
+            }
+
+            // Valida dados do formulário
+            $data = $this->validate([
+                'tipo' => 'required|in:fisica,juridica',
+                'nome_razao_social' => 'required',
+                'nome_fantasia' => 'nullable',
+                'cpf_cnpj' => 'nullable',
+                'email' => 'nullable|email',
+                'telefone' => 'nullable',
+                'celular' => 'nullable',
+                'score' => 'nullable|integer|min:0|max:100',
+                'observacoes' => 'nullable'
+            ]);
+
+            // Cria cliente
+            $client = \App\Models\Client::create([
+                'user_id' => $userId,
+                'tipo' => $data['tipo'],
+                'nome_razao_social' => $data['nome_razao_social'],
+                'nome_fantasia' => $data['nome_fantasia'] ?? null,
+                'cpf_cnpj' => $data['cpf_cnpj'] ?? null,
+                'email' => $data['email'] ?? $lead->email,
+                'telefone' => $data['telefone'] ?? $lead->telefone,
+                'celular' => $data['celular'] ?? null,
+                'score' => $data['score'] ?? $lead->score_potencial ?? 50,
+                'observacoes' => $data['observacoes'] ?? null
+            ]);
+
+            // Associa cliente ao lead
+            $lead->update(['client_id' => $client->id]);
+
+            json_response([
+                'success' => true,
+                'message' => 'Cliente cadastrado com sucesso!',
+                'client_id' => $client->id
+            ]);
+
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao cadastrar cliente: ' . $e->getMessage()
             ], 500);
         }
     }

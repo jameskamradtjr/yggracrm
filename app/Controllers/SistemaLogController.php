@@ -176,10 +176,15 @@ class SistemaLogController extends Controller
                     'registro_id' => $log['registro_id'] ?? '-',
                     'acao' => $acaoBadge,
                     'descricao' => htmlspecialchars($log['descricao'] ?? '-'),
-                    'usuario' => $log['usuario_nome'] ? htmlspecialchars($log['usuario_nome']) . '<br><small class="text-muted">' . htmlspecialchars($log['usuario_email']) . '</small>' : '-',
+                    'usuario_nome' => $log['usuario_nome'] ? htmlspecialchars($log['usuario_nome']) . '<br><small class="text-muted">' . htmlspecialchars($log['usuario_email'] ?? '') . '</small>' : '-',
                     'ip_address' => htmlspecialchars($log['ip_address'] ?? '-'),
                     'created_at' => date('d/m/Y H:i:s', strtotime($log['created_at'])),
-                    'dados' => $log['dados_anteriores'] || $log['dados_novos'] ? 'Sim' : 'Não'
+                    'dados' => $log['dados_anteriores'] || $log['dados_novos'] ? 'Sim' : 'Não',
+                    'full_data' => [
+                        'dados_anteriores' => $log['dados_anteriores'],
+                        'dados_novos' => $log['dados_novos'],
+                        'descricao' => $log['descricao']
+                    ]
                 ];
             }
             

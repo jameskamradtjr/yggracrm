@@ -51,7 +51,7 @@
 
             <!-- Content -->
             <div class="body-wrapper">
-                <div class="container-fluid">
+                <div class="container">
                     <!-- Mensagens Flash -->
                     <?php 
                     $successMessage = session()->has('_flash_success') ? session()->getFlash('success') : null;

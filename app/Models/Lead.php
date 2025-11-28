@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Core\Model;
+use App\Models\Client;
+use App\Models\Proposal;
+use App\Models\Contact;
+use App\Models\User;
 
 /**
  * Model Lead
@@ -30,25 +34,54 @@ class Lead extends Model
         'invest_categoria',
         'objetivo',
         'faz_trafego',
+        'tem_software',
+        'investimento_software',
+        'tipo_sistema',
+        'plataforma_app',
         'tags_ai',
         'score_potencial',
+        'valor_oportunidade',
         'urgencia',
         'resumo',
-        'status_kanban'
+        'status_kanban',
+        'etapa_funil',
+        'origem',
+        'origem_conheceu',
+        'responsible_user_id',
+        'client_id',
+        'user_id'
     ];
 
     protected array $casts = [
         'faz_trafego' => 'boolean',
+        'tem_software' => 'boolean',
         'tags_ai' => 'json',
-        'score_potencial' => 'integer'
+        'score_potencial' => 'integer',
+        'valor_oportunidade' => 'float'
     ];
 
     /**
-     * Retorna leads por status kanban
+     * Retorna leads por etapa do funil
+     */
+    public static function byEtapaFunil(string $etapa): array
+    {
+        return static::where('etapa_funil', $etapa)->orderBy('score_potencial', 'DESC')->get();
+    }
+
+    /**
+     * Retorna leads por status kanban (mantido para compatibilidade)
      */
     public static function byStatus(string $status): array
     {
         return static::where('status_kanban', $status)->orderBy('score_potencial', 'DESC')->get();
+    }
+
+    /**
+     * Atualiza etapa do funil
+     */
+    public function updateEtapaFunil(string $etapa): bool
+    {
+        return $this->update(['etapa_funil' => $etapa]);
     }
 
     /**
@@ -57,6 +90,47 @@ class Lead extends Model
     public function updateStatus(string $status): bool
     {
         return $this->update(['status_kanban' => $status]);
+    }
+    
+    /**
+     * Relacionamento com cliente
+     */
+    public function client(): ?Client
+    {
+        if (!$this->client_id) {
+            return null;
+        }
+        return Client::find($this->client_id);
+    }
+    
+    /**
+     * Relacionamento com propostas
+     */
+    public function proposals(): array
+    {
+        return Proposal::where('lead_id', $this->id)->get();
+    }
+    
+    /**
+     * Relacionamento com contatos
+     */
+    public function contacts(): array
+    {
+        return Contact::where('lead_id', $this->id)
+            ->orderBy('data_contato', 'DESC')
+            ->orderBy('hora_contato', 'DESC')
+            ->get();
+    }
+    
+    /**
+     * Relacionamento com responsável
+     */
+    public function responsible(): ?User
+    {
+        if (!$this->responsible_user_id) {
+            return null;
+        }
+        return User::find($this->responsible_user_id);
     }
 
     /**

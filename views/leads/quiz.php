@@ -29,7 +29,7 @@
         <!-- Barra de Progresso -->
         <div class="mb-8">
             <div class="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Pergunta <span id="current-question">1</span> de <span id="total-questions">8</span></span>
+                <span>Pergunta <span id="current-question">1</span> de <span id="total-questions">10</span></span>
                 <span id="progress-percent">0%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -40,105 +40,127 @@
         <!-- Container das Perguntas -->
         <div id="quiz-container" class="bg-white rounded-2xl shadow-xl p-8 md:p-12 min-h-[400px] flex items-center">
             <form id="quiz-form" class="w-full">
-                <!-- Pergunta 1: Faturamento -->
+                <!-- Pergunta 1: Nome -->
                 <div class="question" data-step="1">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o faturamento atual da sua empresa?</h2>
-                    <div class="space-y-4">
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faturamento" value="0-10k" class="mr-3" required>
-                            <span class="text-lg">Até R$ 10.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faturamento" value="10-50k" class="mr-3" required>
-                            <span class="text-lg">R$ 10.000 - R$ 50.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faturamento" value="50-200k" class="mr-3" required>
-                            <span class="text-lg">R$ 50.000 - R$ 200.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faturamento" value="200k+" class="mr-3" required>
-                            <span class="text-lg">Acima de R$ 200.000/mês</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Pergunta 2: Investimento -->
-                <div class="question hidden" data-step="2">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Quanto pretende investir em tráfego pago?</h2>
-                    <div class="space-y-4">
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="investimento" value="1k" class="mr-3" required>
-                            <span class="text-lg">Até R$ 1.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="investimento" value="3k" class="mr-3" required>
-                            <span class="text-lg">R$ 1.000 - R$ 3.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="investimento" value="5k" class="mr-3" required>
-                            <span class="text-lg">R$ 3.000 - R$ 5.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="investimento" value="10k" class="mr-3" required>
-                            <span class="text-lg">R$ 5.000 - R$ 10.000/mês</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="investimento" value="10k+" class="mr-3" required>
-                            <span class="text-lg">Acima de R$ 10.000/mês</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Pergunta 3: Instagram -->
-                <div class="question hidden" data-step="3">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual o Instagram da sua empresa?</h2>
-                    <input type="text" name="instagram" placeholder="@seuinstagram" class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
-                </div>
-
-                <!-- Pergunta 4: Ramo -->
-                <div class="question hidden" data-step="4">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o ramo da sua empresa?</h2>
-                    <input type="text" name="ramo" placeholder="Ex: E-commerce, Serviços, SaaS..." class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
-                </div>
-
-                <!-- Pergunta 5: Faz Tráfego -->
-                <div class="question hidden" data-step="5">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Você já faz tráfego pago atualmente?</h2>
-                    <div class="space-y-4">
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faz_trafego" value="sim" class="mr-3" required>
-                            <span class="text-lg">Sim</span>
-                        </label>
-                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
-                            <input type="radio" name="faz_trafego" value="não" class="mr-3" required>
-                            <span class="text-lg">Não</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Pergunta 6: Objetivo -->
-                <div class="question hidden" data-step="6">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual seu objetivo principal com tráfego pago?</h2>
-                    <textarea name="objetivo" rows="4" placeholder="Descreva seu objetivo..." class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required></textarea>
-                </div>
-
-                <!-- Pergunta 7: Nome -->
-                <div class="question hidden" data-step="7">
                     <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o seu nome?</h2>
                     <input type="text" name="nome" placeholder="Seu nome completo" class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
                 </div>
 
-                <!-- Pergunta 8: Email -->
-                <div class="question hidden" data-step="8">
+                <!-- Pergunta 2: Email -->
+                <div class="question hidden" data-step="2">
                     <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o seu email?</h2>
                     <input type="email" name="email" placeholder="seu@email.com" class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
                 </div>
 
-                <!-- Pergunta 9: Telefone -->
-                <div class="question hidden" data-step="9">
+                <!-- Pergunta 3: Telefone -->
+                <div class="question hidden" data-step="3">
                     <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o seu telefone?</h2>
                     <input type="tel" name="telefone" placeholder="(00) 00000-0000" class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <!-- Pergunta 4: Tem Software -->
+                <div class="question hidden" data-step="4">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Você já possui algum software/sistema?</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="tem_software" value="sim" class="mr-3" required>
+                            <span class="text-lg">Sim, já tenho</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="tem_software" value="não" class="mr-3" required>
+                            <span class="text-lg">Não, ainda não tenho</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pergunta 5: Investimento -->
+                <div class="question hidden" data-step="5">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual o investimento que deseja fazer?</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="investimento_software" value="5k" class="mr-3" required>
+                            <span class="text-lg">Até R$ 5.000</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="investimento_software" value="10k" class="mr-3" required>
+                            <span class="text-lg">R$ 5.000 - R$ 10.000</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="investimento_software" value="25k" class="mr-3" required>
+                            <span class="text-lg">R$ 10.000 - R$ 25.000</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="investimento_software" value="50k" class="mr-3" required>
+                            <span class="text-lg">R$ 25.000 - R$ 50.000</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="investimento_software" value="50k+" class="mr-3" required>
+                            <span class="text-lg">Acima de R$ 50.000</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pergunta 6: Tipo de Sistema -->
+                <div class="question hidden" data-step="6">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Para que tipo de sistema você precisa?</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="tipo_sistema" value="interno" class="mr-3" required>
+                            <span class="text-lg">Sistema para utilização interna da empresa</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="tipo_sistema" value="cliente" class="mr-3" required>
+                            <span class="text-lg">Software para um cliente específico</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="tipo_sistema" value="saas" class="mr-3" required>
+                            <span class="text-lg">SaaS (Software como Serviço) para múltiplos clientes</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pergunta 7: Plataforma App -->
+                <div class="question hidden" data-step="7">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Deseja aplicativo mobile?</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="plataforma_app" value="ios_android" class="mr-3" required>
+                            <span class="text-lg">Sim, para iOS e Android</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="plataforma_app" value="ios" class="mr-3" required>
+                            <span class="text-lg">Apenas iOS</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="plataforma_app" value="android" class="mr-3" required>
+                            <span class="text-lg">Apenas Android</span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                            <input type="radio" name="plataforma_app" value="nenhum" class="mr-3" required>
+                            <span class="text-lg">Não preciso de aplicativo</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pergunta 8: Ramo -->
+                <div class="question hidden" data-step="8">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual é o ramo da sua empresa?</h2>
+                    <input type="text" name="ramo" placeholder="Ex: Tecnologia, Saúde, Educação..." class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <!-- Pergunta 9: Objetivo -->
+                <div class="question hidden" data-step="9">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Qual seu objetivo principal com o software?</h2>
+                    <textarea name="objetivo" rows="4" placeholder="Descreva seu objetivo..." class="w-full p-4 border-2 border-gray-200 rounded-lg text-lg focus:border-blue-500 focus:outline-none" required></textarea>
+                </div>
+
+                <!-- Pergunta 10: De onde nos conheceu -->
+                <div class="question hidden" data-step="10">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">De onde você nos conheceu?</h2>
+                    <div id="origens-container" class="space-y-4">
+                        <!-- Será preenchido via AJAX -->
+                        <div class="text-center text-gray-500">Carregando opções...</div>
+                    </div>
                 </div>
 
                 <!-- Botão Próximo/Enviar -->
@@ -163,7 +185,69 @@
 
     <script>
         let currentStep = 1;
-        const totalSteps = 9;
+        const totalSteps = 10;
+
+        // Carrega origens quando chegar na pergunta 10
+        function carregarOrigens() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (!token) return;
+            
+            fetch('<?php echo url('/api/leads/origens'); ?>?token=' + token)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('origens-container');
+                    if (data.success && data.origens && data.origens.length > 0) {
+                        container.innerHTML = '';
+                        data.origens.forEach(origem => {
+                            const label = document.createElement('label');
+                            label.className = 'flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition';
+                            label.innerHTML = `
+                                <input type="radio" name="origem_conheceu" value="${origem.nome}" class="mr-3" required>
+                                <span class="text-lg">${origem.nome}</span>
+                            `;
+                            container.appendChild(label);
+                        });
+                    } else {
+                        // Fallback: opções padrão
+                        const opcoesPadrao = [
+                            'Google',
+                            'Facebook/Instagram',
+                            'Indicação',
+                            'LinkedIn',
+                            'YouTube',
+                            'Outro'
+                        ];
+                        container.innerHTML = '';
+                        opcoesPadrao.forEach(opcao => {
+                            const label = document.createElement('label');
+                            label.className = 'flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition';
+                            label.innerHTML = `
+                                <input type="radio" name="origem_conheceu" value="${opcao}" class="mr-3" required>
+                                <span class="text-lg">${opcao}</span>
+                            `;
+                            container.appendChild(label);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar origens:', error);
+                    // Fallback para opções padrão em caso de erro
+                    const container = document.getElementById('origens-container');
+                    const opcoesPadrao = ['Google', 'Facebook/Instagram', 'Indicação', 'LinkedIn', 'YouTube', 'Outro'];
+                    container.innerHTML = '';
+                    opcoesPadrao.forEach(opcao => {
+                        const label = document.createElement('label');
+                        label.className = 'flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition';
+                        label.innerHTML = `
+                            <input type="radio" name="origem_conheceu" value="${opcao}" class="mr-3" required>
+                            <span class="text-lg">${opcao}</span>
+                        `;
+                        container.appendChild(label);
+                    });
+                });
+        }
 
         function updateProgress() {
             const percent = (currentStep / totalSteps) * 100;
@@ -182,6 +266,11 @@
                     q.classList.remove('question-enter');
                 }
             });
+
+            // Carrega origens quando chegar na pergunta 10
+            if (step === 10) {
+                carregarOrigens();
+            }
 
             // Mostra/esconde botões
             if (step === totalSteps) {
@@ -224,6 +313,13 @@
             
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
+
+            // Converte tem_software para boolean
+            if (data.tem_software === 'sim') {
+                data.tem_software = true;
+            } else {
+                data.tem_software = false;
+            }
 
             // Adiciona token da URL se existir
             const urlParams = new URLSearchParams(window.location.search);
@@ -269,4 +365,3 @@
     </script>
 </body>
 </html>
-

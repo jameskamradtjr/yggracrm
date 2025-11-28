@@ -120,7 +120,8 @@ ob_start();
                         
                         <div class="col-md-6 mb-3">
                             <div class="form-check">
-                                <input type="checkbox" name="is_recurring" class="form-check-input" id="is_recurring">
+                                <input type="hidden" name="is_recurring" value="0">
+                                <input type="checkbox" name="is_recurring" class="form-check-input" id="is_recurring" value="1">
                                 <label class="form-check-label" for="is_recurring">
                                     Lançamento Recorrente
                                 </label>
@@ -129,7 +130,8 @@ ob_start();
                         
                         <div class="col-md-6 mb-3">
                             <div class="form-check">
-                                <input type="checkbox" name="is_installment" class="form-check-input" id="is_installment">
+                                <input type="hidden" name="is_installment" value="0">
+                                <input type="checkbox" name="is_installment" class="form-check-input" id="is_installment" value="1">
                                 <label class="form-check-label" for="is_installment">
                                     Lançamento Parcelado
                                 </label>
@@ -144,6 +146,12 @@ ob_start();
                                 <option value="diario">Diário</option>
                                 <option value="anual">Anual</option>
                             </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3" id="recurrence_end_date_field" style="display: none;">
+                            <label class="form-label">Data Final da Recorrência</label>
+                            <input type="date" name="recurrence_end_date" class="form-control" value="<?php echo date('Y-m-d', strtotime('+1 year')); ?>">
+                            <small class="text-muted">Até quando os lançamentos serão criados automaticamente</small>
                         </div>
                         
                         <div class="col-md-6 mb-3" id="installment_fields" style="display: none;">
@@ -183,7 +191,15 @@ ob_start();
 
 <script>
 document.getElementById('is_recurring').addEventListener('change', function() {
-    document.getElementById('recurrence_fields').style.display = this.checked ? 'block' : 'none';
+    const recurrenceFields = document.getElementById('recurrence_fields');
+    const recurrenceEndDateField = document.getElementById('recurrence_end_date_field');
+    if (this.checked) {
+        recurrenceFields.style.display = 'block';
+        recurrenceEndDateField.style.display = 'block';
+    } else {
+        recurrenceFields.style.display = 'none';
+        recurrenceEndDateField.style.display = 'none';
+    }
 });
 
 document.getElementById('is_installment').addEventListener('change', function() {

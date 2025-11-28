@@ -162,6 +162,10 @@ ob_start();
                             <i class="ti ti-x me-2"></i>
                             Cancelar
                         </a>
+                        <button type="button" class="btn btn-danger ms-auto" onclick="deleteEntry(<?php echo $entry->id; ?>, <?php echo ($entry->is_recurring || $entry->is_installment || $entry->parent_entry_id) ? 'true' : 'false'; ?>)">
+                            <i class="ti ti-trash me-2"></i>
+                            Excluir
+                        </button>
                     </div>
                 </form>
             </div>
@@ -170,6 +174,52 @@ ob_start();
 </div>
 
 <script>
+function deleteEntry(id, hasDependencies) {
+    if (hasDependencies) {
+        const cancelDeps = confirm('Este lançamento possui parcelas ou recorrências.\n\nDeseja cancelar todas as parcelas/recorrências também?\n\nOK = Sim, cancelar tudo\nCancelar = Não, excluir apenas este');
+        
+        if (!confirm('Deseja realmente excluir este lançamento?')) {
+            return;
+        }
+        
+        fetch(`<?php echo url('/financial'); ?>/${id}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ cancel_dependencies: cancelDeps })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '<?php echo url('/financial'); ?>';
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        });
+    } else {
+        if (confirm('Deseja realmente excluir este lançamento?')) {
+            fetch(`<?php echo url('/financial'); ?>/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ cancel_dependencies: false })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '<?php echo url('/financial'); ?>';
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            });
+        }
+    }
+}
+
 document.getElementById('account_select').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const selectedValue = this.value;

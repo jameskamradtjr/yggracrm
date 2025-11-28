@@ -52,9 +52,29 @@ class Validator
     {
         foreach ($this->rules as $field => $rules) {
             $rulesArray = is_string($rules) ? explode('|', $rules) : $rules;
+            
+            $value = $this->data[$field] ?? null;
+            $isNullable = in_array('nullable', $rulesArray);
+            $hasRequired = in_array('required', $rulesArray);
+            
+            // Se o campo é nullable e está vazio, adiciona ao validated como null e pula validações
+            if ($isNullable && empty($value) && !$hasRequired) {
+                $this->validated[$field] = null;
+                continue;
+            }
 
+            $fieldValidated = false;
             foreach ($rulesArray as $rule) {
+                if ($rule === 'nullable') {
+                    continue; // Pula a regra nullable na validação
+                }
                 $this->validateRule($field, $rule);
+                $fieldValidated = true;
+            }
+            
+            // Se o campo passou em todas as validações mas não foi adicionado ao validated, adiciona agora
+            if ($fieldValidated && !isset($this->validated[$field]) && !isset($this->errors[$field])) {
+                $this->validated[$field] = $value;
             }
         }
     }
@@ -182,6 +202,35 @@ class Validator
     private function validateRegex(string $field, mixed $value, ?string $params): bool
     {
         return preg_match($params, $value) === 1;
+    }
+
+    private function validateIn(string $field, mixed $value, ?string $params): bool
+    {
+        if ($params === null) {
+            return false;
+        }
+        
+        $allowedValues = explode(',', $params);
+        return in_array($value, $allowedValues);
+    }
+
+    private function validateDate(string $field, mixed $value, ?string $params): bool
+    {
+        if (empty($value)) {
+            return true; // Campos nullable podem ser vazios
+        }
+        
+        $date = \DateTime::createFromFormat('Y-m-d', $value);
+        return $date && $date->format('Y-m-d') === $value;
+    }
+
+    private function validateInteger(string $field, mixed $value, ?string $params): bool
+    {
+        if (empty($value)) {
+            return true; // Campos nullable podem ser vazios
+        }
+        
+        return filter_var($value, FILTER_VALIDATE_INT) !== false;
     }
 
     /**

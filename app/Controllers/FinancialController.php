@@ -14,6 +14,7 @@ use App\Models\CostCenter;
 use App\Models\SubCostCenter;
 use App\Models\Tag;
 use App\Models\Supplier;
+use App\Models\SistemaLog;
 
 /**
  * Controller Financeiro
@@ -48,6 +49,7 @@ class FinancialController extends Controller
         $endDate = $this->request->query('end_date');
         
         // Define datas do período
+        $useDateFilter = true;
         if ($period === 'today') {
             $startDate = date('Y-m-d');
             $endDate = date('Y-m-d');
@@ -57,8 +59,13 @@ class FinancialController extends Controller
         } elseif ($period === 'month') {
             $startDate = date('Y-m-01');
             $endDate = date('Y-m-t');
-        } elseif ($period === 'custom' && $startDate && $endDate) {
-            // Usa as datas fornecidas
+        } elseif ($period === 'custom') {
+            if ($startDate && $endDate) {
+                // Usa as datas fornecidas
+            } else {
+                // Se for custom mas não tiver datas, não filtra por data
+                $useDateFilter = false;
+            }
         } else {
             $startDate = date('Y-m-01');
             $endDate = date('Y-m-t');
@@ -69,11 +76,14 @@ class FinancialController extends Controller
         $whereConditions = ["`user_id` = ?"];
         $params = [$userId];
         
-        $whereConditions[] = "`competence_date` >= ?";
-        $params[] = $startDate;
-        
-        $whereConditions[] = "`competence_date` <= ?";
-        $params[] = $endDate;
+        // Aplica filtro de data apenas se necessário
+        if ($useDateFilter) {
+            $whereConditions[] = "`competence_date` >= ?";
+            $params[] = $startDate;
+            
+            $whereConditions[] = "`competence_date` <= ?";
+            $params[] = $endDate;
+        }
         
         // Aplica filtros
         if ($type !== 'all') {
@@ -339,6 +349,17 @@ class FinancialController extends Controller
                 }
             }
             
+            // Registra log
+            $dadosAnteriores = $entry->original ?? [];
+            SistemaLog::registrar(
+                'financial_entries',
+                'UPDATE',
+                $entry->id,
+                "Lançamento atualizado: {$entry->description} - R$ " . number_format((float)$entry->value, 2, ',', '.'),
+                $dadosAnteriores,
+                $entry->toArray()
+            );
+            
             session()->flash('success', 'Lançamento atualizado com sucesso!');
             $this->redirect('/financial');
             
@@ -362,6 +383,10 @@ class FinancialController extends Controller
             $this->redirect('/financial');
         }
 
+        // Debug: verifica o que está sendo recebido
+        $allInput = $this->request->all();
+        error_log("Dados recebidos no store: " . print_r($allInput, true));
+        
         $data = $this->validate([
             'type' => 'required|in:entrada,saida,transferencia',
             'description' => 'required',
@@ -376,12 +401,34 @@ class FinancialController extends Controller
             'cost_center_id' => 'nullable|integer',
             'sub_cost_center_id' => 'nullable|integer',
             'observations' => 'nullable',
-            'is_recurring' => 'nullable|boolean',
+            'is_recurring' => 'nullable',
             'recurrence_type' => 'nullable|in:mensal,semanal,diario,anual',
-            'is_installment' => 'nullable|boolean',
+            'recurrence_end_date' => 'nullable|date',
+            'is_installment' => 'nullable',
             'total_installments' => 'nullable|integer|min:1',
             'release_date' => 'nullable|date'
         ]);
+        
+        // Normaliza checkbox (verifica tanto no $data quanto no input direto)
+        $isRecurringInput = $this->request->input('is_recurring');
+        $data['is_recurring'] = ($isRecurringInput === '1' || $isRecurringInput === 1 || $isRecurringInput === true || (isset($data['is_recurring']) && ($data['is_recurring'] === '1' || $data['is_recurring'] === 1 || $data['is_recurring'] === true)));
+        
+        $isInstallmentInput = $this->request->input('is_installment');
+        $data['is_installment'] = ($isInstallmentInput === '1' || $isInstallmentInput === 1 || $isInstallmentInput === true || (isset($data['is_installment']) && ($data['is_installment'] === '1' || $data['is_installment'] === 1 || $data['is_installment'] === true)));
+        
+        // Se recurrence_type não veio no validated, pega direto do request (fallback)
+        if (!isset($data['recurrence_type']) || $data['recurrence_type'] === null) {
+            $data['recurrence_type'] = $this->request->input('recurrence_type');
+        }
+        
+        // Se recurrence_end_date não veio no validated, pega direto do request (fallback)
+        if (!isset($data['recurrence_end_date']) || $data['recurrence_end_date'] === null) {
+            $data['recurrence_end_date'] = $this->request->input('recurrence_end_date');
+        }
+        
+        error_log("is_recurring normalizado: " . ($data['is_recurring'] ? 'true' : 'false'));
+        error_log("recurrence_type: " . ($data['recurrence_type'] ?? 'null'));
+        error_log("recurrence_end_date: " . ($data['recurrence_end_date'] ?? 'null'));
 
         try {
             $userId = auth()->getDataUserId();
@@ -401,9 +448,10 @@ class FinancialController extends Controller
                 'cost_center_id' => $data['cost_center_id'] ?? null,
                 'sub_cost_center_id' => $data['sub_cost_center_id'] ?? null,
                 'observations' => $data['observations'] ?? null,
-                'is_recurring' => $data['is_recurring'] ?? false,
+                'is_recurring' => $data['is_recurring'] ? 1 : 0, // Converte para inteiro para salvar no banco
                 'recurrence_type' => $data['recurrence_type'] ?? null,
-                'is_installment' => $data['is_installment'] ?? false,
+                'recurrence_end_date' => $data['recurrence_end_date'] ?? null,
+                'is_installment' => $data['is_installment'] ? 1 : 0, // Converte para inteiro para salvar no banco
                 'total_installments' => $data['total_installments'] ?? null,
                 'release_date' => $data['release_date'] ?? null,
                 'responsible_user_id' => $userId,
@@ -431,10 +479,13 @@ class FinancialController extends Controller
             
             // Se já está pago/recebido
             if ($this->request->input('is_paid') || $this->request->input('is_received')) {
-                $entryData['is_paid'] = $data['type'] === 'saida';
-                $entryData['is_received'] = $data['type'] === 'entrada';
+                $entryData['is_paid'] = $data['type'] === 'saida' ? 1 : 0;
+                $entryData['is_received'] = $data['type'] === 'entrada' ? 1 : 0;
                 $entryData['payment_date'] = $this->request->input('payment_date') ?? date('Y-m-d');
                 $entryData['paid_value'] = $data['value'];
+            } else {
+                $entryData['is_paid'] = 0;
+                $entryData['is_received'] = 0;
             }
             
             // Cria o lançamento
@@ -465,14 +516,29 @@ class FinancialController extends Controller
             }
             
             // Se for recorrente, cria os próximos lançamentos
+            error_log("Verificando recorrência - is_recurring: " . ($entry->is_recurring ? 'true' : 'false') . ", recurrence_type: " . ($entry->recurrence_type ?? 'null'));
+            
             if ($entry->is_recurring && $entry->recurrence_type) {
+                error_log("Chamando createRecurringEntries para entry ID: " . $entry->id);
                 $this->createRecurringEntries($entry);
+            } else {
+                error_log("NÃO chamou createRecurringEntries - is_recurring: " . ($entry->is_recurring ? 'true' : 'false') . ", recurrence_type: " . ($entry->recurrence_type ?? 'null'));
             }
             
             // Se for parcelado, cria as parcelas
             if ($entry->is_installment && $entry->total_installments > 1) {
                 $this->createInstallments($entry);
             }
+            
+            // Registra log
+            SistemaLog::registrar(
+                'financial_entries',
+                'CREATE',
+                $entry->id,
+                "Lançamento criado: {$entry->description} - R$ " . number_format((float)$entry->value, 2, ',', '.'),
+                null,
+                $entry->toArray()
+            );
             
             session()->flash('success', 'Lançamento cadastrado com sucesso!');
             $this->redirect('/financial');
@@ -505,6 +571,38 @@ class FinancialController extends Controller
         $count = 0;
         $maxEntries = 120; // Limite de segurança
         
+        // Prepara dados base do lançamento recorrente
+        $baseData = [
+            'type' => $parent->type,
+            'description' => $parent->description,
+            'value' => $parent->value,
+            'bank_account_id' => $parent->bank_account_id,
+            'credit_card_id' => $parent->credit_card_id,
+            'supplier_id' => $parent->supplier_id,
+            'client_id' => $parent->client_id ?? null,
+            'category_id' => $parent->category_id,
+            'subcategory_id' => $parent->subcategory_id,
+            'cost_center_id' => $parent->cost_center_id,
+            'sub_cost_center_id' => $parent->sub_cost_center_id,
+            'observations' => $parent->observations,
+            'release_date' => $parent->release_date,
+            'is_recurring' => false, // Os lançamentos filhos não são recorrentes
+            'recurrence_type' => null,
+            'is_installment' => false,
+            'parent_entry_id' => $parent->id,
+            'is_paid' => false,
+            'is_received' => false,
+            'payment_date' => null,
+            'paid_value' => null,
+            'fees' => 0,
+            'interest' => 0,
+            'user_id' => $parent->user_id,
+            'responsible_user_id' => $parent->responsible_user_id ?? $parent->user_id
+        ];
+        
+        // Debug: log para verificar se está entrando no método
+        error_log("Criando lançamentos recorrentes. Tipo: {$recurrenceType}, Data inicial: {$parent->competence_date}, Data final: {$endDate}");
+        
         while ($currentDate <= $endDateTime && $count < $maxEntries) {
             $currentDate->add($interval);
             
@@ -512,20 +610,21 @@ class FinancialController extends Controller
                 break;
             }
             
-            $entryData = $parent->toArray();
-            unset($entryData['id'], $entryData['created_at'], $entryData['updated_at']);
-            
+            $entryData = $baseData;
             $entryData['competence_date'] = $currentDate->format('Y-m-d');
             $entryData['due_date'] = $currentDate->format('Y-m-d');
-            $entryData['parent_entry_id'] = $parent->id;
-            $entryData['is_paid'] = false;
-            $entryData['is_received'] = false;
-            $entryData['payment_date'] = null;
-            $entryData['paid_value'] = null;
             
-            FinancialEntry::create($entryData);
-            $count++;
+            try {
+                $created = FinancialEntry::create($entryData);
+                error_log("Lançamento recorrente criado: ID {$created->id}, Data: {$entryData['competence_date']}");
+                $count++;
+            } catch (\Exception $e) {
+                // Log do erro mas continua criando os próximos
+                error_log("Erro ao criar lançamento recorrente: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+            }
         }
+        
+        error_log("Total de lançamentos recorrentes criados: {$count}");
     }
     
     /**
@@ -599,7 +698,18 @@ class FinancialController extends Controller
             $updateData['is_received'] = true;
         }
         
+        $dadosAnteriores = $entry->toArray();
         $entry->update($updateData);
+        
+        // Registra log
+        SistemaLog::registrar(
+            'financial_entries',
+            'UPDATE',
+            $entry->id,
+            "Lançamento marcado como pago/recebido: {$entry->description}",
+            $dadosAnteriores,
+            $entry->toArray()
+        );
         
         json_response([
             'success' => true,
@@ -624,12 +734,265 @@ class FinancialController extends Controller
             json_response(['success' => false, 'message' => 'Lançamento não encontrado'], 404);
         }
 
+        $dadosAnteriores = $entry->toArray();
         $entry->unmarkAsPaid();
+        
+        // Registra log
+        SistemaLog::registrar(
+            'financial_entries',
+            'UPDATE',
+            $entry->id,
+            "Lançamento desmarcado como pago/recebido: {$entry->description}",
+            $dadosAnteriores,
+            $entry->toArray()
+        );
         
         json_response([
             'success' => true,
             'message' => 'Lançamento atualizado com sucesso'
         ]);
+    }
+    
+    // ==================== FORNECEDORES ====================
+    
+    /**
+     * Lista fornecedores
+     */
+    public function suppliers(): string
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        $userId = auth()->getDataUserId();
+        $suppliers = Supplier::where('user_id', $userId)->get();
+        
+        return $this->view('financial/suppliers/index', [
+            'title' => 'Fornecedores',
+            'suppliers' => $suppliers
+        ]);
+    }
+    
+    /**
+     * Exibe formulário de criação de fornecedor
+     */
+    public function createSupplier(): string
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        return $this->view('financial/suppliers/create', [
+            'title' => 'Novo Fornecedor'
+        ]);
+    }
+    
+    /**
+     * Salva novo fornecedor
+     */
+    public function storeSupplier(): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/financial/suppliers');
+        }
+
+        $data = $this->validate([
+            'name' => 'required',
+            'fantasy_name' => 'nullable',
+            'cnpj' => 'nullable',
+            'email' => 'nullable|email',
+            'phone' => 'nullable',
+            'address' => 'nullable',
+            'additional_info' => 'nullable',
+            'is_client' => 'nullable|boolean',
+            'receives_invoice' => 'nullable|boolean',
+            'issues_invoice' => 'nullable|boolean'
+        ]);
+
+        try {
+            $userId = auth()->getDataUserId();
+            
+            $supplier = Supplier::create([
+                'name' => $data['name'],
+                'fantasy_name' => $data['fantasy_name'] ?? null,
+                'cnpj' => $data['cnpj'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'additional_info' => $data['additional_info'] ?? null,
+                'is_client' => $data['is_client'] ?? false,
+                'receives_invoice' => $data['receives_invoice'] ?? false,
+                'issues_invoice' => $data['issues_invoice'] ?? false,
+                'user_id' => $userId
+            ]);
+            
+            // Registra log
+            SistemaLog::registrar(
+                'suppliers',
+                'CREATE',
+                $supplier->id,
+                "Fornecedor criado: {$supplier->name}",
+                null,
+                $supplier->toArray()
+            );
+            
+            session()->flash('success', 'Fornecedor cadastrado com sucesso!');
+            $this->redirect('/financial/suppliers');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao cadastrar fornecedor: ' . $e->getMessage());
+            $this->redirect('/financial/suppliers/create');
+        }
+    }
+    
+    /**
+     * Exibe formulário de edição de fornecedor
+     */
+    public function editSupplier(array $params): string
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        $userId = auth()->getDataUserId();
+        $supplier = Supplier::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$supplier) {
+            session()->flash('error', 'Fornecedor não encontrado.');
+            $this->redirect('/financial/suppliers');
+        }
+        
+        return $this->view('financial/suppliers/edit', [
+            'title' => 'Editar Fornecedor',
+            'supplier' => $supplier
+        ]);
+    }
+    
+    /**
+     * Atualiza fornecedor
+     */
+    public function updateSupplier(array $params): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/financial/suppliers');
+        }
+
+        $userId = auth()->getDataUserId();
+        $supplier = Supplier::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$supplier) {
+            session()->flash('error', 'Fornecedor não encontrado.');
+            $this->redirect('/financial/suppliers');
+        }
+
+        $data = $this->validate([
+            'name' => 'required',
+            'fantasy_name' => 'nullable',
+            'cnpj' => 'nullable',
+            'email' => 'nullable|email',
+            'phone' => 'nullable',
+            'address' => 'nullable',
+            'additional_info' => 'nullable',
+            'is_client' => 'nullable|boolean',
+            'receives_invoice' => 'nullable|boolean',
+            'issues_invoice' => 'nullable|boolean'
+        ]);
+
+        try {
+            $dadosAnteriores = $supplier->toArray();
+            
+            $supplier->update([
+                'name' => $data['name'],
+                'fantasy_name' => $data['fantasy_name'] ?? null,
+                'cnpj' => $data['cnpj'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'additional_info' => $data['additional_info'] ?? null,
+                'is_client' => $data['is_client'] ?? false,
+                'receives_invoice' => $data['receives_invoice'] ?? false,
+                'issues_invoice' => $data['issues_invoice'] ?? false
+            ]);
+            
+            // Registra log
+            SistemaLog::registrar(
+                'suppliers',
+                'UPDATE',
+                $supplier->id,
+                "Fornecedor atualizado: {$supplier->name}",
+                $dadosAnteriores,
+                $supplier->toArray()
+            );
+            
+            session()->flash('success', 'Fornecedor atualizado com sucesso!');
+            $this->redirect('/financial/suppliers');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao atualizar fornecedor: ' . $e->getMessage());
+            $this->redirect('/financial/suppliers/' . $params['id'] . '/edit');
+        }
+    }
+    
+    /**
+     * Exclui fornecedor
+     */
+    public function deleteSupplier(array $params): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/financial/suppliers');
+        }
+
+        $userId = auth()->getDataUserId();
+        $supplier = Supplier::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$supplier) {
+            session()->flash('error', 'Fornecedor não encontrado.');
+            $this->redirect('/financial/suppliers');
+        }
+
+        try {
+            $nome = $supplier->name;
+            
+            // Registra log antes de excluir
+            SistemaLog::registrar(
+                'suppliers',
+                'DELETE',
+                $supplier->id,
+                "Fornecedor excluído: {$nome}",
+                $supplier->toArray(),
+                null
+            );
+            
+            $supplier->delete();
+            
+            session()->flash('success', 'Fornecedor excluído com sucesso!');
+            $this->redirect('/financial/suppliers');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao excluir fornecedor: ' . $e->getMessage());
+            $this->redirect('/financial/suppliers');
+        }
     }
     
     // ==================== CONTAS BANCÁRIAS ====================
@@ -1346,6 +1709,218 @@ class FinancialController extends Controller
             json_response([
                 'success' => false,
                 'message' => 'Erro ao cadastrar subcentro: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Exclui um lançamento
+     */
+    public function delete(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+        }
+
+        $requestData = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $requestData['_csrf_token'] ?? '';
+        
+        if (!verify_csrf($csrfToken)) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $entry = FinancialEntry::where('id', $params['id'])
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$entry) {
+                json_response(['success' => false, 'message' => 'Lançamento não encontrado'], 404);
+            }
+            
+            $cancelDependencies = $requestData['cancel_dependencies'] ?? false;
+            
+            // Se deve cancelar dependências (parcelas/recorrências)
+            if ($cancelDependencies) {
+                // Exclui todas as parcelas/recorrências relacionadas
+                if ($entry->is_recurring || $entry->is_installment) {
+                    // Exclui lançamentos filhos (parcelas ou recorrências)
+                    $db = \Core\Database::getInstance();
+                    $db->execute(
+                        "DELETE FROM financial_entries WHERE parent_entry_id = ? AND user_id = ?",
+                        [$entry->id, $userId]
+                    );
+                }
+                
+                // Se este é um lançamento filho, exclui todos os irmãos também
+                if ($entry->parent_entry_id) {
+                    $parent = FinancialEntry::find($entry->parent_entry_id);
+                    if ($parent && $parent->user_id == $userId) {
+                        // Exclui todos os filhos do pai
+                        $db = \Core\Database::getInstance();
+                        $db->execute(
+                            "DELETE FROM financial_entries WHERE parent_entry_id = ? AND user_id = ?",
+                            [$parent->id, $userId]
+                        );
+                        // Exclui o pai também
+                        $parent->delete();
+                    }
+                }
+            } else {
+                // Se não deve cancelar dependências, apenas exclui este lançamento
+                // Mas se for um lançamento pai, não permite excluir sem cancelar dependências
+                if ($entry->is_recurring || $entry->is_installment) {
+                    // Verifica se tem filhos
+                    $db = \Core\Database::getInstance();
+                    $children = $db->query(
+                        "SELECT COUNT(*) as count FROM financial_entries WHERE parent_entry_id = ? AND user_id = ?",
+                        [$entry->id, $userId]
+                    );
+                    
+                    if ($children && $children[0]['count'] > 0) {
+                        json_response([
+                            'success' => false,
+                            'message' => 'Este lançamento possui parcelas/recorrências. Selecione a opção de cancelar dependências.'
+                        ], 400);
+                    }
+                }
+            }
+            
+            // Remove tags associadas
+            $entry->removeAllTags();
+            
+            // Registra log antes de excluir
+            SistemaLog::registrar(
+                'financial_entries',
+                'DELETE',
+                $entry->id,
+                "Lançamento excluído: {$entry->description} - R$ " . number_format((float)$entry->value, 2, ',', '.') . ($cancelDependencies ? ' (com dependências)' : ''),
+                $entry->toArray(),
+                null
+            );
+            
+            // Exclui o lançamento
+            $entry->delete();
+            
+            json_response([
+                'success' => true,
+                'message' => 'Lançamento excluído com sucesso!'
+            ]);
+            
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao excluir lançamento: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Exclui múltiplos lançamentos
+     */
+    public function bulkDelete(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+
+            $requestData = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$requestData) {
+                json_response(['success' => false, 'message' => 'Dados inválidos'], 400);
+                return;
+            }
+            
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $requestData['_csrf_token'] ?? '';
+            
+            if (!verify_csrf($csrfToken)) {
+                json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+                return;
+            }
+
+            $userId = auth()->getDataUserId();
+            $ids = $requestData['ids'] ?? [];
+            
+            if (empty($ids) || !is_array($ids)) {
+                json_response(['success' => false, 'message' => 'Nenhum lançamento selecionado'], 400);
+                return;
+            }
+            
+            // Converte IDs para inteiros
+            $ids = array_map('intval', $ids);
+            $ids = array_filter($ids, fn($id) => $id > 0);
+            
+            if (empty($ids)) {
+                json_response(['success' => false, 'message' => 'IDs inválidos'], 400);
+                return;
+            }
+            
+            $deleted = 0;
+            $errors = [];
+            $db = \Core\Database::getInstance();
+            
+            // Busca todos os lançamentos de uma vez
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $entries = $db->query(
+                "SELECT * FROM financial_entries WHERE id IN ({$placeholders}) AND user_id = ?",
+                array_merge($ids, [$userId])
+            );
+            
+            foreach ($entries as $entryData) {
+                $entry = FinancialEntry::newInstance($entryData, true);
+                
+                try {
+                    // Remove tags
+                    $entry->removeAllTags();
+                    
+                    // Registra log antes de excluir
+                    SistemaLog::registrar(
+                        'financial_entries',
+                        'DELETE',
+                        $entry->id,
+                        "Lançamento excluído (lote): {$entry->description} - R$ " . number_format((float)$entry->value, 2, ',', '.'),
+                        $entry->toArray(),
+                        null
+                    );
+                    
+                    // Exclui o lançamento
+                    if ($entry->delete()) {
+                        $deleted++;
+                    } else {
+                        $errors[] = "Erro ao excluir lançamento ID {$entry->id}";
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = "Erro ao excluir lançamento ID {$entry->id}: " . $e->getMessage();
+                }
+            }
+            
+            if ($deleted > 0) {
+                json_response([
+                    'success' => true,
+                    'message' => "{$deleted} lançamento(s) excluído(s) com sucesso!",
+                    'deleted' => $deleted,
+                    'errors' => $errors
+                ]);
+            } else {
+                json_response([
+                    'success' => false,
+                    'message' => 'Nenhum lançamento foi excluído',
+                    'errors' => $errors
+                ], 400);
+            }
+            
+        } catch (\Exception $e) {
+            error_log("Erro em bulkDelete: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao excluir lançamentos: ' . $e->getMessage()
             ], 500);
         }
     }

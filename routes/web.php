@@ -31,6 +31,9 @@ $router->get('/', function() {
 // Rota pública do Quiz (aceita parâmetros ?u=USER_ID ou ?token=TOKEN)
 $router->get('/quiz', [LeadController::class, 'quiz']);
 
+// API pública para buscar origens (usa token)
+$router->get('/api/leads/origens', [LeadController::class, 'getOrigens']);
+
 // Rota para gerar link único do quiz (protegida)
 $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], function($router) {
     $router->get('/leads/generate-link', [LeadController::class, 'generateQuizLink']);
@@ -95,16 +98,33 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/leads/create', [LeadController::class, 'create']);
     $router->post('/leads', [LeadController::class, 'store']);
     $router->get('/leads/{id}', [LeadController::class, 'show']);
+    $router->get('/leads/{id}/edit-modal', [LeadController::class, 'editModal']);
+    $router->post('/leads/{id}/update', [LeadController::class, 'update']);
+    $router->post('/leads/update-etapa-funil', [LeadController::class, 'updateEtapaFunil']);
+    $router->post('/leads/update-responsible', [LeadController::class, 'updateResponsible']);
     $router->post('/leads/update-status', [LeadController::class, 'updateStatus']);
     $router->post('/leads/{id}/reanalyze', [LeadController::class, 'reanalyze']);
+    $router->post('/leads/{id}/convert-to-client', [LeadController::class, 'convertToClient']);
     $router->post('/leads/generate-quiz-link', [LeadController::class, 'generateQuizLink']);
+    
+    // Clientes
+    $router->get('/clients', [\App\Controllers\ClientController::class, 'index']);
+    $router->get('/clients/create', [\App\Controllers\ClientController::class, 'create']);
+    $router->post('/clients', [\App\Controllers\ClientController::class, 'store']);
+    $router->get('/clients/{id}', [\App\Controllers\ClientController::class, 'show']);
+    $router->get('/clients/{id}/details', [\App\Controllers\ClientController::class, 'details']);
+    $router->get('/clients/{id}/edit', [\App\Controllers\ClientController::class, 'edit']);
+    $router->post('/clients/{id}', [\App\Controllers\ClientController::class, 'update']);
+    $router->post('/clients/{id}/delete', [\App\Controllers\ClientController::class, 'destroy']);
     
     // Módulo Financeiro
     $router->get('/financial', [FinancialController::class, 'index']);
     $router->get('/financial/create', [FinancialController::class, 'create']);
     $router->post('/financial', [FinancialController::class, 'store']);
+    $router->post('/financial/bulk-delete', [FinancialController::class, 'bulkDelete']); // Deve vir antes das rotas com {id}
     $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
     $router->post('/financial/{id}', [FinancialController::class, 'update']);
+    $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
     $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
     $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
     
@@ -117,6 +137,14 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/credit-cards', [FinancialController::class, 'creditCards']);
     $router->get('/financial/credit-cards/create', [FinancialController::class, 'createCreditCard']);
     $router->post('/financial/credit-cards', [FinancialController::class, 'storeCreditCard']);
+    
+    // Fornecedores
+    $router->get('/financial/suppliers', [FinancialController::class, 'suppliers']);
+    $router->get('/financial/suppliers/create', [FinancialController::class, 'createSupplier']);
+    $router->post('/financial/suppliers', [FinancialController::class, 'storeSupplier']);
+    $router->get('/financial/suppliers/{id}/edit', [FinancialController::class, 'editSupplier']);
+    $router->post('/financial/suppliers/{id}', [FinancialController::class, 'updateSupplier']);
+    $router->post('/financial/suppliers/{id}/delete', [FinancialController::class, 'deleteSupplier']);
     
     // Categorias
     $router->get('/financial/categories', [FinancialController::class, 'categories']);

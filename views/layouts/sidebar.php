@@ -78,6 +78,12 @@
                         <span class="hide-menu">Centros de Custo</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/suppliers'); ?>">
+                        <span><i class="ti ti-truck"></i></span>
+                        <span class="hide-menu">Fornecedores</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- CRM de Leads -->
@@ -90,6 +96,12 @@
                     <a class="sidebar-link" href="<?php echo url('/leads'); ?>">
                         <span><i class="ti ti-address-book"></i></span>
                         <span class="hide-menu">Leads</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/clients'); ?>">
+                        <span><i class="ti ti-user"></i></span>
+                        <span class="hide-menu">Clientes</span>
                     </a>
                 </li>
                 <?php endif; ?>

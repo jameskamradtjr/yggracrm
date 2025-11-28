@@ -17,14 +17,14 @@ ob_start();
                 </div>
 
                 <div class="row">
-                    <!-- Card 1 - Usuários -->
+                    <!-- Card 1 - Total de Leads -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card border-bottom border-primary">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <h4 class="card-title fw-semibold"><?php echo $total_users ?? 0; ?></h4>
-                                        <p class="card-subtitle">Usuários</p>
+                                        <h4 class="card-title fw-semibold"><?php echo $lead_stats['total_leads'] ?? 0; ?></h4>
+                                        <p class="card-subtitle">Total de Leads</p>
                                     </div>
                                     <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(93, 135, 255, 0.1);">
                                         <i class="ti ti-users fs-6 text-primary"></i>
@@ -34,57 +34,102 @@ ob_start();
                         </div>
                     </div>
 
-                    <!-- Card 2 - Roles -->
+                    <!-- Card 2 - Oportunidades -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card border-bottom border-success">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <h4 class="card-title fw-semibold"><?php echo count($user_roles ?? []); ?></h4>
-                                        <p class="card-subtitle">Minhas Roles</p>
+                                        <h4 class="card-title fw-semibold"><?php echo $lead_stats['total_oportunidades'] ?? 0; ?></h4>
+                                        <p class="card-subtitle">Oportunidades</p>
                                     </div>
                                     <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(19, 194, 150, 0.1);">
-                                        <i class="ti ti-shield fs-6 text-success"></i>
+                                        <i class="ti ti-briefcase fs-6 text-success"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Card 3 - Status -->
+                    <!-- Card 3 - Valor Total -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card border-bottom border-warning">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <h4 class="card-title fw-semibold text-capitalize"><?php echo $user->status ?? 'Ativo'; ?></h4>
-                                        <p class="card-subtitle">Status da Conta</p>
+                                        <h4 class="card-title fw-semibold">R$ <?php echo number_format($lead_stats['valor_total'] ?? 0, 2, ',', '.'); ?></h4>
+                                        <p class="card-subtitle">Valor Total</p>
                                     </div>
                                     <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255, 180, 0, 0.1);">
-                                        <i class="ti ti-check fs-6 text-warning"></i>
+                                        <i class="ti ti-currency-dollar fs-6 text-warning"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Card 4 - Atividade -->
+                    <!-- Card 4 - Valor Médio -->
                     <div class="col-md-6 col-lg-3">
-                        <div class="card border-bottom border-danger">
+                        <div class="card border-bottom border-info">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <h4 class="card-title fw-semibold">0</h4>
-                                        <p class="card-subtitle">Atividades Hoje</p>
+                                        <h4 class="card-title fw-semibold">R$ <?php echo number_format($lead_stats['valor_medio'] ?? 0, 2, ',', '.'); ?></h4>
+                                        <p class="card-subtitle">Valor Médio</p>
                                     </div>
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255, 102, 146, 0.1);">
-                                        <i class="ti ti-activity fs-6 text-danger"></i>
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(13, 202, 240, 0.1);">
+                                        <i class="ti ti-chart-line fs-6 text-info"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Estatísticas por Etapa do Funil -->
+                <?php if (!empty($lead_stats['por_etapa'])): ?>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="ti ti-chart-bar me-2"></i>
+                                    Oportunidades por Etapa do Funil
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <?php 
+                                    $etapas = [
+                                        'interessados' => ['nome' => 'Interessados', 'cor' => 'primary'],
+                                        'negociacao_proposta' => ['nome' => 'Negociação e Proposta', 'cor' => 'warning'],
+                                        'fechamento' => ['nome' => 'Fechamento', 'cor' => 'success'],
+                                        'perdidos' => ['nome' => 'Perdidos', 'cor' => 'danger']
+                                    ];
+                                    foreach ($etapas as $key => $etapa): 
+                                        $stats = $lead_stats['por_etapa'][$key] ?? ['total' => 0, 'valor' => 0];
+                                    ?>
+                                    <div class="col-md-6 col-lg-3 mb-3">
+                                        <div class="card border-<?php echo $etapa['cor']; ?>">
+                                            <div class="card-body">
+                                                <h6 class="text-<?php echo $etapa['cor']; ?> mb-2"><?php echo $etapa['nome']; ?></h6>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <p class="mb-0"><strong><?php echo $stats['total']; ?></strong> leads</p>
+                                                        <p class="mb-0 text-muted small">R$ <?php echo number_format($stats['valor'], 2, ',', '.'); ?></p>
+                                                    </div>
+                                                    <i class="ti ti-arrow-right fs-4 text-<?php echo $etapa['cor']; ?>"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <!-- Informações do Usuário -->
                 <div class="row mt-4">

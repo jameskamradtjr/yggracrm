@@ -56,5 +56,66 @@ class DashboardController extends Controller
         // TODO: Implementar sistema de logs/atividades
         return [];
     }
+
+    /**
+     * Retorna estatísticas de leads e oportunidades
+     */
+    private function getLeadStats(int $userId): array
+    {
+        $db = \Core\Database::getInstance();
+        
+        // Total de leads
+        $totalLeads = $db->query(
+            "SELECT COUNT(*) as total FROM leads WHERE user_id = ?",
+            [$userId]
+        )[0]['total'] ?? 0;
+        
+        // Total de oportunidades (leads com valor)
+        $totalOportunidades = $db->query(
+            "SELECT COUNT(*) as total FROM leads WHERE user_id = ? AND valor_oportunidade IS NOT NULL AND valor_oportunidade > 0",
+            [$userId]
+        )[0]['total'] ?? 0;
+        
+        // Valor total das oportunidades
+        $valorTotal = $db->query(
+            "SELECT COALESCE(SUM(valor_oportunidade), 0) as total FROM leads WHERE user_id = ? AND valor_oportunidade IS NOT NULL AND valor_oportunidade > 0",
+            [$userId]
+        )[0]['total'] ?? 0;
+        
+        // Valor médio das oportunidades
+        $valorMedio = $totalOportunidades > 0 ? ($valorTotal / $totalOportunidades) : 0;
+        
+        // Leads por etapa do funil
+        $leadsPorEtapa = $db->query(
+            "SELECT etapa_funil, COUNT(*) as total, COALESCE(SUM(valor_oportunidade), 0) as valor_total 
+             FROM leads 
+             WHERE user_id = ? 
+             GROUP BY etapa_funil",
+            [$userId]
+        );
+        
+        $etapas = [
+            'interessados' => ['total' => 0, 'valor' => 0],
+            'negociacao_proposta' => ['total' => 0, 'valor' => 0],
+            'fechamento' => ['total' => 0, 'valor' => 0],
+            'perdidos' => ['total' => 0, 'valor' => 0]
+        ];
+        
+        foreach ($leadsPorEtapa as $etapa) {
+            $etapaNome = $etapa['etapa_funil'] ?? 'interessados';
+            if (isset($etapas[$etapaNome])) {
+                $etapas[$etapaNome]['total'] = (int)$etapa['total'];
+                $etapas[$etapaNome]['valor'] = (float)$etapa['valor_total'];
+            }
+        }
+        
+        return [
+            'total_leads' => (int)$totalLeads,
+            'total_oportunidades' => (int)$totalOportunidades,
+            'valor_total' => (float)$valorTotal,
+            'valor_medio' => (float)$valorMedio,
+            'por_etapa' => $etapas
+        ];
+    }
 }
 

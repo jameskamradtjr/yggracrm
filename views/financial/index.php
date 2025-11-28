@@ -69,7 +69,7 @@ ob_start();
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Período</label>
-                            <select name="period" class="form-select">
+                            <select name="period" class="form-select" id="period_select">
                                 <option value="today" <?php echo ($filters['period'] ?? '') === 'today' ? 'selected' : ''; ?>>Hoje</option>
                                 <option value="week" <?php echo ($filters['period'] ?? '') === 'week' ? 'selected' : ''; ?>>Esta Semana</option>
                                 <option value="month" <?php echo ($filters['period'] ?? 'month') === 'month' ? 'selected' : ''; ?>>Este Mês</option>
@@ -84,13 +84,35 @@ ob_start();
                             </button>
                         </div>
                     </div>
+                    <!-- Campos de data personalizada (aparecem quando período é "Personalizado") -->
+                    <div class="row g-3 mt-2" id="custom_date_fields" style="display: <?php echo ($filters['period'] ?? '') === 'custom' ? 'flex' : 'none'; ?>;">
+                        <div class="col-md-3">
+                            <label class="form-label">Data Inicial</label>
+                            <input type="date" name="start_date" class="form-control" value="<?php echo $filters['start_date'] ?? ''; ?>">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Data Final</label>
+                            <input type="date" name="end_date" class="form-control" value="<?php echo $filters['end_date'] ?? ''; ?>">
+                        </div>
+                    </div>
                 </form>
+
+                <!-- Botão de exclusão múltipla -->
+                <div class="mb-3" id="bulk-actions" style="display: none;">
+                    <button type="button" class="btn btn-danger" onclick="deleteSelected()">
+                        <i class="ti ti-trash me-2"></i>
+                        Excluir Selecionados (<span id="selected-count">0</span>)
+                    </button>
+                </div>
 
                 <!-- Lista de Lançamentos -->
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                                </th>
                                 <th>Data</th>
                                 <th>Descrição</th>
                                 <th>Categoria</th>
@@ -103,7 +125,7 @@ ob_start();
                         <tbody>
                             <?php if (empty($entries)): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         <i class="ti ti-inbox fs-1 d-block mb-2"></i>
                                         Nenhum lançamento encontrado
                                     </td>
@@ -111,6 +133,9 @@ ob_start();
                             <?php else: ?>
                                 <?php foreach ($entries as $entry): ?>
                                     <tr>
+                                        <td>
+                                            <input type="checkbox" class="entry-checkbox" value="<?php echo $entry->id; ?>" onchange="updateSelectedCount()">
+                                        </td>
                                         <td><?php echo date('d/m/Y', strtotime($entry->competence_date)); ?></td>
                                         <td><?php echo e($entry->description); ?></td>
                                         <td>
@@ -171,6 +196,9 @@ ob_start();
                                                         <i class="ti ti-x"></i>
                                                     </button>
                                                 <?php endif; ?>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteEntry(<?php echo $entry->id; ?>, <?php echo ($entry->is_recurring || $entry->is_installment || $entry->parent_entry_id) ? 'true' : 'false'; ?>)" title="Excluir">
+                                                    <i class="ti ti-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -185,6 +213,128 @@ ob_start();
 </div>
 
 <script>
+// Mostra/oculta campos de data quando período muda
+document.getElementById('period_select').addEventListener('change', function() {
+    const period = this.value;
+    const customDateFields = document.getElementById('custom_date_fields');
+    
+    if (period === 'custom') {
+        customDateFields.style.display = 'flex';
+    } else {
+        customDateFields.style.display = 'none';
+    }
+});
+
+// Seleção múltipla
+function toggleSelectAll() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.entry-checkbox:checked');
+    const count = checked.length;
+    document.getElementById('selected-count').textContent = count;
+    document.getElementById('bulk-actions').style.display = count > 0 ? 'block' : 'none';
+}
+
+function deleteSelected() {
+    const checked = document.querySelectorAll('.entry-checkbox:checked');
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    
+    if (ids.length === 0) {
+        alert('Selecione pelo menos um lançamento para excluir.');
+        return;
+    }
+    
+    if (confirm(`Deseja realmente excluir ${ids.length} lançamento(s)?`)) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        fetch('<?php echo url('/financial/bulk-delete'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ 
+                ids: ids,
+                _csrf_token: csrfToken
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch {
+                        throw new Error('Resposta inválida do servidor');
+                    }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir lançamentos: ' + error.message);
+        });
+    }
+}
+
+function deleteEntry(id, hasDependencies) {
+    if (hasDependencies) {
+        const cancelDeps = confirm('Este lançamento possui parcelas ou recorrências.\n\nDeseja cancelar todas as parcelas/recorrências também?\n\nOK = Sim, cancelar tudo\nCancelar = Não, excluir apenas este');
+        
+        if (!confirm('Deseja realmente excluir este lançamento?')) {
+            return;
+        }
+        
+        fetch(`<?php echo url('/financial'); ?>/${id}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ cancel_dependencies: cancelDeps })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        });
+    } else {
+        if (confirm('Deseja realmente excluir este lançamento?')) {
+            fetch(`<?php echo url('/financial'); ?>/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ cancel_dependencies: false })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            });
+        }
+    }
+}
+
 function markAsPaid(id) {
     if (confirm('Marcar como pago/recebido?')) {
         fetch(`<?php echo url('/financial'); ?>/${id}/mark-paid`, {

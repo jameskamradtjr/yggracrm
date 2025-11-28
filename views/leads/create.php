@@ -28,6 +28,27 @@ ob_start();
                             <h5 class="mb-3">Informações Básicas</h5>
                             
                             <div class="mb-3">
+                                <label for="client_id" class="form-label">Cliente Existente (Opcional)</label>
+                                <select class="form-select" id="client_id" name="client_id" onchange="preencherDadosCliente()">
+                                    <option value="">Selecione um cliente existente ou cadastre novo</option>
+                                    <?php if (!empty($clients)): ?>
+                                        <?php foreach ($clients as $client): ?>
+                                            <option value="<?php echo $client->id; ?>" 
+                                                    data-nome="<?php echo e($client->nome_razao_social); ?>"
+                                                    data-email="<?php echo e($client->email ?? ''); ?>"
+                                                    data-telefone="<?php echo e($client->telefone ?? ''); ?>">
+                                                <?php echo e($client->nome_razao_social); ?>
+                                                <?php if ($client->email): ?>
+                                                    (<?php echo e($client->email); ?>)
+                                                <?php endif; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <small class="text-muted">Se selecionar um cliente, os campos abaixo serão preenchidos automaticamente. Se não selecionar, um novo cliente será criado automaticamente.</small>
+                            </div>
+                            
+                            <div class="mb-3">
                                 <label for="nome" class="form-label">Nome Completo <span class="text-danger">*</span></label>
                                 <input type="text" 
                                        class="form-control" 
@@ -121,6 +142,19 @@ ob_start();
                             </div>
 
                             <div class="mb-3">
+                                <label for="valor_oportunidade" class="form-label">Valor da Oportunidade (R$)</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="valor_oportunidade" 
+                                       name="valor_oportunidade" 
+                                       value="<?php echo old('valor_oportunidade'); ?>" 
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00">
+                                <small class="text-muted">Valor estimado da oportunidade de negócio</small>
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="objetivo" class="form-label">Objetivo Principal</label>
                                 <textarea class="form-control" 
                                           id="objetivo" 
@@ -149,6 +183,34 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+function preencherDadosCliente() {
+    const select = document.getElementById('client_id');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value) {
+        // Preenche os campos com os dados do cliente selecionado
+        document.getElementById('nome').value = selectedOption.getAttribute('data-nome') || '';
+        document.getElementById('email').value = selectedOption.getAttribute('data-email') || '';
+        document.getElementById('telefone').value = selectedOption.getAttribute('data-telefone') || '';
+        
+        // Desabilita os campos (mas mantém required para validação)
+        document.getElementById('nome').readOnly = true;
+        document.getElementById('email').readOnly = true;
+        document.getElementById('telefone').readOnly = true;
+    } else {
+        // Limpa e habilita os campos
+        document.getElementById('nome').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('telefone').value = '';
+        
+        document.getElementById('nome').readOnly = false;
+        document.getElementById('email').readOnly = false;
+        document.getElementById('telefone').readOnly = false;
+    }
+}
+</script>
 
 <?php
 $content = ob_get_clean();
