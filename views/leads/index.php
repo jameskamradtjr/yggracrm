@@ -467,14 +467,34 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function abrirEdicaoLead(leadId) {
+    if (!leadId) {
+        alert('ID do lead não informado.');
+        return;
+    }
+    
+    // Mostra loading
+    document.getElementById('editLeadModalBody').innerHTML = '<div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></div>';
+    
+    const modal = new bootstrap.Modal(document.getElementById('editLeadModal'));
+    modal.show();
+    
     fetch('<?php echo url('/leads'); ?>/' + leadId + '/edit-modal', {
         method: 'GET',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            'Accept': 'text/html'
         }
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro ao carregar: ' + response.status);
+        }
+        return response.text();
+    })
     .then(html => {
+        if (!html || html.trim() === '') {
+            throw new Error('Resposta vazia do servidor');
+        }
+        
         document.getElementById('editLeadModalBody').innerHTML = html;
         
         // Busca o nome do lead do atributo data ou do campo input
@@ -494,14 +514,79 @@ function abrirEdicaoLead(leadId) {
             modalTitle.textContent = nomeLead ? `Editar Lead: ${nomeLead}` : 'Editar Lead';
         }
         
-        const modal = new bootstrap.Modal(document.getElementById('editLeadModal'));
-        modal.show();
+        // Re-executa scripts dentro do HTML carregado (se houver)
+        const scripts = document.getElementById('editLeadModalBody').querySelectorAll('script');
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
     })
     .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao carregar dados do lead.');
+        console.error('Erro ao carregar lead:', error);
+        document.getElementById('editLeadModalBody').innerHTML = `
+            <div class="alert alert-danger">
+                <h6>Erro ao carregar dados do lead</h6>
+                <p class="mb-0">${error.message}</p>
+                <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="bootstrap.Modal.getInstance(document.getElementById('editLeadModal')).hide()">Fechar</button>
+            </div>
+        `;
     });
 }
+
+// Função global para salvar lead (será chamada pelo formulário carregado via AJAX)
+window.salvarLead = function(event, leadId) {
+    event.preventDefault();
+    
+    if (!leadId) {
+        alert('ID do lead não informado.');
+        return;
+    }
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    
+    fetch('<?php echo url('/leads'); ?>/' + leadId + '/update', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na requisição: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('editLeadModal'));
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.message || 'Erro desconhecido'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao salvar lead:', error);
+        alert('Erro ao salvar lead: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+};
 </script>
 <?php
 $scripts = ob_get_clean();

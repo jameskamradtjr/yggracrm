@@ -51,8 +51,9 @@
             <label class="form-label">Valor da Oportunidade (R$)</label>
             <div class="input-group">
                 <span class="input-group-text">R$</span>
-                <input type="number" name="valor_oportunidade" class="form-control" value="<?php echo $lead->valor_oportunidade ?? 0; ?>" step="0.01" min="0">
+                <input type="number" name="valor_oportunidade" class="form-control" value="<?php echo $lead->valor_oportunidade ?? ''; ?>" step="0.01" min="0" placeholder="0.00">
             </div>
+            <small class="text-muted">Deixe vazio para remover o valor</small>
         </div>
         
         <div class="col-md-6 mb-3">
@@ -76,32 +77,53 @@
 </form>
 
 <script>
-function salvarLead(event, leadId) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    
-    fetch('<?php echo url('/leads'); ?>/' + leadId + '/update', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('editLeadModal')).hide();
-            location.reload();
-        } else {
-            alert('Erro: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao salvar lead.');
-    });
+// A função salvarLead está definida globalmente em views/leads/index.php
+// Se não estiver disponível, define localmente
+if (typeof window.salvarLead !== 'function') {
+    window.salvarLead = function(event, leadId) {
+        event.preventDefault();
+        
+        const form = event.target;
+        const formData = new FormData(form);
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+        
+        fetch('<?php echo url('/leads'); ?>/' + leadId + '/update', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na requisição: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('editLeadModal'));
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.message || 'Erro desconhecido'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao salvar lead:', error);
+            alert('Erro ao salvar lead: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    };
 }
 </script>
 

@@ -1022,11 +1022,22 @@ Dados do lead:
         ]);
 
         try {
+            // Trata valor_oportunidade: se foi enviado e é numérico, salva (pode ser 0 para limpar)
+            $valorOportunidade = null;
+            if (isset($data['valor_oportunidade'])) {
+                $valor = trim((string)$data['valor_oportunidade']);
+                if ($valor !== '' && is_numeric($valor)) {
+                    $valorFloat = (float)$valor;
+                    // Permite salvar 0 ou valores positivos
+                    $valorOportunidade = $valorFloat >= 0 ? $valorFloat : null;
+                }
+            }
+            
             $lead->update([
                 'nome' => $data['nome'],
                 'email' => $data['email'],
                 'telefone' => $data['telefone'],
-                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
+                'valor_oportunidade' => $valorOportunidade,
                 'etapa_funil' => $data['etapa_funil'] ?? $lead->etapa_funil,
                 'responsible_user_id' => !empty($data['responsible_user_id']) ? (int)$data['responsible_user_id'] : null,
                 'origem' => $data['origem'] ?? $lead->origem
