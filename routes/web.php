@@ -117,6 +117,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/clients/{id}', [\App\Controllers\ClientController::class, 'update']);
     $router->post('/clients/{id}/delete', [\App\Controllers\ClientController::class, 'destroy']);
     
+    // Projetos
+    $router->get('/projects', [\App\Controllers\ProjectController::class, 'index']);
+    $router->get('/projects/create', [\App\Controllers\ProjectController::class, 'create']);
+    $router->post('/projects', [\App\Controllers\ProjectController::class, 'store']);
+    $router->get('/projects/{id}', [\App\Controllers\ProjectController::class, 'show']);
+    $router->get('/projects/{id}/edit', [\App\Controllers\ProjectController::class, 'edit']);
+    $router->post('/projects/{id}', [\App\Controllers\ProjectController::class, 'update']);
+    $router->post('/projects/{id}/delete', [\App\Controllers\ProjectController::class, 'destroy']);
+    
     // Módulo Financeiro
     $router->get('/financial', [FinancialController::class, 'index']);
     $router->get('/financial/create', [FinancialController::class, 'create']);

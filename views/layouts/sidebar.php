@@ -104,6 +104,12 @@
                         <span class="hide-menu">Clientes</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/projects'); ?>">
+                        <span><i class="ti ti-briefcase"></i></span>
+                        <span class="hide-menu">Projetos</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- Usuários -->
