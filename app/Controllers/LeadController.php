@@ -191,7 +191,8 @@ class LeadController extends Controller
                 'plataforma_app' => 'required',
                 'ramo' => 'nullable',
                 'objetivo' => 'nullable',
-                'origem_conheceu' => 'nullable'
+                'origem_conheceu' => 'nullable',
+                'valor_oportunidade' => 'nullable|numeric|min:0'
             ]);
 
             if (!$validator->passes()) {
@@ -315,7 +316,7 @@ class LeadController extends Controller
                 'investimento_software' => $data['investimento_software'] ?? null,
                 'tipo_sistema' => $data['tipo_sistema'] ?? null,
                 'plataforma_app' => $data['plataforma_app'] ?? null,
-                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'tags_ai' => $tagsAi,
                 'score_potencial' => $aiAnalysis['score_potencial'] ?? 0,
                 'urgencia' => $aiAnalysis['urgencia'] ?? 'baixa',
@@ -788,13 +789,15 @@ Dados do lead:
             'nome' => 'required',
             'email' => 'required|email',
             'telefone' => 'required',
-            'faturamento' => 'required',
-            'investimento' => 'required',
+            'tem_software' => 'required|in:sim,nao',
+            'investimento_software' => 'required|in:5k,10k,25k,50k,50k+',
+            'tipo_sistema' => 'required|in:interno,cliente,saas',
+            'plataforma_app' => 'required|in:ios_android,ios,android,nenhum',
             'valor_oportunidade' => 'nullable|numeric|min:0',
             'instagram' => 'nullable',
             'ramo' => 'nullable',
             'objetivo' => 'nullable',
-            'faz_trafego' => 'nullable'
+            'origem_conheceu' => 'nullable'
         ]);
 
         try {
@@ -848,14 +851,15 @@ Dados do lead:
                 }
             }
 
-            // Prepara dados para Gemini
+            // Prepara dados para Gemini (mesmo formato do quiz)
             $promptData = [
-                'faturamento' => $data['faturamento'],
-                'investimento' => $data['investimento'],
-                'instagram' => $data['instagram'] ?? '',
+                'tem_software' => $data['tem_software'] ?? false,
+                'investimento_software' => $data['investimento_software'] ?? '',
+                'tipo_sistema' => $data['tipo_sistema'] ?? '',
+                'plataforma_app' => $data['plataforma_app'] ?? '',
                 'ramo' => $data['ramo'] ?? '',
                 'objetivo' => $data['objetivo'] ?? '',
-                'faz_trafego' => isset($data['faz_trafego']) && $data['faz_trafego'] === 'sim' ? 'sim' : 'não'
+                'origem_conheceu' => $data['origem_conheceu'] ?? ''
             ];
 
             // Chama Gemini para classificação (usa API key do usuário logado)
@@ -876,20 +880,19 @@ Dados do lead:
                 'telefone' => $data['telefone'],
                 'instagram' => $data['instagram'] ?? null,
                 'ramo' => $data['ramo'] ?? null,
-                'faturamento_raw' => $data['faturamento'],
-                'faturamento_categoria' => $aiAnalysis['faturamento_categoria'] ?? null,
-                'invest_raw' => $data['investimento'],
-                'invest_categoria' => $aiAnalysis['invest_categoria'] ?? null,
-                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
+                'tem_software' => isset($data['tem_software']) && ($data['tem_software'] === true || $data['tem_software'] === 'sim'),
+                'investimento_software' => $data['investimento_software'] ?? null,
+                'tipo_sistema' => $data['tipo_sistema'] ?? null,
+                'plataforma_app' => $data['plataforma_app'] ?? null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'objetivo' => $data['objetivo'] ?? null,
-                'faz_trafego' => isset($data['faz_trafego']) && $data['faz_trafego'] === 'sim',
                 'tags_ai' => $tagsAi,
                 'score_potencial' => $aiAnalysis['score_potencial'] ?? 0,
                 'urgencia' => $aiAnalysis['urgencia'] ?? 'baixa',
                 'resumo' => $aiAnalysis['resumo'] ?? null,
-                'status_kanban' => $this->getStatusByFaturamento($aiAnalysis['faturamento_categoria'] ?? '0-10k'),
                 'etapa_funil' => 'interessados',
                 'origem' => 'cadastro_manual',
+                'origem_conheceu' => $data['origem_conheceu'] ?? null,
                 'user_id' => $userId
             ];
 
@@ -970,7 +973,10 @@ Dados do lead:
         // Renderiza apenas o conteúdo do modal
         $viewFile = base_path('views/leads/_edit_modal.php');
         if (file_exists($viewFile)) {
+            // Inclui o nome do lead em um atributo data para facilitar o acesso via JavaScript
+            echo '<div data-lead-nome="' . htmlspecialchars($lead->nome, ENT_QUOTES, 'UTF-8') . '">';
             include $viewFile;
+            echo '</div>';
         } else {
             echo '<p>Erro ao carregar formulário de edição.</p>';
         }
@@ -1020,7 +1026,7 @@ Dados do lead:
                 'nome' => $data['nome'],
                 'email' => $data['email'],
                 'telefone' => $data['telefone'],
-                'valor_oportunidade' => isset($data['valor_oportunidade']) && $data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'etapa_funil' => $data['etapa_funil'] ?? $lead->etapa_funil,
                 'responsible_user_id' => !empty($data['responsible_user_id']) ? (int)$data['responsible_user_id'] : null,
                 'origem' => $data['origem'] ?? $lead->origem

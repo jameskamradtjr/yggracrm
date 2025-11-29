@@ -122,29 +122,31 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/create', [FinancialController::class, 'create']);
     $router->post('/financial', [FinancialController::class, 'store']);
     $router->post('/financial/bulk-delete', [FinancialController::class, 'bulkDelete']); // Deve vir antes das rotas com {id}
-    $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
-    $router->post('/financial/{id}', [FinancialController::class, 'update']);
-    $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
-    $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
-    $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
     
-    // Contas Bancárias
+    // Contas Bancárias (rotas específicas antes das genéricas)
     $router->get('/financial/bank-accounts', [FinancialController::class, 'bankAccounts']);
     $router->get('/financial/bank-accounts/create', [FinancialController::class, 'createBankAccount']);
     $router->post('/financial/bank-accounts', [FinancialController::class, 'storeBankAccount']);
     
-    // Cartões de Crédito
+    // Cartões de Crédito (rotas específicas antes das genéricas)
     $router->get('/financial/credit-cards', [FinancialController::class, 'creditCards']);
     $router->get('/financial/credit-cards/create', [FinancialController::class, 'createCreditCard']);
     $router->post('/financial/credit-cards', [FinancialController::class, 'storeCreditCard']);
     
-    // Fornecedores
+    // Fornecedores (rotas específicas antes das genéricas)
     $router->get('/financial/suppliers', [FinancialController::class, 'suppliers']);
     $router->get('/financial/suppliers/create', [FinancialController::class, 'createSupplier']);
     $router->post('/financial/suppliers', [FinancialController::class, 'storeSupplier']);
     $router->get('/financial/suppliers/{id}/edit', [FinancialController::class, 'editSupplier']);
     $router->post('/financial/suppliers/{id}', [FinancialController::class, 'updateSupplier']);
     $router->post('/financial/suppliers/{id}/delete', [FinancialController::class, 'deleteSupplier']);
+    
+    // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
+    $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
+    $router->post('/financial/{id}', [FinancialController::class, 'update']);
+    $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
+    $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
+    $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
     
     // Categorias
     $router->get('/financial/categories', [FinancialController::class, 'categories']);

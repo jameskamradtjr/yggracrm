@@ -15,5 +15,11 @@ class Supplier extends Model
         'name', 'fantasy_name', 'cnpj', 'email', 'phone', 'address',
         'additional_info', 'is_client', 'receives_invoice', 'issues_invoice', 'user_id'
     ];
+    
+    protected array $casts = [
+        'is_client' => 'boolean',
+        'receives_invoice' => 'boolean',
+        'issues_invoice' => 'boolean'
+    ];
 }
 

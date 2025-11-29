@@ -476,6 +476,24 @@ function abrirEdicaoLead(leadId) {
     .then(response => response.text())
     .then(html => {
         document.getElementById('editLeadModalBody').innerHTML = html;
+        
+        // Busca o nome do lead do atributo data ou do campo input
+        const nomeContainer = document.querySelector('#editLeadModalBody [data-lead-nome]');
+        const nomeInput = document.querySelector('#editLeadModalBody input[name="nome"]');
+        
+        let nomeLead = '';
+        if (nomeContainer) {
+            nomeLead = nomeContainer.getAttribute('data-lead-nome') || '';
+        } else if (nomeInput) {
+            nomeLead = nomeInput.value.trim();
+        }
+        
+        // Atualiza o título do modal
+        const modalTitle = document.getElementById('editLeadModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = nomeLead ? `Editar Lead: ${nomeLead}` : 'Editar Lead';
+        }
+        
         const modal = new bootstrap.Modal(document.getElementById('editLeadModal'));
         modal.show();
     })

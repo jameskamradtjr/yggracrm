@@ -801,33 +801,47 @@ class FinancialController extends Controller
             $this->redirect('/financial/suppliers');
         }
 
-        $data = $this->validate([
-            'name' => 'required',
-            'fantasy_name' => 'nullable',
-            'cnpj' => 'nullable',
-            'email' => 'nullable|email',
-            'phone' => 'nullable',
-            'address' => 'nullable',
-            'additional_info' => 'nullable',
-            'is_client' => 'nullable|boolean',
-            'receives_invoice' => 'nullable|boolean',
-            'issues_invoice' => 'nullable|boolean'
-        ]);
+        try {
+            $data = $this->validate([
+                'name' => 'required',
+                'fantasy_name' => 'nullable',
+                'cnpj' => 'nullable',
+                'email' => 'nullable|email',
+                'phone' => 'nullable',
+                'address' => 'nullable',
+                'additional_info' => 'nullable',
+                'is_client' => 'nullable',
+                'receives_invoice' => 'nullable',
+                'issues_invoice' => 'nullable'
+            ]);
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro na validação: ' . $e->getMessage());
+            session()->flash('old', $this->request->all());
+            $this->redirect('/financial/suppliers/create');
+            return;
+        }
 
         try {
             $userId = auth()->getDataUserId();
             
+            // Converte checkboxes para boolean
+            // Quando checkbox não está marcado, pode vir como "0" (string) ou não existir
+            // Quando está marcado, vem como "1" (string)
+            $isClient = isset($data['is_client']) && ($data['is_client'] === '1' || $data['is_client'] === 1 || $data['is_client'] === true);
+            $receivesInvoice = isset($data['receives_invoice']) && ($data['receives_invoice'] === '1' || $data['receives_invoice'] === 1 || $data['receives_invoice'] === true);
+            $issuesInvoice = isset($data['issues_invoice']) && ($data['issues_invoice'] === '1' || $data['issues_invoice'] === 1 || $data['issues_invoice'] === true);
+            
             $supplier = Supplier::create([
-                'name' => $data['name'],
-                'fantasy_name' => $data['fantasy_name'] ?? null,
-                'cnpj' => $data['cnpj'] ?? null,
-                'email' => $data['email'] ?? null,
-                'phone' => $data['phone'] ?? null,
-                'address' => $data['address'] ?? null,
-                'additional_info' => $data['additional_info'] ?? null,
-                'is_client' => $data['is_client'] ?? false,
-                'receives_invoice' => $data['receives_invoice'] ?? false,
-                'issues_invoice' => $data['issues_invoice'] ?? false,
+                'name' => trim($data['name']),
+                'fantasy_name' => !empty($data['fantasy_name']) ? trim($data['fantasy_name']) : null,
+                'cnpj' => !empty($data['cnpj']) ? trim($data['cnpj']) : null,
+                'email' => !empty($data['email']) ? trim($data['email']) : null,
+                'phone' => !empty($data['phone']) ? trim($data['phone']) : null,
+                'address' => !empty($data['address']) ? trim($data['address']) : null,
+                'additional_info' => !empty($data['additional_info']) ? trim($data['additional_info']) : null,
+                'is_client' => $isClient ? 1 : 0,
+                'receives_invoice' => $receivesInvoice ? 1 : 0,
+                'issues_invoice' => $issuesInvoice ? 1 : 0,
                 'user_id' => $userId
             ]);
             
@@ -845,7 +859,9 @@ class FinancialController extends Controller
             $this->redirect('/financial/suppliers');
             
         } catch (\Exception $e) {
+            error_log("Erro ao cadastrar fornecedor: " . $e->getMessage() . "\n" . $e->getTraceAsString());
             session()->flash('error', 'Erro ao cadastrar fornecedor: ' . $e->getMessage());
+            session()->flash('old', $this->request->all());
             $this->redirect('/financial/suppliers/create');
         }
     }

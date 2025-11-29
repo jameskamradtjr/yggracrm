@@ -100,45 +100,83 @@ ob_start();
                             </div>
                         </div>
 
-                        <!-- Informações de Negócio -->
+                        <!-- Informações de Software -->
                         <div class="col-md-6">
-                            <h5 class="mb-3">Informações de Negócio</h5>
+                            <h5 class="mb-3">Informações de Software</h5>
                             
                             <div class="mb-3">
-                                <label for="faturamento" class="form-label">Faturamento Atual <span class="text-danger">*</span></label>
-                                <select class="form-select" id="faturamento" name="faturamento" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="0-10k" <?php echo old('faturamento') === '0-10k' ? 'selected' : ''; ?>>Até R$ 10.000/mês</option>
-                                    <option value="10-50k" <?php echo old('faturamento') === '10-50k' ? 'selected' : ''; ?>>R$ 10.000 - R$ 50.000/mês</option>
-                                    <option value="50-200k" <?php echo old('faturamento') === '50-200k' ? 'selected' : ''; ?>>R$ 50.000 - R$ 200.000/mês</option>
-                                    <option value="200k+" <?php echo old('faturamento') === '200k+' ? 'selected' : ''; ?>>Acima de R$ 200.000/mês</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="investimento" class="form-label">Investimento Pretendido <span class="text-danger">*</span></label>
-                                <select class="form-select" id="investimento" name="investimento" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="1k" <?php echo old('investimento') === '1k' ? 'selected' : ''; ?>>Até R$ 1.000/mês</option>
-                                    <option value="3k" <?php echo old('investimento') === '3k' ? 'selected' : ''; ?>>R$ 1.000 - R$ 3.000/mês</option>
-                                    <option value="5k" <?php echo old('investimento') === '5k' ? 'selected' : ''; ?>>R$ 3.000 - R$ 5.000/mês</option>
-                                    <option value="10k" <?php echo old('investimento') === '10k' ? 'selected' : ''; ?>>R$ 5.000 - R$ 10.000/mês</option>
-                                    <option value="10k+" <?php echo old('investimento') === '10k+' ? 'selected' : ''; ?>>Acima de R$ 10.000/mês</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Já faz tráfego pago?</label>
+                                <label class="form-label">Já possui software/sistema? <span class="text-danger">*</span></label>
                                 <div>
                                     <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="faz_trafego" id="faz_trafego_sim" value="sim" <?php echo old('faz_trafego') === 'sim' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="faz_trafego_sim">Sim</label>
+                                        <input class="form-check-input" type="radio" name="tem_software" id="tem_software_sim" value="sim" <?php echo old('tem_software') === 'sim' ? 'checked' : ''; ?> required>
+                                        <label class="form-check-label" for="tem_software_sim">Sim, já tenho</label>
                                     </div>
                                     <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="faz_trafego" id="faz_trafego_nao" value="não" <?php echo old('faz_trafego') === 'não' || old('faz_trafego') === '' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="faz_trafego_nao">Não</label>
+                                        <input class="form-check-input" type="radio" name="tem_software" id="tem_software_nao" value="nao" <?php echo old('tem_software') === 'nao' || old('tem_software') === '' ? 'checked' : ''; ?> required>
+                                        <label class="form-check-label" for="tem_software_nao">Não, ainda não tenho</label>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="investimento_software" class="form-label">Investimento em Software <span class="text-danger">*</span></label>
+                                <select class="form-select" id="investimento_software" name="investimento_software" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="5k" <?php echo old('investimento_software') === '5k' ? 'selected' : ''; ?>>Até R$ 5.000</option>
+                                    <option value="10k" <?php echo old('investimento_software') === '10k' ? 'selected' : ''; ?>>R$ 5.000 - R$ 10.000</option>
+                                    <option value="25k" <?php echo old('investimento_software') === '25k' ? 'selected' : ''; ?>>R$ 10.000 - R$ 25.000</option>
+                                    <option value="50k" <?php echo old('investimento_software') === '50k' ? 'selected' : ''; ?>>R$ 25.000 - R$ 50.000</option>
+                                    <option value="50k+" <?php echo old('investimento_software') === '50k+' ? 'selected' : ''; ?>>Acima de R$ 50.000</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="tipo_sistema" class="form-label">Tipo de Sistema <span class="text-danger">*</span></label>
+                                <select class="form-select" id="tipo_sistema" name="tipo_sistema" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="interno" <?php echo old('tipo_sistema') === 'interno' ? 'selected' : ''; ?>>Sistema para utilização interna da empresa</option>
+                                    <option value="cliente" <?php echo old('tipo_sistema') === 'cliente' ? 'selected' : ''; ?>>Software para um cliente específico</option>
+                                    <option value="saas" <?php echo old('tipo_sistema') === 'saas' ? 'selected' : ''; ?>>SaaS (Software como Serviço) para múltiplos clientes</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="plataforma_app" class="form-label">Plataforma de Aplicativo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="plataforma_app" name="plataforma_app" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="ios_android" <?php echo old('plataforma_app') === 'ios_android' ? 'selected' : ''; ?>>iOS e Android</option>
+                                    <option value="ios" <?php echo old('plataforma_app') === 'ios' ? 'selected' : ''; ?>>Apenas iOS</option>
+                                    <option value="android" <?php echo old('plataforma_app') === 'android' ? 'selected' : ''; ?>>Apenas Android</option>
+                                    <option value="nenhum" <?php echo old('plataforma_app') === 'nenhum' ? 'selected' : ''; ?>>Não preciso de aplicativo</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="origem_conheceu" class="form-label">De onde nos conheceu?</label>
+                                <select class="form-select" id="origem_conheceu" name="origem_conheceu">
+                                    <option value="">Selecione...</option>
+                                    <?php
+                                    // Busca origens do sistema
+                                    $userId = auth()->getDataUserId();
+                                    $origens = \App\Models\LeadOrigin::where('user_id', $userId)->get();
+                                    if (empty($origens)) {
+                                        // Fallback para lista padrão
+                                        $origens = [
+                                            (object)['nome' => 'Google'],
+                                            (object)['nome' => 'Facebook/Instagram'],
+                                            (object)['nome' => 'Indicação'],
+                                            (object)['nome' => 'LinkedIn'],
+                                            (object)['nome' => 'YouTube'],
+                                            (object)['nome' => 'Outro']
+                                        ];
+                                    }
+                                    foreach ($origens as $origem):
+                                    ?>
+                                        <option value="<?php echo e($origem->nome); ?>" <?php echo old('origem_conheceu') === $origem->nome ? 'selected' : ''; ?>>
+                                            <?php echo e($origem->nome); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
 
                             <div class="mb-3">
@@ -160,7 +198,7 @@ ob_start();
                                           id="objetivo" 
                                           name="objetivo" 
                                           rows="4" 
-                                          placeholder="Descreva o objetivo principal com tráfego pago..."><?php echo old('objetivo'); ?></textarea>
+                                          placeholder="Descreva seu objetivo principal com o software..."><?php echo old('objetivo'); ?></textarea>
                             </div>
                         </div>
                     </div>
