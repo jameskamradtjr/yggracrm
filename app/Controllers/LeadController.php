@@ -7,6 +7,7 @@ namespace App\Controllers;
 use Core\Controller;
 use App\Models\Lead;
 use App\Models\SystemSetting;
+use App\Models\SistemaLog;
 
 /**
  * Controller de Leads
@@ -337,6 +338,16 @@ class LeadController extends Controller
             }
 
             $lead = Lead::create($leadData);
+            
+            // Registra log
+            SistemaLog::registrar(
+                'leads',
+                'CREATE',
+                $lead->id,
+                "Lead criado via quiz: {$lead->nome}",
+                null,
+                $lead->toArray()
+            );
 
             $message = 'Lead cadastrado com sucesso!';
             if ($existingClient) {
@@ -902,6 +913,16 @@ Dados do lead:
             }
 
             $lead = Lead::create($leadData);
+            
+            // Registra log
+            SistemaLog::registrar(
+                'leads',
+                'CREATE',
+                $lead->id,
+                "Lead criado: {$lead->nome}",
+                null,
+                $lead->toArray()
+            );
 
             session()->flash('success', 'Lead cadastrado com sucesso!');
             $this->redirect('/leads');
@@ -1033,6 +1054,17 @@ Dados do lead:
                 }
             }
             
+            // Captura dados anteriores para o log
+            $dadosAnteriores = [
+                'nome' => $lead->nome,
+                'email' => $lead->email,
+                'telefone' => $lead->telefone,
+                'valor_oportunidade' => $lead->valor_oportunidade,
+                'etapa_funil' => $lead->etapa_funil,
+                'responsible_user_id' => $lead->responsible_user_id,
+                'origem' => $lead->origem
+            ];
+            
             $lead->update([
                 'nome' => $data['nome'],
                 'email' => $data['email'],
@@ -1042,6 +1074,16 @@ Dados do lead:
                 'responsible_user_id' => !empty($data['responsible_user_id']) ? (int)$data['responsible_user_id'] : null,
                 'origem' => $data['origem'] ?? $lead->origem
             ]);
+            
+            // Registra log
+            SistemaLog::registrar(
+                'leads',
+                'UPDATE',
+                $lead->id,
+                "Lead atualizado: {$lead->nome}",
+                $dadosAnteriores,
+                $lead->toArray()
+            );
 
             json_response([
                 'success' => true,
@@ -1095,7 +1137,18 @@ Dados do lead:
             json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
         }
 
+        $etapaAnterior = $lead->etapa_funil;
         $lead->updateEtapaFunil($etapa);
+        
+        // Registra log
+        SistemaLog::registrar(
+            'leads',
+            'UPDATE',
+            $lead->id,
+            "Etapa do funil alterada de '{$etapaAnterior}' para '{$etapa}' - Lead: {$lead->nome}",
+            ['etapa_funil' => $etapaAnterior],
+            ['etapa_funil' => $etapa]
+        );
 
         json_response([
             'success' => true,
@@ -1138,9 +1191,46 @@ Dados do lead:
             json_response(['success' => false, 'message' => 'Lead não encontrado'], 404);
         }
 
+        $responsibleAnterior = $lead->responsible_user_id;
+        $responsibleNovo = !empty($input['responsible_user_id']) ? (int)$input['responsible_user_id'] : null;
+        
         $lead->update([
-            'responsible_user_id' => !empty($input['responsible_user_id']) ? (int)$input['responsible_user_id'] : null
+            'responsible_user_id' => $responsibleNovo
         ]);
+        
+        // Busca nome do responsável anterior e novo (se houver)
+        $responsibleAnteriorNome = null;
+        $responsibleNovoNome = null;
+        
+        if ($responsibleAnterior) {
+            $userAnterior = \App\Models\User::find($responsibleAnterior);
+            $responsibleAnteriorNome = $userAnterior ? $userAnterior->name : "ID {$responsibleAnterior}";
+        }
+        
+        if ($responsibleNovo) {
+            $userNovo = \App\Models\User::find($responsibleNovo);
+            $responsibleNovoNome = $userNovo ? $userNovo->name : "ID {$responsibleNovo}";
+        }
+        
+        $descricao = "Responsável alterado";
+        if ($responsibleAnteriorNome && $responsibleNovoNome) {
+            $descricao .= " de '{$responsibleAnteriorNome}' para '{$responsibleNovoNome}'";
+        } elseif ($responsibleNovoNome) {
+            $descricao .= " para '{$responsibleNovoNome}'";
+        } elseif ($responsibleAnteriorNome) {
+            $descricao .= " - removido responsável '{$responsibleAnteriorNome}'";
+        }
+        $descricao .= " - Lead: {$lead->nome}";
+        
+        // Registra log
+        SistemaLog::registrar(
+            'leads',
+            'UPDATE',
+            $lead->id,
+            $descricao,
+            ['responsible_user_id' => $responsibleAnterior],
+            ['responsible_user_id' => $responsibleNovo]
+        );
 
         json_response([
             'success' => true,
