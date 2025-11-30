@@ -621,6 +621,153 @@ function excluirCard(cardId) {
         alert('Erro ao excluir card.');
     });
 }
+
+// Time Tracker Functions
+let timersAtivos = {}; // Armazena intervalos de atualização dos timers
+
+// Carrega status do timer para todos os cards ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    // Aguarda um pouco para garantir que os cards foram renderizados
+    setTimeout(() => {
+        const timerDisplays = document.querySelectorAll('.timer-display');
+        timerDisplays.forEach(display => {
+            const cardId = display.getAttribute('data-card-id');
+            if (cardId) {
+                atualizarStatusTimer(cardId);
+            }
+        });
+    }, 500);
+});
+
+// Atualiza status do timer de um card
+function atualizarStatusTimer(cardId) {
+    fetch(`<?php echo url('/projects/kanban/timer/status'); ?>?card_id=${cardId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const startBtn = document.querySelector(`.timer-start-btn[data-card-id="${cardId}"]`);
+            const stopBtn = document.querySelector(`.timer-stop-btn[data-card-id="${cardId}"]`);
+            const display = document.querySelector(`.timer-display[data-card-id="${cardId}"] .timer-total`);
+            
+            if (startBtn && stopBtn && display) {
+                if (data.timer_ativo) {
+                    startBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                    display.textContent = data.tempo_total_formatado + ' (em andamento)';
+                    
+                    // Inicia atualização em tempo real
+                    if (!timersAtivos[cardId]) {
+                        timersAtivos[cardId] = setInterval(() => {
+                            atualizarTempoDecorrido(cardId);
+                        }, 1000);
+                    }
+                } else {
+                    startBtn.style.display = 'inline-block';
+                    stopBtn.style.display = 'none';
+                    display.textContent = data.tempo_total_formatado;
+                    
+                    // Para atualização em tempo real
+                    if (timersAtivos[cardId]) {
+                        clearInterval(timersAtivos[cardId]);
+                        delete timersAtivos[cardId];
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar status do timer:', error);
+    });
+}
+
+// Atualiza tempo decorrido em tempo real
+function atualizarTempoDecorrido(cardId) {
+    fetch(`<?php echo url('/projects/kanban/timer/status'); ?>?card_id=${cardId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.timer_ativo) {
+            const display = document.querySelector(`.timer-display[data-card-id="${cardId}"] .timer-total`);
+            if (display) {
+                const tempoTotal = data.tempo_total + data.tempo_decorrido;
+                display.textContent = formatarTempo(tempoTotal) + ' (em andamento)';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar tempo decorrido:', error);
+    });
+}
+
+// Formata segundos em HH:MM:SS
+function formatarTempo(segundos) {
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const seg = segundos % 60;
+    
+    if (horas > 0) {
+        return `${horas}:${String(minutos).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
+    }
+    return `${minutos}:${String(seg).padStart(2, '0')}`;
+}
+
+// Inicia timer
+function iniciarTimer(cardId) {
+    fetch('<?php echo url('/projects/kanban/timer/start'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ card_id: cardId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            atualizarStatusTimer(cardId);
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao iniciar timer');
+    });
+}
+
+// Para timer
+function pararTimer(cardId) {
+    fetch('<?php echo url('/projects/kanban/timer/stop'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ card_id: cardId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            atualizarStatusTimer(cardId);
+            alert(`Timer parado! Tempo trabalhado: ${data.tempo_formatado}`);
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao parar timer');
+    });
+}
 </script>
 <?php
 $scripts = ob_get_clean();

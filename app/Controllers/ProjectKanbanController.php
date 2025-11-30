@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectCard;
 use App\Models\ProjectCardChecklist;
 use App\Models\ProjectCardTag;
+use App\Models\ProjectCardTimeTracking;
 use App\Models\SistemaLog;
 
 /**
@@ -700,6 +701,214 @@ class ProjectKanbanController extends Controller
         
         // Envolve em div com data attribute para passar o nome
         return '<div data-card-nome="' . e($card->titulo) . '">' . $html . '</div>';
+    }
+    
+    /**
+     * Inicia timer para um card
+     */
+    public function startTimer(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (empty($input)) {
+            $input = $this->request->all();
+        }
+        
+        $validator = new \Core\Validator($input, [
+            'card_id' => 'required|numeric'
+        ]);
+        
+        if (!$validator->passes()) {
+            json_response(['success' => false, 'message' => 'Dados inválidos'], 400);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            $card = ProjectCard::where('id', $input['card_id'])
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$card) {
+                json_response(['success' => false, 'message' => 'Card não encontrado'], 404);
+                return;
+            }
+            
+            // Verifica se já existe um timer ativo para este card e usuário
+            $timerAtivo = ProjectCardTimeTracking::where('card_id', $card->id)
+                ->where('user_id', $userId)
+                ->whereNull('fim')
+                ->first();
+            
+            if ($timerAtivo) {
+                json_response(['success' => false, 'message' => 'Já existe um timer ativo para este card'], 400);
+                return;
+            }
+            
+            // Cria novo timer
+            $timer = ProjectCardTimeTracking::create([
+                'card_id' => $card->id,
+                'user_id' => $userId,
+                'inicio' => date('Y-m-d H:i:s'),
+                'fim' => null,
+                'tempo_segundos' => 0
+            ]);
+            
+            json_response([
+                'success' => true,
+                'message' => 'Timer iniciado!',
+                'timer' => $timer->toArray()
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao iniciar timer: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao iniciar timer: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Para timer de um card
+     */
+    public function stopTimer(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (empty($input)) {
+            $input = $this->request->all();
+        }
+        
+        $validator = new \Core\Validator($input, [
+            'card_id' => 'required|numeric'
+        ]);
+        
+        if (!$validator->passes()) {
+            json_response(['success' => false, 'message' => 'Dados inválidos'], 400);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            $card = ProjectCard::where('id', $input['card_id'])
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$card) {
+                json_response(['success' => false, 'message' => 'Card não encontrado'], 404);
+                return;
+            }
+            
+            // Busca timer ativo
+            $timer = ProjectCardTimeTracking::where('card_id', $card->id)
+                ->where('user_id', $userId)
+                ->whereNull('fim')
+                ->first();
+            
+            if (!$timer) {
+                json_response(['success' => false, 'message' => 'Nenhum timer ativo encontrado'], 404);
+                return;
+            }
+            
+            // Calcula tempo decorrido
+            $inicio = new \DateTime($timer->inicio);
+            $fim = new \DateTime();
+            $diferenca = $fim->getTimestamp() - $inicio->getTimestamp();
+            
+            // Atualiza timer
+            $timer->update([
+                'fim' => $fim->format('Y-m-d H:i:s'),
+                'tempo_segundos' => $diferenca
+            ]);
+            
+            // Calcula tempo total do card
+            $tempoTotal = ProjectCardTimeTracking::tempoTotalCard($card->id);
+            
+            json_response([
+                'success' => true,
+                'message' => 'Timer parado!',
+                'tempo_segundos' => $diferenca,
+                'tempo_formatado' => ProjectCardTimeTracking::formatarSegundos($diferenca),
+                'tempo_total' => $tempoTotal,
+                'tempo_total_formatado' => ProjectCardTimeTracking::formatarSegundos($tempoTotal)
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao parar timer: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao parar timer: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Obtém status do timer e tempo total do card
+     */
+    public function getTimerStatus(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        $cardId = $this->request->query('card_id');
+        if (!$cardId) {
+            json_response(['success' => false, 'message' => 'card_id é obrigatório'], 400);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            $card = ProjectCard::where('id', $cardId)
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$card) {
+                json_response(['success' => false, 'message' => 'Card não encontrado'], 404);
+                return;
+            }
+            
+            // Busca timer ativo
+            $timerAtivo = ProjectCardTimeTracking::where('card_id', $card->id)
+                ->where('user_id', $userId)
+                ->whereNull('fim')
+                ->first();
+            
+            // Calcula tempo total
+            $tempoTotal = ProjectCardTimeTracking::tempoTotalCard($card->id);
+            
+            // Se há timer ativo, adiciona tempo decorrido
+            $tempoDecorrido = 0;
+            if ($timerAtivo) {
+                $inicio = new \DateTime($timerAtivo->inicio);
+                $agora = new \DateTime();
+                $tempoDecorrido = $agora->getTimestamp() - $inicio->getTimestamp();
+            }
+            
+            json_response([
+                'success' => true,
+                'timer_ativo' => $timerAtivo !== null,
+                'timer_inicio' => $timerAtivo ? $timerAtivo->inicio : null,
+                'tempo_total' => $tempoTotal,
+                'tempo_total_formatado' => ProjectCardTimeTracking::formatarSegundos($tempoTotal),
+                'tempo_decorrido' => $tempoDecorrido,
+                'tempo_decorrido_formatado' => ProjectCardTimeTracking::formatarSegundos($tempoDecorrido)
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao obter status do timer: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao obter status: ' . $e->getMessage()], 500);
+        }
     }
 }
 

@@ -122,6 +122,30 @@ $responsible = $card->responsible();
                     </small>
                 </div>
             <?php endif; ?>
+            
+            <!-- Time Tracker -->
+            <div class="mt-2" onclick="event.stopPropagation();">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" 
+                            class="btn btn-sm btn-success timer-start-btn" 
+                            data-card-id="<?php echo $card->id; ?>"
+                            onclick="iniciarTimer(<?php echo $card->id; ?>)"
+                            style="display: none;">
+                        <i class="ti ti-player-play me-1"></i>Iniciar
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm btn-danger timer-stop-btn" 
+                            data-card-id="<?php echo $card->id; ?>"
+                            onclick="pararTimer(<?php echo $card->id; ?>)"
+                            style="display: none;">
+                        <i class="ti ti-player-stop me-1"></i>Parar
+                    </button>
+                    <small class="text-muted timer-display" data-card-id="<?php echo $card->id; ?>">
+                        <i class="ti ti-clock me-1"></i>
+                        <span class="timer-total">Carregando...</span>
+                    </small>
+                </div>
+            </div>
         </div>
     </div>
 </div>
