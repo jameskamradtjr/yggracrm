@@ -253,6 +253,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         },
         eventClassNames: function ({ event: calendarEvent }) {
+            // Se for um timer, mantém a classe timer-ativo
+            if (calendarEvent._def.extendedProps.tipo === 'timer') {
+                return ['timer-ativo'];
+            }
             const getColorValue = calendarsEvents[calendarEvent._def.extendedProps.calendar] || 'primary';
             return ["event-fc-color fc-bg-" + getColorValue];
         },
@@ -269,10 +273,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     calendar.render();
     
-    // Atualiza eventos de timer a cada 30 segundos
+    // Atualiza eventos de timer a cada 30 segundos para mostrar timers ativos
     setInterval(function() {
         calendar.refetchEvents();
     }, 30000);
+    
+    // Atualiza mais frequentemente quando há timers ativos (a cada 10 segundos)
+    let timerUpdateInterval = setInterval(function() {
+        // Verifica se há timers ativos e atualiza o calendário
+        fetch('<?php echo url('/projects/kanban/timer/active'); ?>', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.total_timers > 0) {
+                // Se há timers ativos, atualiza o calendário para mostrar o tempo atualizado
+                calendar.refetchEvents();
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar timers:', error);
+        });
+    }, 10000);
+    
+    // Atualiza imediatamente ao carregar a página para mostrar timers ativos
+    setTimeout(function() {
+        calendar.refetchEvents();
+    }, 1000);
 
     // Abre modal de evento
     function openEventModal(eventId, startDate, endDate, eventObj) {

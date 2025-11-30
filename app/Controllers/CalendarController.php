@@ -101,43 +101,95 @@ class CalendarController extends Controller
         // Adiciona eventos de timer ativo
         $userId = auth()->getDataUserId();
         $db = \Core\Database::getInstance();
-        $timersAtivos = $db->query(
-            "SELECT t.*, c.titulo as card_titulo, p.titulo as project_titulo 
-             FROM project_card_time_tracking t
-             INNER JOIN project_cards c ON c.id = t.card_id
-             LEFT JOIN projects p ON p.id = c.project_id
-             WHERE t.user_id = ? AND t.fim IS NULL",
-            [$userId]
-        );
+        $timersAtivos = [];
         
-        foreach ($timersAtivos as $timer) {
-            $inicio = new \DateTime($timer['inicio']);
-            $agora = new \DateTime();
+        try {
+            $timersAtivos = $db->query(
+                "SELECT t.*, c.titulo as card_titulo, p.titulo as project_titulo 
+                 FROM project_card_time_tracking t
+                 INNER JOIN project_cards c ON c.id = t.card_id
+                 LEFT JOIN projects p ON p.id = c.project_id
+                 WHERE t.user_id = ? AND t.fim IS NULL",
+                [$userId]
+            );
             
-            // Calcula tempo decorrido
-            $tempoDecorrido = $agora->getTimestamp() - $inicio->getTimestamp();
-            $horas = floor($tempoDecorrido / 3600);
-            $minutos = floor(($tempoDecorrido % 3600) / 60);
-            $tempoFormatado = sprintf('%02d:%02d', $horas, $minutos);
-            
-            $fcEvents[] = [
-                'id' => 'timer_' . $timer['id'],
-                'title' => '⏱️ ' . ($timer['card_titulo'] ?? 'Timer Ativo') . ($timer['project_titulo'] ? ' - ' . $timer['project_titulo'] : '') . ' (' . $tempoFormatado . ')',
-                'start' => $inicio->format('Y-m-d\TH:i:s'),
-                'end' => $agora->format('Y-m-d\TH:i:s'),
-                'color' => '#28a745',
-                'backgroundColor' => '#28a745',
-                'borderColor' => '#28a745',
-                'textColor' => '#ffffff',
-                'extendedProps' => [
-                    'tipo' => 'timer',
-                    'timer_id' => $timer['id'],
-                    'card_id' => $timer['card_id']
-                ],
-                'editable' => false,
-                'allDay' => false,
-                'classNames' => ['timer-ativo']
-            ];
+            foreach ($timersAtivos as $timer) {
+                $inicio = new \DateTime($timer['inicio']);
+                $agora = new \DateTime();
+                
+                // Verifica se o timer está dentro do período solicitado
+                if ($start) {
+                    $periodStart = new \DateTime($start);
+                    $periodEnd = new \DateTime($end ?? '9999-12-31');
+                    
+                    // Se o timer começou antes do fim do período e ainda está ativo (ou termina depois do início)
+                    if ($inicio > $periodEnd) {
+                        continue; // Timer começou depois do período
+                    }
+                }
+                
+                // Calcula tempo decorrido
+                $tempoDecorrido = $agora->getTimestamp() - $inicio->getTimestamp();
+                $horas = floor($tempoDecorrido / 3600);
+                $minutos = floor(($tempoDecorrido % 3600) / 60);
+                $segundos = $tempoDecorrido % 60;
+                
+                // Formata tempo: HH:MM:SS ou MM:SS se menos de 1 hora
+                if ($horas > 0) {
+                    $tempoFormatado = sprintf('%d:%02d:%02d', $horas, $minutos, $segundos);
+                } else {
+                    $tempoFormatado = sprintf('%d:%02d', $minutos, $segundos);
+                }
+                
+                // Título do evento
+                $titulo = '⏱️ Trabalhando: ' . ($timer['card_titulo'] ?? 'Timer Ativo');
+                if ($timer['project_titulo']) {
+                    $titulo .= ' (' . $timer['project_titulo'] . ')';
+                }
+                $titulo .= ' - ' . $tempoFormatado;
+                
+                // Formata data de início no formato ISO para FullCalendar
+                $startStr = $inicio->format('Y-m-d\TH:i:s');
+                
+                // Para o end, usa o momento atual ou o fim do período, o que for menor
+                // Isso garante que o evento seja visível no calendário
+                $endStr = $agora->format('Y-m-d\TH:i:s');
+                if ($end) {
+                    $periodEnd = new \DateTime($end);
+                    if ($agora > $periodEnd) {
+                        $endStr = $periodEnd->format('Y-m-d\TH:i:s');
+                    }
+                }
+                
+                $fcEvents[] = [
+                    'id' => 'timer_' . $timer['id'],
+                    'title' => $titulo,
+                    'start' => $startStr,
+                    'end' => $endStr,
+                    'color' => '#28a745',
+                    'backgroundColor' => '#28a745',
+                    'borderColor' => '#28a745',
+                    'textColor' => '#ffffff',
+                    'extendedProps' => [
+                        'tipo' => 'timer',
+                        'timer_id' => $timer['id'],
+                        'card_id' => $timer['card_id'],
+                        'card_titulo' => $timer['card_titulo'] ?? 'Timer Ativo',
+                        'project_titulo' => $timer['project_titulo'] ?? null
+                    ],
+                    'editable' => false,
+                    'allDay' => false,
+                    'classNames' => ['timer-ativo'],
+                    'display' => 'block'
+                ];
+            }
+        } catch (\Exception $e) {
+            error_log("Erro ao buscar timers ativos para calendário: " . $e->getMessage());
+        }
+        
+        // Log para debug (remover em produção se necessário)
+        if (!empty($timersAtivos)) {
+            error_log("Timers ativos encontrados para calendário: " . count($timersAtivos));
         }
 
         json_response($fcEvents);

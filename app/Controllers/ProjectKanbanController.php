@@ -831,12 +831,58 @@ class ProjectKanbanController extends Controller
                 'tempo_segundos' => $diferenca
             ]);
             
+            // Cria evento no calendário com o tempo trabalhado
+            try {
+                $project = $card->project();
+                $tempoFormatado = ProjectCardTimeTracking::formatarSegundos($diferenca);
+                
+                // Título do evento
+                $titulo = '⏱️ Trabalhado: ' . $card->titulo;
+                if ($project) {
+                    $titulo .= ' (' . $project->titulo . ')';
+                }
+                $titulo .= ' - ' . $tempoFormatado;
+                
+                // Descrição com detalhes
+                $descricao = "Tempo trabalhado no card: {$card->titulo}\n";
+                if ($project) {
+                    $descricao .= "Projeto: {$project->titulo}\n";
+                }
+                $descricao .= "Tempo: {$tempoFormatado}";
+                
+                // Cria evento no calendário
+                $calendarEvent = \App\Models\CalendarEvent::create([
+                    'user_id' => $userId,
+                    'titulo' => $titulo,
+                    'descricao' => $descricao,
+                    'data_inicio' => $inicio->format('Y-m-d H:i:s'),
+                    'data_fim' => $fim->format('Y-m-d H:i:s'),
+                    'cor' => 'success', // Verde para indicar tempo trabalhado
+                    'dia_inteiro' => false,
+                    'project_id' => $card->project_id,
+                    'observacoes' => "Evento criado automaticamente pelo time tracker do card #{$card->id}"
+                ]);
+                
+                // Registra no log do sistema
+                \App\Models\SistemaLog::registrar(
+                    'calendar_events',
+                    'CREATE',
+                    $calendarEvent->id,
+                    "Evento de tempo trabalhado criado automaticamente para o card {$card->titulo}",
+                    null,
+                    $calendarEvent->toArray()
+                );
+            } catch (\Exception $e) {
+                // Log do erro mas não interrompe o processo
+                error_log("Erro ao criar evento no calendário após pausar timer: " . $e->getMessage());
+            }
+            
             // Calcula tempo total do card
             $tempoTotal = ProjectCardTimeTracking::tempoTotalCard($card->id);
             
             json_response([
                 'success' => true,
-                'message' => 'Timer parado!',
+                'message' => 'Timer parado e salvo na agenda!',
                 'tempo_segundos' => $diferenca,
                 'tempo_formatado' => ProjectCardTimeTracking::formatarSegundos($diferenca),
                 'tempo_total' => $tempoTotal,
@@ -1004,6 +1050,55 @@ class ProjectKanbanController extends Controller
                     'fim' => $fim->format('Y-m-d H:i:s'),
                     'tempo_segundos' => $tempoDecorrido
                 ]);
+                
+                // Cria evento no calendário com o tempo trabalhado
+                try {
+                    $card = $timer->card();
+                    if ($card) {
+                        $project = $card->project();
+                        $tempoFormatado = ProjectCardTimeTracking::formatarSegundos($tempoDecorrido);
+                        
+                        // Título do evento
+                        $titulo = '⏱️ Trabalhado: ' . $card->titulo;
+                        if ($project) {
+                            $titulo .= ' (' . $project->titulo . ')';
+                        }
+                        $titulo .= ' - ' . $tempoFormatado;
+                        
+                        // Descrição com detalhes
+                        $descricao = "Tempo trabalhado no card: {$card->titulo}\n";
+                        if ($project) {
+                            $descricao .= "Projeto: {$project->titulo}\n";
+                        }
+                        $descricao .= "Tempo: {$tempoFormatado}";
+                        
+                        // Cria evento no calendário
+                        $calendarEvent = \App\Models\CalendarEvent::create([
+                            'user_id' => $userId,
+                            'titulo' => $titulo,
+                            'descricao' => $descricao,
+                            'data_inicio' => $inicio->format('Y-m-d H:i:s'),
+                            'data_fim' => $fim->format('Y-m-d H:i:s'),
+                            'cor' => 'success', // Verde para indicar tempo trabalhado
+                            'dia_inteiro' => false,
+                            'project_id' => $card->project_id,
+                            'observacoes' => "Evento criado automaticamente pelo time tracker do card #{$card->id}"
+                        ]);
+                        
+                        // Registra no log do sistema
+                        \App\Models\SistemaLog::registrar(
+                            'calendar_events',
+                            'CREATE',
+                            $calendarEvent->id,
+                            "Evento de tempo trabalhado criado automaticamente para o card {$card->titulo}",
+                            null,
+                            $calendarEvent->toArray()
+                        );
+                    }
+                } catch (\Exception $e) {
+                    // Log do erro mas não interrompe o processo
+                    error_log("Erro ao criar evento no calendário após pausar timer: " . $e->getMessage());
+                }
                 
                 $timersPausados++;
             }
