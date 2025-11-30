@@ -302,40 +302,160 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                                 Configure as chaves de API para integrações com serviços externos.
                             </p>
                             
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <label for="gemini_api_key" class="form-label">
-                                        Google Gemini API Key
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" 
-                                               class="form-control" 
-                                               id="gemini_api_key" 
-                                               name="gemini_api_key" 
-                                               value="" 
-                                               placeholder="<?php echo \App\Models\SystemSetting::get('gemini_api_key') ? 'Digite nova chave para alterar' : 'Digite sua API Key do Google Gemini'; ?>"
-                                               autocomplete="new-password">
-                                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKey" onclick="toggleApiKeyVisibility()">
-                                            <i class="ti ti-eye" id="toggleApiKeyIcon"></i>
-                                        </button>
-                                    </div>
-                                    <?php 
-                                    $currentKey = \App\Models\SystemSetting::get('gemini_api_key', '');
-                                    if ($currentKey): 
-                                    ?>
-                                        <div class="alert alert-info mt-2 mb-0">
-                                            <i class="ti ti-info-circle me-2"></i>
-                                            <strong>Chave configurada:</strong> 
-                                            <code><?php echo substr($currentKey, 0, 8); ?>...</code>
-                                            <br>
-                                            <small>Deixe o campo acima vazio para manter a chave atual, ou digite uma nova para alterar.</small>
+                            <?php
+                            // Obtém configurações existentes
+                            $geminiApiKey = \App\Models\SystemSetting::get('gemini_api_key', '');
+                            $apizapConfig = \App\Models\SystemSetting::get('apizap_config', []);
+                            $resendConfig = \App\Models\SystemSetting::get('resend_config', []);
+                            ?>
+                            
+                            <!-- Google Gemini -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="ti ti-brand-google me-2"></i>Google Gemini</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="gemini_api_key" class="form-label">
+                                            Google Gemini API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" 
+                                                   class="form-control" 
+                                                   id="gemini_api_key" 
+                                                   name="gemini_api_key" 
+                                                   value="" 
+                                                   placeholder="<?php echo $geminiApiKey ? 'Digite nova chave para alterar' : 'Digite sua API Key do Google Gemini'; ?>"
+                                                   autocomplete="new-password">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('gemini_api_key', 'toggleGeminiIcon')">
+                                                <i class="ti ti-eye" id="toggleGeminiIcon"></i>
+                                            </button>
                                         </div>
-                                    <?php endif; ?>
-                                    <small class="text-muted d-block mt-2">
+                                        <?php if ($geminiApiKey): ?>
+                                            <div class="alert alert-info mt-2 mb-0">
+                                                <i class="ti ti-info-circle me-2"></i>
+                                                <strong>Chave configurada:</strong> 
+                                                <code><?php echo substr($geminiApiKey, 0, 8); ?>...</code>
+                                                <br>
+                                                <small>Deixe o campo acima vazio para manter a chave atual, ou digite uma nova para alterar.</small>
+                                            </div>
+                                        <?php endif; ?>
+                                        <small class="text-muted d-block mt-2">
+                                            <i class="ti ti-info-circle me-1"></i>
+                                            Obtenha sua API Key em: 
+                                            <a href="https://makersuite.google.com/app/apikey" target="_blank">
+                                                Google AI Studio
+                                                <i class="ti ti-external-link ms-1"></i>
+                                            </a>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- APIzap (WhatsApp) -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="ti ti-brand-whatsapp me-2"></i>APIzap - WhatsApp</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="apizap_instance_key" class="form-label">
+                                                Instance Key <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="apizap_instance_key" 
+                                                   name="apizap_instance_key" 
+                                                   value="<?php echo e($apizapConfig['instance_key'] ?? ''); ?>" 
+                                                   placeholder="Ex: instance_691dff417b1f1">
+                                            <small class="text-muted">Chave da instância do WhatsApp</small>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="apizap_token" class="form-label">
+                                                Token de Segurança <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="apizap_token" 
+                                                       name="apizap_token" 
+                                                       value="" 
+                                                       placeholder="<?php echo !empty($apizapConfig['token']) ? 'Digite novo token para alterar' : 'Digite o token de segurança'; ?>"
+                                                       autocomplete="new-password">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('apizap_token', 'toggleApizapIcon')">
+                                                    <i class="ti ti-eye" id="toggleApizapIcon"></i>
+                                                </button>
+                                            </div>
+                                            <?php if (!empty($apizapConfig['token'])): ?>
+                                                <div class="alert alert-info mt-2 mb-0">
+                                                    <i class="ti ti-info-circle me-2"></i>
+                                                    <strong>Token configurado:</strong> 
+                                                    <code><?php echo substr($apizapConfig['token'], 0, 8); ?>...</code>
+                                                    <br>
+                                                    <small>Deixe o campo acima vazio para manter o token atual.</small>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
                                         <i class="ti ti-info-circle me-1"></i>
-                                        Obtenha sua API Key em: 
-                                        <a href="https://makersuite.google.com/app/apikey" target="_blank">
-                                            Google AI Studio
+                                        Configure suas credenciais da APIzap para envio de mensagens WhatsApp.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Resend (Email) -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="ti ti-mail me-2"></i>Resend - Email</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="resend_api_key" class="form-label">
+                                                API Key <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="resend_api_key" 
+                                                       name="resend_api_key" 
+                                                       value="" 
+                                                       placeholder="<?php echo !empty($resendConfig['api_key']) ? 'Digite nova chave para alterar' : 'Digite sua API Key do Resend'; ?>"
+                                                       autocomplete="new-password">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('resend_api_key', 'toggleResendIcon')">
+                                                    <i class="ti ti-eye" id="toggleResendIcon"></i>
+                                                </button>
+                                            </div>
+                                            <?php if (!empty($resendConfig['api_key'])): ?>
+                                                <div class="alert alert-info mt-2 mb-0">
+                                                    <i class="ti ti-info-circle me-2"></i>
+                                                    <strong>Chave configurada:</strong> 
+                                                    <code><?php echo substr($resendConfig['api_key'], 0, 8); ?>...</code>
+                                                    <br>
+                                                    <small>Deixe o campo acima vazio para manter a chave atual.</small>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="resend_from_email" class="form-label">
+                                                Email Remetente
+                                            </label>
+                                            <input type="email" 
+                                                   class="form-control" 
+                                                   id="resend_from_email" 
+                                                   name="resend_from_email" 
+                                                   value="<?php echo e($resendConfig['from_email'] ?? 'noreply@email.byte0.com.br'); ?>" 
+                                                   placeholder="noreply@email.byte0.com.br">
+                                            <small class="text-muted">Email padrão para envio (opcional)</small>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        Configure suas credenciais do Resend para envio de emails. 
+                                        <a href="https://resend.com/api-keys" target="_blank">
+                                            Obtenha sua API Key
                                             <i class="ti ti-external-link ms-1"></i>
                                         </a>
                                     </small>
@@ -385,19 +505,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Função para mostrar/ocultar API Key
-function toggleApiKeyVisibility() {
-    const input = document.getElementById('gemini_api_key');
-    const icon = document.getElementById('toggleApiKeyIcon');
+// Função genérica para mostrar/ocultar senha
+function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
     
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('ti-eye');
-        icon.classList.add('ti-eye-off');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('ti-eye-off');
-        icon.classList.add('ti-eye');
+    if (input && icon) {
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('ti-eye');
+            icon.classList.add('ti-eye-off');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('ti-eye-off');
+            icon.classList.add('ti-eye');
+        }
     }
 }
 </script>

@@ -167,27 +167,37 @@ abstract class Model
      */
     private function performInsert(): bool
     {
-        $columns = array_keys($this->attributes);
-        $escapedColumns = array_map([$this, 'escapeColumn'], $columns);
-        $placeholders = array_fill(0, count($columns), '?');
-        
-        $table = $this->getTable();
-        $escapedTable = strpos($table, '`') !== false ? $table : "`{$table}`";
+        try {
+            $columns = array_keys($this->attributes);
+            $escapedColumns = array_map([$this, 'escapeColumn'], $columns);
+            $placeholders = array_fill(0, count($columns), '?');
+            
+            $table = $this->getTable();
+            $escapedTable = strpos($table, '`') !== false ? $table : "`{$table}`";
 
-        $sql = sprintf(
-            "INSERT INTO %s (%s) VALUES (%s)",
-            $escapedTable,
-            implode(', ', $escapedColumns),
-            implode(', ', $placeholders)
-        );
+            $sql = sprintf(
+                "INSERT INTO %s (%s) VALUES (%s)",
+                $escapedTable,
+                implode(', ', $escapedColumns),
+                implode(', ', $placeholders)
+            );
 
-        $this->db->execute($sql, array_values($this->attributes));
-        
-        $this->attributes[$this->primaryKey] = (int) $this->db->lastInsertId();
-        $this->exists = true;
-        $this->original = $this->attributes;
+            error_log("SQL INSERT: " . $sql);
+            error_log("Valores: " . print_r(array_values($this->attributes), true));
 
-        return true;
+            $this->db->execute($sql, array_values($this->attributes));
+            
+            $this->attributes[$this->primaryKey] = (int) $this->db->lastInsertId();
+            $this->exists = true;
+            $this->original = $this->attributes;
+
+            return true;
+        } catch (\Exception $e) {
+            error_log("Erro em performInsert: " . $e->getMessage());
+            error_log("Tabela: " . $this->getTable());
+            error_log("Atributos: " . print_r($this->attributes, true));
+            throw $e;
+        }
     }
 
     /**

@@ -15,6 +15,7 @@ use App\Controllers\NotificacaoController;
 use App\Controllers\SettingsController;
 use App\Controllers\LeadController;
 use App\Controllers\FinancialController;
+use App\Controllers\CalendarController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -126,6 +127,19 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/projects/{id}', [\App\Controllers\ProjectController::class, 'update']);
     $router->post('/projects/{id}/delete', [\App\Controllers\ProjectController::class, 'destroy']);
     
+    // Kanban de Projetos
+    $router->get('/projects/{id}/kanban', [\App\Controllers\ProjectKanbanController::class, 'show']);
+    $router->post('/projects/kanban/store-card', [\App\Controllers\ProjectKanbanController::class, 'storeCard']);
+    $router->post('/projects/kanban/update-card-column', [\App\Controllers\ProjectKanbanController::class, 'updateCardColumn']);
+    $router->get('/projects/kanban/{id}/edit-modal', [\App\Controllers\ProjectKanbanController::class, 'editCardModal']);
+    $router->post('/projects/kanban/{id}/update', [\App\Controllers\ProjectKanbanController::class, 'updateCard']);
+    $router->post('/projects/kanban/{id}/delete', [\App\Controllers\ProjectKanbanController::class, 'deleteCard']);
+    $router->post('/projects/kanban/add-checklist-item', [\App\Controllers\ProjectKanbanController::class, 'addChecklistItem']);
+    $router->post('/projects/kanban/checklist/{id}/update', [\App\Controllers\ProjectKanbanController::class, 'updateChecklistItem']);
+    $router->post('/projects/kanban/checklist/{id}/delete', [\App\Controllers\ProjectKanbanController::class, 'deleteChecklistItem']);
+    $router->post('/projects/kanban/add-tag', [\App\Controllers\ProjectKanbanController::class, 'addTag']);
+    $router->post('/projects/kanban/tag/{id}/delete', [\App\Controllers\ProjectKanbanController::class, 'deleteTag']);
+    
     // Módulo Financeiro
     $router->get('/financial', [FinancialController::class, 'index']);
     $router->get('/financial/create', [FinancialController::class, 'create']);
@@ -179,5 +193,12 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/api/notificacoes', [NotificacaoController::class, 'index']);
     $router->post('/api/notificacoes/{id}/marcar-lida', [NotificacaoController::class, 'marcarLida']);
     $router->post('/api/notificacoes/marcar-todas-lidas', [NotificacaoController::class, 'marcarTodasLidas']);
+    
+    // Agenda/Calendário
+    $router->get('/calendar', [CalendarController::class, 'index']);
+    $router->get('/calendar/events', [CalendarController::class, 'getEvents']);
+    $router->post('/calendar/store', [CalendarController::class, 'store']);
+    $router->post('/calendar/{id}/update', [CalendarController::class, 'update']);
+    $router->post('/calendar/{id}/delete', [CalendarController::class, 'destroy']);
 });
 

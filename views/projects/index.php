@@ -224,8 +224,11 @@ $title = $title ?? 'Gestão de Projetos';
                         </div>
                         
                         <div class="d-flex gap-2">
-                            <a href="<?php echo url('/projects/' . $project->id); ?>" class="btn btn-sm btn-primary flex-grow-1">
-                                <i class="ti ti-eye me-1"></i>Ver Detalhes
+                            <a href="<?php echo url('/projects/' . $project->id . '/kanban'); ?>" class="btn btn-sm btn-info flex-grow-1">
+                                <i class="ti ti-layout-kanban me-1"></i>Kanban
+                            </a>
+                            <a href="<?php echo url('/projects/' . $project->id); ?>" class="btn btn-sm btn-primary">
+                                <i class="ti ti-eye me-1"></i>Detalhes
                             </a>
                             <a href="<?php echo url('/projects/' . $project->id . '/edit'); ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="ti ti-pencil"></i>

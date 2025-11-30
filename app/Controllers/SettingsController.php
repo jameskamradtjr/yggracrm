@@ -369,33 +369,60 @@ class SettingsController extends Controller
             $this->redirect('/settings?tab=integrations');
         }
 
-        // Obtém valor diretamente do request
+        // Google Gemini
         $geminiApiKey = trim($this->request->input('gemini_api_key', ''));
-
-        // Obtém configuração anterior
-        $oldApiKey = SystemSetting::get('gemini_api_key');
+        $oldGeminiApiKey = SystemSetting::get('gemini_api_key');
         
-        // Se o campo está vazio mas já existe uma chave salva, mantém a chave existente
-        // (isso acontece quando o campo é do tipo password e o usuário não preenche novamente)
-        if (empty($geminiApiKey) && !empty($oldApiKey)) {
-            // Mantém a chave existente, não atualiza
-            $geminiApiKey = $oldApiKey;
+        if (empty($geminiApiKey) && !empty($oldGeminiApiKey)) {
+            $geminiApiKey = $oldGeminiApiKey;
         } else if (!empty($geminiApiKey)) {
-            // Salva a nova chave apenas se não estiver vazia
             SystemSetting::set('gemini_api_key', $geminiApiKey, 'text', 'integrations', 'API Key do Google Gemini');
         }
 
-        // Registra log (sem mostrar a chave completa)
-        $oldApiKeyLog = $oldApiKey ? substr($oldApiKey, 0, 8) . '...' : 'não configurada';
-        $newApiKeyLog = $geminiApiKey ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada';
+        // APIzap
+        $apizapInstanceKey = trim($this->request->input('apizap_instance_key', ''));
+        $apizapToken = trim($this->request->input('apizap_token', ''));
+        
+        $oldApizapConfig = SystemSetting::get('apizap_config', []);
+        $apizapConfig = [
+            'instance_key' => $apizapInstanceKey,
+            'token' => !empty($apizapToken) ? $apizapToken : ($oldApizapConfig['token'] ?? '')
+        ];
+        
+        if (!empty($apizapInstanceKey)) {
+            SystemSetting::set('apizap_config', $apizapConfig, 'json', 'integrations', 'Configurações da APIzap');
+        }
+
+        // Resend
+        $resendApiKey = trim($this->request->input('resend_api_key', ''));
+        $resendFromEmail = trim($this->request->input('resend_from_email', 'noreply@email.byte0.com.br'));
+        
+        $oldResendConfig = SystemSetting::get('resend_config', []);
+        $resendConfig = [
+            'api_key' => !empty($resendApiKey) ? $resendApiKey : ($oldResendConfig['api_key'] ?? ''),
+            'from_email' => $resendFromEmail
+        ];
+        
+        if (!empty($resendApiKey) || !empty($oldResendConfig['api_key'])) {
+            SystemSetting::set('resend_config', $resendConfig, 'json', 'integrations', 'Configurações do Resend');
+        }
+
+        // Registra log (sem mostrar as chaves completas)
+        $logData = [
+            'gemini_api_key' => $geminiApiKey ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada',
+            'apizap_instance_key' => $apizapInstanceKey ?: 'não configurada',
+            'apizap_token' => !empty($apizapConfig['token']) ? substr($apizapConfig['token'], 0, 8) . '...' : 'não configurada',
+            'resend_api_key' => !empty($resendConfig['api_key']) ? substr($resendConfig['api_key'], 0, 8) . '...' : 'não configurada',
+            'resend_from_email' => $resendFromEmail
+        ];
         
         SistemaLog::registrar(
             'system_settings',
             'UPDATE',
             null,
             'Configurações de integrações atualizadas',
-            ['gemini_api_key' => $oldApiKeyLog],
-            ['gemini_api_key' => $newApiKeyLog]
+            [],
+            $logData
         );
         
         session()->flash('success', 'Configurações de integrações salvas com sucesso!');

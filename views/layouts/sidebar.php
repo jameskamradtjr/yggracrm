@@ -110,6 +110,12 @@
                         <span class="hide-menu">Projetos</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/calendar'); ?>">
+                        <span><i class="ti ti-calendar"></i></span>
+                        <span class="hide-menu">Agenda</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- Usuários -->

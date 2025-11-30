@@ -220,8 +220,37 @@ class Validator
             return true; // Campos nullable podem ser vazios
         }
         
+        // Tenta formato datetime com segundos (Y-m-d\TH:i:s)
+        $date = \DateTime::createFromFormat('Y-m-d\TH:i:s', $value);
+        if ($date !== false) {
+            return true;
+        }
+        
+        // Tenta formato datetime sem segundos (Y-m-d\TH:i)
+        $date = \DateTime::createFromFormat('Y-m-d\TH:i', $value);
+        if ($date !== false) {
+            return true;
+        }
+        
+        // Tenta formato date apenas (Y-m-d)
         $date = \DateTime::createFromFormat('Y-m-d', $value);
-        return $date && $date->format('Y-m-d') === $value;
+        if ($date !== false) {
+            return true;
+        }
+        
+        // Tenta formato datetime com timezone
+        $date = \DateTime::createFromFormat('Y-m-d\TH:i:sP', $value);
+        if ($date !== false) {
+            return true;
+        }
+        
+        // Última tentativa: usar strtotime
+        $timestamp = strtotime($value);
+        if ($timestamp !== false) {
+            return true;
+        }
+        
+        return false;
     }
 
     private function validateInteger(string $field, mixed $value, ?string $params): bool
@@ -231,6 +260,29 @@ class Validator
         }
         
         return filter_var($value, FILTER_VALIDATE_INT) !== false;
+    }
+
+    private function validateBoolean(string $field, mixed $value, ?string $params): bool
+    {
+        if (empty($value) || $value === null) {
+            return true; // Campos nullable podem ser vazios
+        }
+        
+        // Aceita: true, false, 1, 0, '1', '0', 'true', 'false', 'on', 'off'
+        if (is_bool($value)) {
+            return true;
+        }
+        
+        if (is_numeric($value)) {
+            return in_array((int)$value, [0, 1]);
+        }
+        
+        if (is_string($value)) {
+            $lower = strtolower($value);
+            return in_array($lower, ['true', 'false', '1', '0', 'on', 'off', 'yes', 'no']);
+        }
+        
+        return false;
     }
 
     /**

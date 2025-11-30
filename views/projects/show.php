@@ -21,7 +21,10 @@ $title = $title ?? 'Detalhes do Projeto';
                 </nav>
             </div>
             <div class="col-3">
-                <div class="text-end">
+                <div class="text-end d-flex gap-2 justify-content-end">
+                    <a href="<?php echo url('/projects/' . $project->id . '/kanban'); ?>" class="btn btn-info">
+                        <i class="ti ti-layout-kanban me-2"></i>Kanban
+                    </a>
                     <a href="<?php echo url('/projects/' . $project->id . '/edit'); ?>" class="btn btn-primary">
                         <i class="ti ti-pencil me-2"></i>Editar
                     </a>
