@@ -540,6 +540,10 @@ function enviarParaAssinante(tipoAssinante, nomeAssinante) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
     
+    // Cria um AbortController para timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos de timeout
+    
     fetch(`<?php echo url('/contracts'); ?>/${contractId}/send-for-signature`, {
         method: 'POST',
         headers: {
@@ -548,12 +552,22 @@ function enviarParaAssinante(tipoAssinante, nomeAssinante) {
         },
         body: JSON.stringify({
             tipo_assinante: tipoAssinante
-        })
+        }),
+        signal: controller.signal
     })
     .then(response => {
+        clearTimeout(timeoutId);
         if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.message || 'Erro ao enviar email');
+            return response.text().then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    throw new Error(data.message || 'Erro ao enviar email');
+                } catch (e) {
+                    if (e instanceof SyntaxError) {
+                        throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                    }
+                    throw e;
+                }
             });
         }
         return response.json();
@@ -569,8 +583,15 @@ function enviarParaAssinante(tipoAssinante, nomeAssinante) {
         }
     })
     .catch(error => {
+        clearTimeout(timeoutId);
         console.error('Erro:', error);
-        alert('Erro ao enviar email: ' + error.message);
+        let errorMessage = 'Erro ao enviar email';
+        if (error.name === 'AbortError') {
+            errorMessage = 'Timeout: O servidor demorou muito para responder. Verifique as configurações SMTP.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        alert(errorMessage);
         btn.disabled = false;
         btn.innerHTML = originalText;
     });

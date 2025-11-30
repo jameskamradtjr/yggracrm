@@ -657,6 +657,16 @@ class ContractController extends Controller
             if ($resendService->isConfigured()) {
                 $emailService = $resendService;
             } elseif ($smtpService->isConfigured()) {
+                // Testa conexão SMTP antes de tentar enviar
+                $testResult = $smtpService->testConnection();
+                if (!$testResult['success']) {
+                    error_log("Teste de conexão SMTP falhou: " . ($testResult['error'] ?? 'Erro desconhecido'));
+                    json_response([
+                        'success' => false,
+                        'message' => 'Não foi possível conectar ao servidor SMTP: ' . ($testResult['message'] ?? 'Erro desconhecido') . '. Verifique as configurações em Configurações > Integrações > Email.'
+                    ], 400);
+                    return;
+                }
                 $emailService = $smtpService;
             } else {
                 json_response([
@@ -685,22 +695,32 @@ class ContractController extends Controller
             $html = $this->gerarEmailAssinatura($contract, $signature, $codigo, $link);
             
             $result = null;
-            if ($emailService instanceof ResendService) {
-                $result = $emailService->sendEmail(
-                    $signature->email,
-                    "Assinatura de Contrato - {$contract->numero_contrato}",
-                    $html
-                );
-            } else {
-                $result = $emailService->sendEmail(
-                    $signature->email,
-                    "Assinatura de Contrato - {$contract->numero_contrato}",
-                    $html
-                );
+            try {
+                if ($emailService instanceof ResendService) {
+                    $result = $emailService->sendEmail(
+                        $signature->email,
+                        "Assinatura de Contrato - {$contract->numero_contrato}",
+                        $html
+                    );
+                } else {
+                    $result = $emailService->sendEmail(
+                        $signature->email,
+                        "Assinatura de Contrato - {$contract->numero_contrato}",
+                        $html
+                    );
+                }
+            } catch (\Exception $e) {
+                error_log("Erro ao enviar email: " . $e->getMessage());
+                json_response([
+                    'success' => false,
+                    'message' => "Erro ao enviar email: " . $e->getMessage()
+                ], 500);
+                return;
             }
             
             if (!$result['success']) {
-                $errorMsg = $result['error'] ?? ($result['response']['error'] ?? 'Erro desconhecido');
+                $errorMsg = $result['error'] ?? ($result['response']['error'] ?? ($result['message'] ?? 'Erro desconhecido'));
+                error_log("Erro ao enviar email para {$signature->email}: {$errorMsg}");
                 json_response([
                     'success' => false,
                     'message' => "Erro ao enviar email: {$errorMsg}"
