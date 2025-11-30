@@ -398,9 +398,16 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                    <small class="text-muted">
+                                    <small class="text-muted d-block mt-2">
                                         <i class="ti ti-info-circle me-1"></i>
                                         Configure suas credenciais da APIzap para envio de mensagens WhatsApp.
+                                        <br>
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        Para criar sua conta e obter sua API Key, acesse: 
+                                        <a href="https://apizap.space" target="_blank">
+                                            https://apizap.space
+                                            <i class="ti ti-external-link ms-1"></i>
+                                        </a>
                                     </small>
                                 </div>
                             </div>
