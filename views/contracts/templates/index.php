@@ -64,7 +64,7 @@ $title = $title ?? 'Templates de Contratos';
                                     if (!empty($variaveis)) {
                                         $vars = array_slice($variaveis, 0, 3);
                                         foreach ($vars as $var) {
-                                            echo '<span class="badge bg-info me-1">{{' . e($var) . '}}') . '</span>';
+                                            echo '<span class="badge bg-info me-1">{{' . e($var) . '}}</span>';
                                         }
                                         if (count($variaveis) > 3) {
                                             echo '<span class="text-muted">+' . (count($variaveis) - 3) . ' mais</span>';

@@ -70,8 +70,18 @@ class SmtpService
             $mail->SMTPAuth = true;
             $mail->Username = $this->config['username'];
             $mail->Password = $this->config['password'];
-            $mail->SMTPSecure = $this->config['encryption'] ?? 'tls';
-            $mail->Port = (int)($this->config['port'] ?? 587);
+            
+            // Ajusta encryption baseado na porta (465 = SSL, 587 = TLS)
+            $port = (int)($this->config['port'] ?? 587);
+            $encryption = $this->config['encryption'] ?? 'tls';
+            
+            // Se porta 465 e encryption não especificado ou TLS, força SSL
+            if ($port === 465 && ($encryption === 'tls' || empty($encryption))) {
+                $encryption = 'ssl';
+            }
+            
+            $mail->SMTPSecure = $encryption;
+            $mail->Port = $port;
             $mail->Timeout = 15; // 15 segundos para teste
             $mail->SMTPKeepAlive = false;
             $mail->SMTPOptions = [
@@ -153,26 +163,55 @@ class SmtpService
             $mail->SMTPAuth = true;
             $mail->Username = $this->config['username'];
             $mail->Password = $this->config['password'];
-            $mail->SMTPSecure = $this->config['encryption'] ?? 'tls';
-            $mail->Port = (int)($this->config['port'] ?? 587);
+            
+            // Ajusta encryption baseado na porta (465 = SSL, 587 = TLS)
+            $port = (int)($this->config['port'] ?? 587);
+            $encryption = $this->config['encryption'] ?? 'tls';
+            
+            // Se porta 465 e encryption não especificado ou TLS, força SSL
+            if ($port === 465 && ($encryption === 'tls' || empty($encryption))) {
+                $encryption = 'ssl';
+                error_log("SmtpService - Porta 465 detectada, alterando encryption para SSL");
+            }
+            
+            $mail->SMTPSecure = $encryption;
+            $mail->Port = $port;
             $mail->CharSet = 'UTF-8';
+            
+            error_log("SmtpService - Configuração final: Porta={$port}, Encryption={$encryption}");
             
             // Timeouts para evitar travamento - valores razoáveis
             $mail->Timeout = 30; // 30 segundos de timeout para conexão
             $mail->SMTPKeepAlive = false;
+            
+            // Configurações SSL/TLS mais permissivas para evitar problemas de certificado
+            $cryptoMethod = ($encryption === 'ssl') ? STREAM_CRYPTO_METHOD_SSLv23_CLIENT : STREAM_CRYPTO_METHOD_TLS_CLIENT;
             $mail->SMTPOptions = [
                 'ssl' => [
                     'verify_peer' => false,
                     'verify_peer_name' => false,
-                    'allow_self_signed' => true
+                    'allow_self_signed' => true,
+                    'crypto_method' => $cryptoMethod
                 ]
             ];
             
-            // Debug (desabilitado por padrão)
-            $mail->SMTPDebug = 0; // 0 = desabilitado, 2 = verbose
+            // Debug (habilitado temporariamente para diagnóstico)
+            $mail->SMTPDebug = 2; // 2 = verbose (pode ser reduzido para 0 em produção)
             $mail->Debugoutput = function($str, $level) {
-                error_log("PHPMailer: $str");
+                error_log("PHPMailer Debug: $str");
             };
+            
+            // Tenta conectar explicitamente antes de enviar (para detectar problemas mais cedo)
+            error_log("Tentando conectar ao servidor SMTP...");
+            $connectStart = time();
+            try {
+                $mail->smtpConnect();
+                $connectTime = time() - $connectStart;
+                error_log("Conexão SMTP estabelecida com sucesso em {$connectTime} segundos");
+            } catch (\Exception $connectEx) {
+                error_log("ERRO ao conectar ao SMTP: " . $connectEx->getMessage());
+                throw $connectEx;
+            }
 
             // Remetente
             $fromEmail = $from ?? ($this->config['from_email'] ?? 'noreply@sistemabase.com');
