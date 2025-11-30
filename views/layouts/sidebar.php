@@ -122,6 +122,18 @@
                         <span class="hide-menu">Agenda</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/contracts'); ?>">
+                        <span><i class="ti ti-file-text"></i></span>
+                        <span class="hide-menu">Contratos</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/contracts/templates'); ?>">
+                        <span><i class="ti ti-notes"></i></span>
+                        <span class="hide-menu">Templates de Contratos</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- Usuários -->

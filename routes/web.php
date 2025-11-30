@@ -17,6 +17,8 @@ use App\Controllers\LeadController;
 use App\Controllers\FinancialController;
 use App\Controllers\PaymentMethodController;
 use App\Controllers\CalendarController;
+use App\Controllers\ContractController;
+use App\Controllers\ContractTemplateController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -35,6 +37,10 @@ $router->get('/quiz', [LeadController::class, 'quiz']);
 
 // API pública para buscar origens (usa token)
 $router->get('/api/leads/origens', [LeadController::class, 'getOrigens']);
+
+// Páginas públicas de assinatura de contratos (fora do middleware de auth)
+$router->get('/contracts/sign/{token}', [ContractController::class, 'signPage']);
+$router->post('/contracts/sign/{token}', [ContractController::class, 'processSignature']);
 
 // Rota para gerar link único do quiz (protegida)
 $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], function($router) {
@@ -211,5 +217,29 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/calendar/store', [CalendarController::class, 'store']);
     $router->post('/calendar/{id}/update', [CalendarController::class, 'update']);
     $router->post('/calendar/{id}/delete', [CalendarController::class, 'destroy']);
+    
+    // Contratos
+    $router->get('/contracts', [ContractController::class, 'index']);
+    $router->get('/contracts/create', [ContractController::class, 'create']);
+    $router->post('/contracts', [ContractController::class, 'store']);
+    
+    // Templates de Contratos (rotas específicas antes das genéricas com {id})
+    $router->get('/contracts/templates', [ContractTemplateController::class, 'index']);
+    $router->get('/contracts/templates/create', [ContractTemplateController::class, 'create']);
+    $router->post('/contracts/templates', [ContractTemplateController::class, 'store']);
+    $router->get('/contracts/templates/{id}/edit', [ContractTemplateController::class, 'edit']);
+    $router->post('/contracts/templates/{id}', [ContractTemplateController::class, 'update']);
+    $router->post('/contracts/templates/{id}/delete', [ContractTemplateController::class, 'destroy']);
+    
+    // Rotas de contratos com {id} (devem vir depois das rotas específicas)
+    $router->get('/contracts/{id}', [ContractController::class, 'show']);
+    $router->get('/contracts/{id}/edit', [ContractController::class, 'edit']);
+    $router->post('/contracts/{id}', [ContractController::class, 'update']);
+    $router->post('/contracts/{id}/delete', [ContractController::class, 'destroy']);
+    $router->post('/contracts/{id}/add-service', [ContractController::class, 'addService']);
+    $router->post('/contracts/{id}/add-condition', [ContractController::class, 'addCondition']);
+    $router->post('/contracts/{id}/setup-signatures', [ContractController::class, 'setupSignatures']);
+    $router->post('/contracts/{id}/send-for-signature', [ContractController::class, 'sendForSignature']);
+    $router->get('/contracts/{id}/pdf', [ContractController::class, 'generatePdf']);
 });
 
