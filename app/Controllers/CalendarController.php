@@ -27,17 +27,28 @@ class CalendarController extends Controller
             ->orderBy('data_inicio', 'ASC')
             ->get();
 
-        // Busca clientes, leads e projetos para associar
+        // Busca clientes, leads, projetos e usuários para associar
         $clients = Client::where('user_id', auth()->getDataUserId())->get();
         $leads = Lead::where('user_id', auth()->getDataUserId())->get();
         $projects = Project::where('user_id', auth()->getDataUserId())->get();
+        
+        // Busca usuários ativos (owner + sub-usuários)
+        $db = \Core\Database::getInstance();
+        $usersData = $db->query(
+            "SELECT * FROM users WHERE (user_id = ? OR id = ?) AND status = 'active' ORDER BY name ASC",
+            [auth()->getDataUserId(), auth()->getDataUserId()]
+        );
+        $users = array_map(function($row) {
+            return \App\Models\User::newInstance($row, true);
+        }, $usersData);
 
         return $this->view('calendar/index', [
             'title' => 'Agenda',
             'events' => $events,
             'clients' => $clients,
             'leads' => $leads,
-            'projects' => $projects
+            'projects' => $projects,
+            'users' => $users
         ]);
     }
 
@@ -120,7 +131,8 @@ class CalendarController extends Controller
             'dia_inteiro' => 'nullable|boolean',
             'client_id' => 'nullable|numeric',
             'lead_id' => 'nullable|numeric',
-            'project_id' => 'nullable|numeric'
+            'project_id' => 'nullable|numeric',
+            'responsible_user_id' => 'nullable|numeric'
         ]);
 
         if (!$validator->passes()) {
@@ -184,7 +196,8 @@ class CalendarController extends Controller
                 'observacoes' => $validatedData['observacoes'] ?? null,
                 'client_id' => !empty($validatedData['client_id']) ? (int)$validatedData['client_id'] : null,
                 'lead_id' => !empty($validatedData['lead_id']) ? (int)$validatedData['lead_id'] : null,
-                'project_id' => !empty($validatedData['project_id']) ? (int)$validatedData['project_id'] : null
+                'project_id' => !empty($validatedData['project_id']) ? (int)$validatedData['project_id'] : null,
+                'responsible_user_id' => !empty($validatedData['responsible_user_id']) ? (int)$validatedData['responsible_user_id'] : null
             ]);
 
             SistemaLog::registrar(
@@ -247,7 +260,8 @@ class CalendarController extends Controller
             'dia_inteiro' => 'nullable|boolean',
             'client_id' => 'nullable|numeric',
             'lead_id' => 'nullable|numeric',
-            'project_id' => 'nullable|numeric'
+            'project_id' => 'nullable|numeric',
+            'responsible_user_id' => 'nullable|numeric'
         ]);
 
         if (!$validator->passes()) {
@@ -311,7 +325,8 @@ class CalendarController extends Controller
                 'observacoes' => $validatedData['observacoes'] ?? null,
                 'client_id' => !empty($validatedData['client_id']) ? (int)$validatedData['client_id'] : null,
                 'lead_id' => !empty($validatedData['lead_id']) ? (int)$validatedData['lead_id'] : null,
-                'project_id' => !empty($validatedData['project_id']) ? (int)$validatedData['project_id'] : null
+                'project_id' => !empty($validatedData['project_id']) ? (int)$validatedData['project_id'] : null,
+                'responsible_user_id' => !empty($validatedData['responsible_user_id']) ? (int)$validatedData['responsible_user_id'] : null
             ]);
 
             SistemaLog::registrar(

@@ -14,7 +14,7 @@ class CalendarEvent extends Model
     protected array $fillable = [
         'user_id', 'titulo', 'descricao', 'data_inicio', 'data_fim',
         'cor', 'dia_inteiro', 'localizacao', 'observacoes',
-        'client_id', 'lead_id', 'project_id'
+        'client_id', 'lead_id', 'project_id', 'responsible_user_id'
     ];
     
     protected array $casts = [
@@ -55,6 +55,17 @@ class CalendarEvent extends Model
     }
     
     /**
+     * Relacionamento com usuário responsável
+     */
+    public function responsible()
+    {
+        if (!$this->responsible_user_id) {
+            return null;
+        }
+        return \App\Models\User::find($this->responsible_user_id);
+    }
+    
+    /**
      * Converte para formato FullCalendar
      */
     public function toFullCalendar(): array
@@ -81,6 +92,7 @@ class CalendarEvent extends Model
                 'client_id' => $this->client_id,
                 'lead_id' => $this->lead_id,
                 'project_id' => $this->project_id,
+                'responsible_user_id' => $this->responsible_user_id,
                 'data_inicio_original' => $this->data_inicio, // Mantém formato original para referência
                 'data_fim_original' => $this->data_fim ?? null
             ]

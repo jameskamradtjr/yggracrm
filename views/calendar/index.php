@@ -125,6 +125,15 @@ $title = $title ?? 'Agenda';
                             </select>
                         </div>
                         <div class="col-md-12 mb-3">
+                            <label class="form-label">Usuário Responsável</label>
+                            <select id="event-responsible" name="responsible_user_id" class="form-select">
+                                <option value="">Nenhum</option>
+                                <?php foreach ($users as $user): ?>
+                                    <option value="<?php echo $user->id; ?>"><?php echo e($user->name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
                             <label class="form-label">Observações</label>
                             <textarea id="event-observacoes" name="observacoes" class="form-control" rows="2"></textarea>
                         </div>
@@ -133,7 +142,7 @@ $title = $title ?? 'Agenda';
                 <div class="modal-footer">
                     <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">Fechar</button>
                     <button type="button" class="btn btn-danger" id="btn-delete-event" style="display: none;">Excluir</button>
-                    <button type="button" class="btn btn-success" id="btn-update-event" style="display: none;">Atualizar</button>
+                    <button type="submit" class="btn btn-success" id="btn-update-event" style="display: none;">Atualizar</button>
                     <button type="submit" class="btn btn-primary" id="btn-add-event">Adicionar Evento</button>
                 </div>
             </form>
@@ -152,6 +161,14 @@ document.addEventListener("DOMContentLoaded", function () {
     var btnUpdateEvent = document.getElementById("btn-update-event");
     var btnDeleteEvent = document.getElementById("btn-delete-event");
     
+    // Verifica se os botões foram encontrados
+    if (!btnAddEvent || !btnUpdateEvent || !btnDeleteEvent) {
+        console.error('Erro: Botões do modal não foram encontrados!');
+        console.log('btnAddEvent:', btnAddEvent);
+        console.log('btnUpdateEvent:', btnUpdateEvent);
+        console.log('btnDeleteEvent:', btnDeleteEvent);
+    }
+    
     var calendarsEvents = {
         Danger: "danger",
         Success: "success",
@@ -165,6 +182,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Inicializa calendário
     var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: {
+            code: 'pt-br',
+            week: {
+                dow: 1, // Segunda-feira é o primeiro dia da semana
+                doy: 4  // A semana que contém 4 de janeiro é a primeira semana do ano
+            },
+            buttonText: {
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia',
+                list: 'Lista'
+            },
+            weekText: 'Sm',
+            allDayText: 'Dia inteiro',
+            moreLinkText: 'mais',
+            noEventsText: 'Nenhum evento para exibir',
+            monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                         'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+            monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                              'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            dayNames: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
+                       'Quinta-feira', 'Sexta-feira', 'Sábado'],
+            dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+        },
         selectable: true,
         editable: true, // Permite arrastar e redimensionar eventos
         eventStartEditable: true, // Permite arrastar o início do evento
@@ -231,6 +273,15 @@ document.addEventListener("DOMContentLoaded", function () {
     function openEventModal(eventId, startDate, endDate, eventObj) {
         eventForm.reset();
         eventIdInput.value = eventId || '';
+        
+        // Garante que os botões existem antes de manipular
+        if (!btnAddEvent || !btnUpdateEvent || !btnDeleteEvent) {
+            console.error('Botões do modal não encontrados!');
+            console.log('btnAddEvent:', btnAddEvent);
+            console.log('btnUpdateEvent:', btnUpdateEvent);
+            console.log('btnDeleteEvent:', btnDeleteEvent);
+            return;
+        }
         
         if (eventId) {
             // Modo edição
@@ -305,6 +356,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     document.getElementById('event-project').value = eventObj._def.extendedProps.project_id;
                 } else {
                     document.getElementById('event-project').value = '';
+                }
+                if (eventObj._def.extendedProps.responsible_user_id) {
+                    document.getElementById('event-responsible').value = eventObj._def.extendedProps.responsible_user_id;
+                } else {
+                    document.getElementById('event-responsible').value = '';
                 }
                 document.getElementById('dia_inteiro').checked = eventObj.allDay || false;
             }
@@ -479,6 +535,9 @@ document.addEventListener("DOMContentLoaded", function () {
         if (event._def.extendedProps.project_id) {
             formData.append('project_id', event._def.extendedProps.project_id);
         }
+        if (event._def.extendedProps.responsible_user_id) {
+            formData.append('responsible_user_id', event._def.extendedProps.responsible_user_id);
+        }
         formData.append('dia_inteiro', event.allDay ? '1' : '0');
 
         fetch('<?php echo url('/calendar'); ?>/' + event.id + '/update', {
@@ -554,6 +613,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         if (event._def.extendedProps.project_id) {
             formData.append('project_id', event._def.extendedProps.project_id);
+        }
+        if (event._def.extendedProps.responsible_user_id) {
+            formData.append('responsible_user_id', event._def.extendedProps.responsible_user_id);
         }
         formData.append('dia_inteiro', event.allDay ? '1' : '0');
 
