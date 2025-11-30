@@ -97,12 +97,22 @@ ob_start();
                     </div>
                 </form>
 
-                <!-- Botão de exclusão múltipla -->
+                <!-- Ações em massa -->
                 <div class="mb-3" id="bulk-actions" style="display: none;">
-                    <button type="button" class="btn btn-danger" onclick="deleteSelected()">
-                        <i class="ti ti-trash me-2"></i>
-                        Excluir Selecionados (<span id="selected-count">0</span>)
-                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-success" onclick="markSelectedAsPaid()">
+                            <i class="ti ti-check me-2"></i>
+                            Marcar como Pago/Recebido (<span id="selected-count">0</span>)
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="unmarkSelectedAsPaid()">
+                            <i class="ti ti-x me-2"></i>
+                            Marcar como Pendente (<span id="selected-count-2">0</span>)
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="deleteSelected()">
+                            <i class="ti ti-trash me-2"></i>
+                            Excluir Selecionados (<span id="selected-count-3">0</span>)
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Lista de Lançamentos -->
@@ -237,6 +247,8 @@ function updateSelectedCount() {
     const checked = document.querySelectorAll('.entry-checkbox:checked');
     const count = checked.length;
     document.getElementById('selected-count').textContent = count;
+    document.getElementById('selected-count-2').textContent = count;
+    document.getElementById('selected-count-3').textContent = count;
     document.getElementById('bulk-actions').style.display = count > 0 ? 'block' : 'none';
 }
 
@@ -373,6 +385,82 @@ function unmarkAsPaid(id) {
             } else {
                 alert('Erro: ' + data.message);
             }
+        });
+    }
+}
+
+function markSelectedAsPaid() {
+    const checked = document.querySelectorAll('.entry-checkbox:checked');
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    
+    if (ids.length === 0) {
+        alert('Selecione pelo menos um lançamento para marcar como pago/recebido.');
+        return;
+    }
+    
+    if (confirm(`Deseja marcar ${ids.length} lançamento(s) como pago/recebido?`)) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        fetch('<?php echo url('/financial/bulk-mark-paid'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ 
+                ids: ids,
+                _csrf_token: csrfToken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao marcar lançamentos: ' + error.message);
+        });
+    }
+}
+
+function unmarkSelectedAsPaid() {
+    const checked = document.querySelectorAll('.entry-checkbox:checked');
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    
+    if (ids.length === 0) {
+        alert('Selecione pelo menos um lançamento para marcar como pendente.');
+        return;
+    }
+    
+    if (confirm(`Deseja marcar ${ids.length} lançamento(s) como pendente?`)) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        fetch('<?php echo url('/financial/bulk-unmark-paid'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ 
+                ids: ids,
+                _csrf_token: csrfToken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao desmarcar lançamentos: ' + error.message);
         });
     }
 }

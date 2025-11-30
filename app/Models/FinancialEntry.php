@@ -19,7 +19,7 @@ class FinancialEntry extends Model
         'is_paid', 'is_received', 'is_recurring', 'is_installment',
         'installment_number', 'total_installments', 'parent_entry_id',
         'recurrence_type', 'recurrence_end_date', 'observations', 'attachments',
-        'responsible_user_id', 'user_id'
+        'responsible_user_id', 'user_id', 'payment_method_id', 'data_liberacao'
     ];
     
     protected array $casts = [
@@ -33,6 +33,17 @@ class FinancialEntry extends Model
         'is_installment' => 'boolean',
         'attachments' => 'json'
     ];
+    
+    /**
+     * Relacionamento com forma de pagamento
+     */
+    public function paymentMethod()
+    {
+        if (!$this->payment_method_id) {
+            return null;
+        }
+        return PaymentMethod::find($this->payment_method_id);
+    }
     
     /**
      * Retorna tags do lançamento

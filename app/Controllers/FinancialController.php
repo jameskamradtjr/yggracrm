@@ -14,6 +14,7 @@ use App\Models\CostCenter;
 use App\Models\SubCostCenter;
 use App\Models\Tag;
 use App\Models\Supplier;
+use App\Models\PaymentMethod;
 use App\Models\SistemaLog;
 
 /**
@@ -193,7 +194,11 @@ class FinancialController extends Controller
                 ->where('type', $type === 'entrada' ? 'entrada' : 'saida')
                 ->get(),
             'costCenters' => CostCenter::where('user_id', $userId)->get(),
-            'tags' => Tag::where('user_id', $userId)->get()
+            'tags' => Tag::where('user_id', $userId)->get(),
+            'paymentMethods' => PaymentMethod::where('user_id', $userId)
+                ->where('ativo', true)
+                ->orderBy('nome', 'ASC')
+                ->get()
         ]);
     }
     
@@ -236,7 +241,11 @@ class FinancialController extends Controller
                 ? SubCostCenter::where('cost_center_id', $entry->cost_center_id)->where('user_id', $userId)->get()
                 : [],
             'tags' => Tag::where('user_id', $userId)->get(),
-            'entryTagIds' => $entryTagIds
+            'entryTagIds' => $entryTagIds,
+            'paymentMethods' => PaymentMethod::where('user_id', $userId)
+                ->where('ativo', true)
+                ->orderBy('nome', 'ASC')
+                ->get()
         ]);
     }
     
@@ -406,7 +415,9 @@ class FinancialController extends Controller
             'recurrence_end_date' => 'nullable|date',
             'is_installment' => 'nullable',
             'total_installments' => 'nullable|integer|min:1',
-            'release_date' => 'nullable|date'
+            'release_date' => 'nullable|date',
+            'payment_method_id' => 'nullable|integer',
+            'data_liberacao' => 'nullable|date'
         ]);
         
         // Normaliza checkbox (verifica tanto no $data quanto no input direto)
@@ -433,6 +444,52 @@ class FinancialController extends Controller
         try {
             $userId = auth()->getDataUserId();
             
+            // Processa forma de pagamento se for entrada
+            $paymentMethodId = null;
+            $dataLiberacao = null;
+            $taxaDespesa = null;
+            
+            if ($data['type'] === 'entrada' && !empty($data['payment_method_id'])) {
+                $paymentMethod = PaymentMethod::find($data['payment_method_id']);
+                if ($paymentMethod && $paymentMethod->user_id === $userId) {
+                    $paymentMethodId = $paymentMethod->id;
+                    
+                    // Calcula data de liberação - prioriza o campo do formulário
+                    // Primeiro tenta pegar direto do request (pode não estar no validated)
+                    $dataLiberacaoInput = $this->request->input('data_liberacao');
+                    if (!empty($dataLiberacaoInput)) {
+                        $dataLiberacao = $dataLiberacaoInput;
+                    } elseif (!empty($data['data_liberacao'])) {
+                        $dataLiberacao = $data['data_liberacao'];
+                    } elseif (!empty($data['due_date'])) {
+                        $dataLiberacao = $paymentMethod->calcularDataLiberacao($data['due_date']);
+                    } elseif (!empty($data['competence_date'])) {
+                        $dataLiberacao = $paymentMethod->calcularDataLiberacao($data['competence_date']);
+                    }
+                    
+                    error_log("Data de liberação calculada: " . ($dataLiberacao ?? 'null') . " para payment_method_id: " . $paymentMethodId);
+                    
+                    // Se a forma de pagamento tem taxa e deve adicionar como despesa
+                    if ($paymentMethod->taxa > 0 && $paymentMethod->adicionar_taxa_como_despesa) {
+                        $valorTaxa = $paymentMethod->calcularTaxa((float)$data['value']);
+                        // Cria uma despesa automática para a taxa
+                        $taxaDespesa = [
+                            'type' => 'saida',
+                            'description' => "Taxa: {$paymentMethod->nome} - {$data['description']}",
+                            'value' => $valorTaxa,
+                            'competence_date' => $data['competence_date'],
+                            'due_date' => $data['due_date'] ?? $data['competence_date'],
+                            'category_id' => $data['category_id'] ?? null,
+                            'bank_account_id' => $paymentMethod->conta_id ?? $data['bank_account_id'] ?? null,
+                            'user_id' => $userId,
+                            'responsible_user_id' => $userId,
+                            'is_paid' => 0,
+                            'is_received' => 0
+                        ];
+                    }
+                }
+            }
+            
             // Prepara dados do lançamento
             $entryData = [
                 'type' => $data['type'],
@@ -454,6 +511,8 @@ class FinancialController extends Controller
                 'is_installment' => $data['is_installment'] ? 1 : 0, // Converte para inteiro para salvar no banco
                 'total_installments' => $data['total_installments'] ?? null,
                 'release_date' => $data['release_date'] ?? null,
+                'payment_method_id' => $paymentMethodId,
+                'data_liberacao' => $dataLiberacao,
                 'responsible_user_id' => $userId,
                 'user_id' => $userId
             ];
@@ -528,6 +587,16 @@ class FinancialController extends Controller
             // Se for parcelado, cria as parcelas
             if ($entry->is_installment && $entry->total_installments > 1) {
                 $this->createInstallments($entry);
+            }
+            
+            // Cria despesa automática da taxa se necessário
+            if ($taxaDespesa) {
+                try {
+                    FinancialEntry::create($taxaDespesa);
+                    error_log("Despesa automática de taxa criada: " . print_r($taxaDespesa, true));
+                } catch (\Exception $e) {
+                    error_log("Erro ao criar despesa automática de taxa: " . $e->getMessage());
+                }
             }
             
             // Registra log
@@ -1937,6 +2006,236 @@ class FinancialController extends Controller
             json_response([
                 'success' => false,
                 'message' => 'Erro ao excluir lançamentos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Marca múltiplos lançamentos como pago/recebido
+     */
+    public function bulkMarkAsPaid(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+
+            $requestData = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$requestData) {
+                json_response(['success' => false, 'message' => 'Dados inválidos'], 400);
+                return;
+            }
+            
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $requestData['_csrf_token'] ?? '';
+            
+            if (!verify_csrf($csrfToken)) {
+                json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+                return;
+            }
+
+            $userId = auth()->getDataUserId();
+            $ids = $requestData['ids'] ?? [];
+            
+            if (empty($ids) || !is_array($ids)) {
+                json_response(['success' => false, 'message' => 'Nenhum lançamento selecionado'], 400);
+                return;
+            }
+            
+            // Converte IDs para inteiros
+            $ids = array_map('intval', $ids);
+            $ids = array_filter($ids, fn($id) => $id > 0);
+            
+            if (empty($ids)) {
+                json_response(['success' => false, 'message' => 'IDs inválidos'], 400);
+                return;
+            }
+            
+            $updated = 0;
+            $errors = [];
+            $db = \Core\Database::getInstance();
+            
+            // Busca todos os lançamentos de uma vez
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $entries = $db->query(
+                "SELECT * FROM financial_entries WHERE id IN ({$placeholders}) AND user_id = ?",
+                array_merge($ids, [$userId])
+            );
+            
+            foreach ($entries as $entryData) {
+                $entry = FinancialEntry::newInstance($entryData, true);
+                
+                try {
+                    $oldData = $entry->toArray();
+                    
+                    // Marca como pago/recebido baseado no tipo
+                    if ($entry->type === 'saida') {
+                        $entry->update([
+                            'is_paid' => 1,
+                            'payment_date' => date('Y-m-d'),
+                            'paid_value' => $entry->value
+                        ]);
+                    } else {
+                        $entry->update([
+                            'is_received' => 1,
+                            'payment_date' => date('Y-m-d'),
+                            'paid_value' => $entry->value
+                        ]);
+                    }
+                    
+                    // Registra log
+                    SistemaLog::registrar(
+                        'financial_entries',
+                        'UPDATE',
+                        $entry->id,
+                        "Lançamento marcado como pago/recebido (lote): {$entry->description}",
+                        $oldData,
+                        $entry->toArray()
+                    );
+                    
+                    $updated++;
+                } catch (\Exception $e) {
+                    $errors[] = "Erro ao marcar lançamento ID {$entry->id}: " . $e->getMessage();
+                }
+            }
+            
+            if ($updated > 0) {
+                json_response([
+                    'success' => true,
+                    'message' => "{$updated} lançamento(s) marcado(s) como pago/recebido com sucesso!",
+                    'updated' => $updated,
+                    'errors' => $errors
+                ]);
+            } else {
+                json_response([
+                    'success' => false,
+                    'message' => 'Nenhum lançamento foi atualizado',
+                    'errors' => $errors
+                ], 400);
+            }
+            
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao marcar lançamentos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Desmarca múltiplos lançamentos como pago/recebido (marca como pendente)
+     */
+    public function bulkUnmarkAsPaid(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+
+            $requestData = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$requestData) {
+                json_response(['success' => false, 'message' => 'Dados inválidos'], 400);
+                return;
+            }
+            
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $requestData['_csrf_token'] ?? '';
+            
+            if (!verify_csrf($csrfToken)) {
+                json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+                return;
+            }
+
+            $userId = auth()->getDataUserId();
+            $ids = $requestData['ids'] ?? [];
+            
+            if (empty($ids) || !is_array($ids)) {
+                json_response(['success' => false, 'message' => 'Nenhum lançamento selecionado'], 400);
+                return;
+            }
+            
+            // Converte IDs para inteiros
+            $ids = array_map('intval', $ids);
+            $ids = array_filter($ids, fn($id) => $id > 0);
+            
+            if (empty($ids)) {
+                json_response(['success' => false, 'message' => 'IDs inválidos'], 400);
+                return;
+            }
+            
+            $updated = 0;
+            $errors = [];
+            $db = \Core\Database::getInstance();
+            
+            // Busca todos os lançamentos de uma vez
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $entries = $db->query(
+                "SELECT * FROM financial_entries WHERE id IN ({$placeholders}) AND user_id = ?",
+                array_merge($ids, [$userId])
+            );
+            
+            foreach ($entries as $entryData) {
+                $entry = FinancialEntry::newInstance($entryData, true);
+                
+                try {
+                    $oldData = $entry->toArray();
+                    
+                    // Desmarca como pago/recebido baseado no tipo
+                    if ($entry->type === 'saida') {
+                        $entry->update([
+                            'is_paid' => 0,
+                            'payment_date' => null,
+                            'paid_value' => null
+                        ]);
+                    } else {
+                        $entry->update([
+                            'is_received' => 0,
+                            'payment_date' => null,
+                            'paid_value' => null
+                        ]);
+                    }
+                    
+                    // Registra log
+                    SistemaLog::registrar(
+                        'financial_entries',
+                        'UPDATE',
+                        $entry->id,
+                        "Lançamento marcado como pendente (lote): {$entry->description}",
+                        $oldData,
+                        $entry->toArray()
+                    );
+                    
+                    $updated++;
+                } catch (\Exception $e) {
+                    $errors[] = "Erro ao desmarcar lançamento ID {$entry->id}: " . $e->getMessage();
+                }
+            }
+            
+            if ($updated > 0) {
+                json_response([
+                    'success' => true,
+                    'message' => "{$updated} lançamento(s) marcado(s) como pendente com sucesso!",
+                    'updated' => $updated,
+                    'errors' => $errors
+                ]);
+            } else {
+                json_response([
+                    'success' => false,
+                    'message' => 'Nenhum lançamento foi atualizado',
+                    'errors' => $errors
+                ], 400);
+            }
+            
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao desmarcar lançamentos: ' . $e->getMessage()
             ], 500);
         }
     }

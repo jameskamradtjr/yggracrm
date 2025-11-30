@@ -84,6 +84,12 @@
                         <span class="hide-menu">Fornecedores</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/financial/payment-methods'); ?>">
+                        <span><i class="ti ti-cash"></i></span>
+                        <span class="hide-menu">Formas de Pagamento</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- CRM de Leads -->

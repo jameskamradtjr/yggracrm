@@ -40,9 +40,37 @@ ob_start();
                         
                         <?php if ($type === 'entrada'): ?>
                             <div class="col-md-6 mb-3">
+                                <label class="form-label">Forma de Pagamento</label>
+                                <select name="payment_method_id" class="form-select" id="payment_method_id">
+                                    <option value="">Selecione (opcional)</option>
+                                    <?php foreach ($paymentMethods as $pm): ?>
+                                        <option value="<?php echo $pm->id; ?>" 
+                                                data-taxa="<?php echo $pm->taxa; ?>"
+                                                data-conta-id="<?php echo $pm->conta_id ?? ''; ?>"
+                                                data-dias-recebimento="<?php echo $pm->dias_recebimento; ?>"
+                                                data-adicionar-taxa="<?php echo $pm->adicionar_taxa_como_despesa ? '1' : '0'; ?>">
+                                            <?php echo e($pm->nome); ?>
+                                            <?php if ($pm->taxa > 0): ?>
+                                                (Taxa: <?php echo number_format($pm->taxa, 2, ',', '.'); ?>%)
+                                            <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted">Ao selecionar, preenche automaticamente conta, taxa e data de liberação</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Data de Liberação</label>
-                                <input type="date" name="release_date" class="form-control">
-                                <small class="text-muted">Para recebimentos via cartão que liberam após X dias</small>
+                                <input type="date" name="data_liberacao" id="data_liberacao" class="form-control">
+                                <small class="text-muted">Calculada automaticamente baseada na forma de pagamento</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3" id="taxa_info" style="display: none;">
+                                <div class="alert alert-info mb-0">
+                                    <strong>Taxa:</strong> <span id="taxa_valor">R$ 0,00</span>
+                                    <br>
+                                    <small>Valor líquido após taxa: <span id="valor_liquido">R$ 0,00</span></small>
+                                </div>
                             </div>
                         <?php endif; ?>
                         
@@ -223,6 +251,100 @@ document.getElementById('account_select').addEventListener('change', function() 
         document.getElementById('bank_account_id').value = '';
     }
 });
+
+// Preenche automaticamente quando forma de pagamento é selecionada (apenas para entradas)
+<?php if ($type === 'entrada'): ?>
+document.getElementById('payment_method_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const paymentMethodId = this.value;
+    
+    if (!paymentMethodId) {
+        // Limpa campos se nenhuma forma de pagamento for selecionada
+        document.getElementById('taxa_info').style.display = 'none';
+        document.getElementById('data_liberacao').value = '';
+        return;
+    }
+    
+    const taxa = parseFloat(selectedOption.getAttribute('data-taxa')) || 0;
+    const contaId = selectedOption.getAttribute('data-conta-id') || '';
+    const diasRecebimento = parseInt(selectedOption.getAttribute('data-dias-recebimento')) || 0;
+    const adicionarTaxa = selectedOption.getAttribute('data-adicionar-taxa') === '1';
+    
+    // Preenche conta bancária se houver
+    if (contaId) {
+        const accountSelect = document.getElementById('account_select');
+        // Procura a opção com data-account-id igual a contaId
+        for (let i = 0; i < accountSelect.options.length; i++) {
+            const opt = accountSelect.options[i];
+            if (opt.getAttribute('data-account-id') === contaId) {
+                accountSelect.value = opt.value;
+                // Dispara o evento change para preencher os campos hidden
+                accountSelect.dispatchEvent(new Event('change'));
+                break;
+            }
+        }
+    }
+    
+    // Calcula data de liberação baseada na data de vencimento
+    const dueDateInput = document.querySelector('input[name="due_date"]');
+    if (dueDateInput && dueDateInput.value) {
+        const dueDate = new Date(dueDateInput.value);
+        if (diasRecebimento > 0) {
+            dueDate.setDate(dueDate.getDate() + diasRecebimento);
+        }
+        document.getElementById('data_liberacao').value = dueDate.toISOString().split('T')[0];
+    } else {
+        // Se não tiver data de vencimento, usa a data de competência
+        const competenceDateInput = document.querySelector('input[name="competence_date"]');
+        if (competenceDateInput && competenceDateInput.value) {
+            const competenceDate = new Date(competenceDateInput.value);
+            if (diasRecebimento > 0) {
+                competenceDate.setDate(competenceDate.getDate() + diasRecebimento);
+            }
+            document.getElementById('data_liberacao').value = competenceDate.toISOString().split('T')[0];
+        }
+    }
+    
+    // Calcula e exibe taxa se houver
+    const valueInput = document.querySelector('input[name="value"]');
+    if (taxa > 0 && valueInput && valueInput.value) {
+        const valorBruto = parseFloat(valueInput.value) || 0;
+        const valorTaxa = valorBruto * (taxa / 100);
+        const valorLiquido = valorBruto - valorTaxa;
+        
+        document.getElementById('taxa_valor').textContent = 'R$ ' + valorTaxa.toFixed(2).replace('.', ',');
+        document.getElementById('valor_liquido').textContent = 'R$ ' + valorLiquido.toFixed(2).replace('.', ',');
+        document.getElementById('taxa_info').style.display = 'block';
+    } else {
+        document.getElementById('taxa_info').style.display = 'none';
+    }
+    
+    // Recalcula taxa quando o valor mudar
+    if (taxa > 0) {
+        if (!valueInput.hasAttribute('data-taxa-listener')) {
+            valueInput.setAttribute('data-taxa-listener', 'true');
+            valueInput.addEventListener('input', function() {
+                const paymentMethodSelect = document.getElementById('payment_method_id');
+                if (paymentMethodSelect.value) {
+                    paymentMethodSelect.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+    }
+    
+    // Recalcula data de liberação quando a data de vencimento mudar
+    const dueDateInput2 = document.querySelector('input[name="due_date"]');
+    if (dueDateInput2 && !dueDateInput2.hasAttribute('data-liberacao-listener')) {
+        dueDateInput2.setAttribute('data-liberacao-listener', 'true');
+        dueDateInput2.addEventListener('change', function() {
+            const paymentMethodSelect = document.getElementById('payment_method_id');
+            if (paymentMethodSelect.value) {
+                paymentMethodSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+});
+<?php endif; ?>
 </script>
 
 <?php

@@ -15,6 +15,7 @@ use App\Controllers\NotificacaoController;
 use App\Controllers\SettingsController;
 use App\Controllers\LeadController;
 use App\Controllers\FinancialController;
+use App\Controllers\PaymentMethodController;
 use App\Controllers\CalendarController;
 
 // O router é injetado automaticamente pela Application
@@ -145,6 +146,8 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/create', [FinancialController::class, 'create']);
     $router->post('/financial', [FinancialController::class, 'store']);
     $router->post('/financial/bulk-delete', [FinancialController::class, 'bulkDelete']); // Deve vir antes das rotas com {id}
+    $router->post('/financial/bulk-mark-paid', [FinancialController::class, 'bulkMarkAsPaid']); // Marcar como pago/recebido em massa
+    $router->post('/financial/bulk-unmark-paid', [FinancialController::class, 'bulkUnmarkAsPaid']); // Desmarcar como pago/recebido em massa
     
     // Contas Bancárias (rotas específicas antes das genéricas)
     $router->get('/financial/bank-accounts', [FinancialController::class, 'bankAccounts']);
@@ -163,6 +166,14 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/suppliers/{id}/edit', [FinancialController::class, 'editSupplier']);
     $router->post('/financial/suppliers/{id}', [FinancialController::class, 'updateSupplier']);
     $router->post('/financial/suppliers/{id}/delete', [FinancialController::class, 'deleteSupplier']);
+    
+    // Formas de Pagamento (rotas específicas antes das genéricas)
+    $router->get('/financial/payment-methods', [PaymentMethodController::class, 'index']);
+    $router->get('/financial/payment-methods/create', [PaymentMethodController::class, 'create']);
+    $router->post('/financial/payment-methods', [PaymentMethodController::class, 'store']);
+    $router->get('/financial/payment-methods/{id}/edit', [PaymentMethodController::class, 'edit']);
+    $router->post('/financial/payment-methods/{id}', [PaymentMethodController::class, 'update']);
+    $router->post('/financial/payment-methods/{id}/delete', [PaymentMethodController::class, 'destroy']);
     
     // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
     $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
