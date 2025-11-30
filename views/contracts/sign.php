@@ -71,8 +71,10 @@ $title = $title ?? 'Assinar Contrato';
         <?php else: ?>
             <div class="contract-preview">
                 <h5 class="mb-3"><?php echo e($contract->titulo); ?></h5>
-                <?php if ($contract->conteudo_gerado): ?>
-                    <?php echo $contract->conteudo_gerado; ?>
+                <?php if (!empty($contract->conteudo_gerado)): ?>
+                    <div><?php echo $contract->conteudo_gerado; ?></div>
+                <?php elseif (!empty($contract->conteudo)): ?>
+                    <div><?php echo $contract->conteudo; ?></div>
                 <?php else: ?>
                     <p class="text-muted">Conteúdo do contrato não disponível.</p>
                 <?php endif; ?>

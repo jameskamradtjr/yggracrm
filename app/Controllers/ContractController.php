@@ -763,19 +763,34 @@ class ContractController extends Controller
      */
     private function gerarEmailAssinatura(Contract $contract, ContractSignature $signature, string $codigo, string $link): string
     {
+        // Garante que o link seja uma URL absoluta
+        if (strpos($link, 'http') !== 0) {
+            // Se não começa com http, adiciona o domínio
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $link = $protocol . '://' . $host . $link;
+        }
+        
+        // Log para debug
+        error_log("Link de assinatura gerado: " . $link);
+        
         ob_start();
         ?>
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #007bff; color: white; padding: 20px; text-align: center; }
-                .content { background: #f9f9f9; padding: 20px; }
-                .code { background: #fff; border: 2px dashed #007bff; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; }
-                .button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
+                .code { background: #fff; border: 2px dashed #007bff; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; border-radius: 5px; letter-spacing: 4px; }
+                .button-container { text-align: center; margin: 30px 0; }
+                .button { display: inline-block; background: #007bff; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 10px 0; font-size: 16px; font-weight: bold; }
+                .button:hover { background: #0056b3; }
+                .link-fallback { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 5px; word-break: break-all; font-size: 12px; color: #666; }
             </style>
         </head>
         <body>
@@ -784,14 +799,18 @@ class ContractController extends Controller
                     <h2>Assinatura de Contrato</h2>
                 </div>
                 <div class="content">
-                    <p>Olá <strong><?php echo e($signature->nome_assinante); ?></strong>,</p>
+                    <p>Olá <strong><?php echo htmlspecialchars($signature->nome_assinante, ENT_QUOTES, 'UTF-8'); ?></strong>,</p>
                     <p>Você recebeu um contrato para assinatura:</p>
-                    <p><strong>Contrato:</strong> <?php echo e($contract->numero_contrato); ?></p>
-                    <p><strong>Título:</strong> <?php echo e($contract->titulo); ?></p>
+                    <p><strong>Contrato:</strong> <?php echo htmlspecialchars($contract->numero_contrato, ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p><strong>Título:</strong> <?php echo htmlspecialchars($contract->titulo, ENT_QUOTES, 'UTF-8'); ?></p>
                     <p>Para assinar o contrato, utilize o código de verificação abaixo:</p>
-                    <div class="code"><?php echo e($codigo); ?></div>
-                    <p>Ou clique no link abaixo para acessar a página de assinatura:</p>
-                    <p><a href="<?php echo $link; ?>" class="button">Assinar Contrato</a></p>
+                    <div class="code"><?php echo htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <p>Ou clique no botão abaixo para acessar a página de assinatura:</p>
+                    <div class="button-container">
+                        <a href="<?php echo htmlspecialchars($link, ENT_QUOTES, 'UTF-8'); ?>" class="button" style="background: #007bff; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Assinar Contrato</a>
+                    </div>
+                    <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+                    <div class="link-fallback"><?php echo htmlspecialchars($link, ENT_QUOTES, 'UTF-8'); ?></div>
                     <p><small>Este código é válido por 24 horas.</small></p>
                 </div>
             </div>
@@ -826,6 +845,21 @@ class ContractController extends Controller
                 'title' => 'Erro',
                 'message' => 'Assinatura não encontrada.'
             ]);
+        }
+        
+        // Gera o conteúdo do contrato se não estiver gerado
+        if (empty($contract->conteudo_gerado)) {
+            try {
+                $conteudoGerado = ContractServiceHelper::substituirVariaveis(
+                    $contract->conteudo ?? '',
+                    $contract
+                );
+                $contract->update(['conteudo_gerado' => $conteudoGerado]);
+                $contract->conteudo_gerado = $conteudoGerado; // Atualiza o objeto em memória
+            } catch (\Exception $e) {
+                error_log("Erro ao gerar conteúdo do contrato: " . $e->getMessage());
+                // Continua mesmo com erro, mas sem conteúdo gerado
+            }
         }
         
         return $this->view('contracts/sign', [
