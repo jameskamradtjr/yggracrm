@@ -163,7 +163,9 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/projects/kanban/tag/{id}/delete', [\App\Controllers\ProjectKanbanController::class, 'deleteTag']);
     $router->post('/projects/kanban/timer/start', [\App\Controllers\ProjectKanbanController::class, 'startTimer']);
     $router->post('/projects/kanban/timer/stop', [\App\Controllers\ProjectKanbanController::class, 'stopTimer']);
+    $router->post('/projects/kanban/timer/pause-all', [\App\Controllers\ProjectKanbanController::class, 'pauseAllTimers']);
     $router->get('/projects/kanban/timer/status', [\App\Controllers\ProjectKanbanController::class, 'getTimerStatus']);
+    $router->get('/projects/kanban/timer/active', [\App\Controllers\ProjectKanbanController::class, 'getActiveTimers']);
     
     // Módulo Financeiro
     $router->get('/financial', [FinancialController::class, 'index']);

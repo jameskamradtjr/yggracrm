@@ -39,6 +39,19 @@
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <div class="d-flex align-items-center justify-content-between">
                     <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-center">
+                        <!-- Timer Ativo -->
+                        <?php if (auth()->check()): ?>
+                        <li class="nav-item d-none" id="navbar-timer-container">
+                            <div class="d-flex align-items-center gap-2 px-2">
+                                <i class="ti ti-clock-play text-success fs-5"></i>
+                                <span class="text-success fw-semibold" id="navbar-timer-time" style="font-size: 0.9rem;">00:00</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="navbar-timer-pause-btn" onclick="pausarTodosTimers()" title="Pausar Timer">
+                                    <i class="ti ti-player-pause"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <?php endif; ?>
+                        
                         <!-- Notificações -->
                         <?php if (auth()->check()): ?>
                         <li class="nav-item dropdown nav-icon-hover-bg rounded-circle">

@@ -910,5 +910,114 @@ class ProjectKanbanController extends Controller
             json_response(['success' => false, 'message' => 'Erro ao obter status: ' . $e->getMessage()], 500);
         }
     }
+    
+    /**
+     * Obtém todos os timers ativos do usuário
+     */
+    public function getActiveTimers(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            
+            // Busca todos os timers ativos do usuário
+            $timersAtivos = ProjectCardTimeTracking::where('user_id', $userId)
+                ->whereNull('fim')
+                ->get();
+            
+            $timersData = [];
+            $tempoTotalDecorrido = 0;
+            
+            foreach ($timersAtivos as $timer) {
+                $card = $timer->card();
+                if ($card) {
+                    $inicio = new \DateTime($timer->inicio);
+                    $agora = new \DateTime();
+                    $tempoDecorrido = $agora->getTimestamp() - $inicio->getTimestamp();
+                    $tempoTotalDecorrido += $tempoDecorrido;
+                    
+                    $timersData[] = [
+                        'card_id' => $card->id,
+                        'card_titulo' => $card->titulo,
+                        'inicio' => $timer->inicio,
+                        'tempo_decorrido' => $tempoDecorrido,
+                        'tempo_formatado' => ProjectCardTimeTracking::formatarSegundos($tempoDecorrido)
+                    ];
+                }
+            }
+            
+            json_response([
+                'success' => true,
+                'timers' => $timersData,
+                'total_timers' => count($timersData),
+                'tempo_total_segundos' => $tempoTotalDecorrido,
+                'tempo_total_decorrido' => $tempoTotalDecorrido,
+                'tempo_total_formatado' => ProjectCardTimeTracking::formatarSegundos($tempoTotalDecorrido)
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao obter timers ativos: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao obter timers: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Pausa todos os timers ativos do usuário
+     */
+    public function pauseAllTimers(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            
+            // Busca todos os timers ativos do usuário
+            $timersAtivos = ProjectCardTimeTracking::where('user_id', $userId)
+                ->whereNull('fim')
+                ->get();
+            
+            if (empty($timersAtivos)) {
+                json_response(['success' => false, 'message' => 'Nenhum timer ativo encontrado'], 404);
+                return;
+            }
+            
+            $timersPausados = 0;
+            foreach ($timersAtivos as $timer) {
+                // Calcula tempo decorrido
+                $inicio = new \DateTime($timer->inicio);
+                $fim = new \DateTime();
+                $tempoDecorrido = $fim->getTimestamp() - $inicio->getTimestamp();
+                
+                // Atualiza timer
+                $timer->update([
+                    'fim' => $fim->format('Y-m-d H:i:s'),
+                    'tempo_segundos' => $tempoDecorrido
+                ]);
+                
+                $timersPausados++;
+            }
+            
+            json_response([
+                'success' => true,
+                'message' => "{$timersPausados} timer(s) pausado(s) com sucesso!",
+                'timers_pausados' => $timersPausados
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao pausar timers: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao pausar timers: ' . $e->getMessage()], 500);
+        }
+    }
 }
 

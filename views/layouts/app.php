@@ -305,6 +305,119 @@
                 errorsAlert.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         })();
+        
+        // Função para atualizar timer no navbar (disponível globalmente)
+        window.atualizarNavbarTimer = function() {
+            const container = document.getElementById('navbar-timer-container');
+            const timeDisplay = document.getElementById('navbar-timer-time');
+            const pauseBtn = document.getElementById('navbar-timer-pause-btn');
+            
+            if (!container || !timeDisplay) {
+                console.log('Timer: Elementos não encontrados', { container: !!container, timeDisplay: !!timeDisplay });
+                return;
+            }
+            
+            fetch('<?php echo url('/projects/kanban/timer/active'); ?>', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Timer: Dados recebidos', data);
+                if (data.success && data.total_timers > 0) {
+                    container.classList.remove('d-none');
+                    container.style.display = '';
+                    timeDisplay.textContent = data.tempo_total_formatado || '00:00';
+                    
+                    if (pauseBtn) {
+                        pauseBtn.style.display = 'inline-block';
+                        let tooltipText = 'Timers Ativos:\n';
+                        data.timers.forEach(timer => {
+                            tooltipText += `• ${timer.card_titulo}: ${timer.tempo_formatado}\n`;
+                        });
+                        pauseBtn.setAttribute('title', tooltipText.trim() + '\n\nClique para pausar todos os timers');
+                    }
+                    console.log('Timer: Exibido com sucesso');
+                } else {
+                    container.classList.add('d-none');
+                    container.style.display = 'none';
+                    if (pauseBtn) {
+                        pauseBtn.style.display = 'none';
+                    }
+                    console.log('Timer: Ocultado - nenhum timer ativo');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao verificar timers ativos:', error);
+            });
+        };
+        
+        // Inicializa timer após definir a função
+        (function() {
+            // Verifica timers ativos e atualiza navbar imediatamente
+            setTimeout(() => {
+                if (typeof window.atualizarNavbarTimer === 'function') {
+                    window.atualizarNavbarTimer();
+                }
+            }, 500);
+            
+            // Atualiza a cada 5 segundos
+            setInterval(() => {
+                if (typeof window.atualizarNavbarTimer === 'function') {
+                    window.atualizarNavbarTimer();
+                }
+            }, 5000);
+            
+            // Se houver timers ativos, atualiza a cada segundo
+            setInterval(() => {
+                const container = document.getElementById('navbar-timer-container');
+                if (container && !container.classList.contains('d-none')) {
+                    if (typeof window.atualizarNavbarTimer === 'function') {
+                        window.atualizarNavbarTimer();
+                    }
+                }
+            }, 1000);
+        })();
+        
+        // Função para pausar todos os timers
+        window.pausarTodosTimers = function() {
+            if (!confirm('Tem certeza que deseja pausar todos os timers ativos?')) {
+                return;
+            }
+            
+            fetch('<?php echo url('/projects/kanban/timer/pause-all'); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    atualizarNavbarTimer();
+                    
+                    // Recarrega a página se estiver no Kanban para atualizar os cards
+                    if (window.location.pathname.includes('/kanban')) {
+                        location.reload();
+                    }
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao pausar timers');
+            });
+        };
     </script>
 </body>
 </html>

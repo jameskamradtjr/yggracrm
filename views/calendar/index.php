@@ -268,6 +268,11 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     calendar.render();
+    
+    // Atualiza eventos de timer a cada 30 segundos
+    setInterval(function() {
+        calendar.refetchEvents();
+    }, 30000);
 
     // Abre modal de evento
     function openEventModal(eventId, startDate, endDate, eventObj) {

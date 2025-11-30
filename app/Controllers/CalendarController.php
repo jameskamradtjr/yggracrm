@@ -97,6 +97,48 @@ class CalendarController extends Controller
         foreach ($events as $event) {
             $fcEvents[] = $event->toFullCalendar();
         }
+        
+        // Adiciona eventos de timer ativo
+        $userId = auth()->getDataUserId();
+        $db = \Core\Database::getInstance();
+        $timersAtivos = $db->query(
+            "SELECT t.*, c.titulo as card_titulo, p.titulo as project_titulo 
+             FROM project_card_time_tracking t
+             INNER JOIN project_cards c ON c.id = t.card_id
+             LEFT JOIN projects p ON p.id = c.project_id
+             WHERE t.user_id = ? AND t.fim IS NULL",
+            [$userId]
+        );
+        
+        foreach ($timersAtivos as $timer) {
+            $inicio = new \DateTime($timer['inicio']);
+            $agora = new \DateTime();
+            
+            // Calcula tempo decorrido
+            $tempoDecorrido = $agora->getTimestamp() - $inicio->getTimestamp();
+            $horas = floor($tempoDecorrido / 3600);
+            $minutos = floor(($tempoDecorrido % 3600) / 60);
+            $tempoFormatado = sprintf('%02d:%02d', $horas, $minutos);
+            
+            $fcEvents[] = [
+                'id' => 'timer_' . $timer['id'],
+                'title' => '⏱️ ' . ($timer['card_titulo'] ?? 'Timer Ativo') . ($timer['project_titulo'] ? ' - ' . $timer['project_titulo'] : '') . ' (' . $tempoFormatado . ')',
+                'start' => $inicio->format('Y-m-d\TH:i:s'),
+                'end' => $agora->format('Y-m-d\TH:i:s'),
+                'color' => '#28a745',
+                'backgroundColor' => '#28a745',
+                'borderColor' => '#28a745',
+                'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'tipo' => 'timer',
+                    'timer_id' => $timer['id'],
+                    'card_id' => $timer['card_id']
+                ],
+                'editable' => false,
+                'allDay' => false,
+                'classNames' => ['timer-ativo']
+            ];
+        }
 
         json_response($fcEvents);
     }
