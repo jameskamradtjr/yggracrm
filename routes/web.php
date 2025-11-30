@@ -19,6 +19,7 @@ use App\Controllers\PaymentMethodController;
 use App\Controllers\CalendarController;
 use App\Controllers\ContractController;
 use App\Controllers\ContractTemplateController;
+use App\Controllers\ProposalController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -124,6 +125,20 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/clients/{id}/edit', [\App\Controllers\ClientController::class, 'edit']);
     $router->post('/clients/{id}', [\App\Controllers\ClientController::class, 'update']);
     $router->post('/clients/{id}/delete', [\App\Controllers\ClientController::class, 'destroy']);
+    
+    // Propostas
+    $router->get('/proposals', [\App\Controllers\ProposalController::class, 'index']);
+    $router->get('/proposals/create', [\App\Controllers\ProposalController::class, 'create']);
+    $router->post('/proposals', [\App\Controllers\ProposalController::class, 'store']);
+    $router->get('/proposals/{id}', [\App\Controllers\ProposalController::class, 'show']);
+    $router->get('/proposals/{id}/preview', [\App\Controllers\ProposalController::class, 'preview']);
+    $router->post('/proposals/{id}', [\App\Controllers\ProposalController::class, 'update']);
+    $router->post('/proposals/{id}/delete', [\App\Controllers\ProposalController::class, 'destroy']);
+    $router->post('/proposals/{id}/add-service', [\App\Controllers\ProposalController::class, 'addService']);
+    $router->post('/proposals/{id}/add-condition', [\App\Controllers\ProposalController::class, 'addCondition']);
+    $router->post('/proposals/{id}/send', [\App\Controllers\ProposalController::class, 'send']);
+    $router->post('/proposals/{id}/duplicate', [\App\Controllers\ProposalController::class, 'duplicate']);
+    $router->get('/proposals/{id}/pdf', [\App\Controllers\ProposalController::class, 'generatePdf']);
     
     // Projetos
     $router->get('/projects', [\App\Controllers\ProjectController::class, 'index']);

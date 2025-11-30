@@ -123,6 +123,12 @@
                     </a>
                 </li>
                 <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/proposals'); ?>">
+                        <span><i class="ti ti-file-description"></i></span>
+                        <span class="hide-menu">Propostas</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
                     <a class="sidebar-link" href="<?php echo url('/contracts'); ?>">
                         <span><i class="ti ti-file-text"></i></span>
                         <span class="hide-menu">Contratos</span>
