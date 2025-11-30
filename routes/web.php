@@ -102,6 +102,13 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/settings/templates/{id}', [SettingsController::class, 'updateTemplate']);
     $router->post('/settings/templates/{id}/delete', [SettingsController::class, 'deleteTemplate']);
     
+    // Templates de WhatsApp
+    $router->get('/settings/whatsapp-templates/create', [SettingsController::class, 'createWhatsAppTemplate']);
+    $router->post('/settings/whatsapp-templates', [SettingsController::class, 'storeWhatsAppTemplate']);
+    $router->get('/settings/whatsapp-templates/{id}/edit', [SettingsController::class, 'editWhatsAppTemplate']);
+    $router->post('/settings/whatsapp-templates/{id}', [SettingsController::class, 'updateWhatsAppTemplate']);
+    $router->post('/settings/whatsapp-templates/{id}/delete', [SettingsController::class, 'deleteWhatsAppTemplate']);
+    
     // CRM de Leads
     $router->get('/leads', [LeadController::class, 'index']);
     $router->get('/leads/create', [LeadController::class, 'create']);

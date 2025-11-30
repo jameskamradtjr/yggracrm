@@ -7,6 +7,7 @@ namespace App\Controllers;
 use Core\Controller;
 use App\Models\SystemSetting;
 use App\Models\EmailTemplate;
+use App\Models\WhatsAppTemplate;
 use App\Models\SistemaLog;
 
 /**
@@ -46,12 +47,14 @@ class SettingsController extends Controller
         $layoutSettings = SystemSetting::getByGroup('layout');
         $emailSettings = SystemSetting::getByGroup('email');
         $templates = EmailTemplate::all();
+        $whatsappTemplates = WhatsAppTemplate::all();
 
         return $this->view('settings/index', [
             'tab' => $tab,
             'layoutSettings' => $layoutSettings,
             'emailSettings' => $emailSettings,
-            'templates' => $templates
+            'templates' => $templates,
+            'whatsappTemplates' => $whatsappTemplates
         ]);
     }
 
@@ -354,6 +357,166 @@ class SettingsController extends Controller
 
         session()->flash('success', 'Template deletado com sucesso!');
         $this->redirect('/settings?tab=templates');
+    }
+
+    /**
+     * Exibe formulário de criação de template WhatsApp
+     */
+    public function createWhatsAppTemplate(): string
+    {
+        $this->checkAdminMaster();
+
+        return $this->view('settings/whatsapp-templates/create');
+    }
+
+    /**
+     * Salva novo template WhatsApp
+     */
+    public function storeWhatsAppTemplate(): void
+    {
+        $this->checkAdminMaster();
+
+        // Valida CSRF
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/settings/whatsapp-templates/create');
+        }
+
+        $data = $this->validate([
+            'name' => 'required|max:255',
+            'slug' => 'required|unique:whatsapp_templates,slug',
+            'message' => 'required'
+        ]);
+
+        $data['is_active'] = $this->request->has('is_active') ? 1 : 0;
+
+        $variables = $this->request->input('variables', '');
+        if (!empty($variables)) {
+            $data['variables'] = json_encode(explode(',', $variables));
+        }
+
+        $template = WhatsAppTemplate::create($data);
+
+        // Registra log
+        SistemaLog::registrar(
+            'whatsapp_templates',
+            'CREATE',
+            $template->id,
+            "Template de WhatsApp '{$template->name}' criado",
+            null,
+            ['name' => $template->name, 'slug' => $template->slug]
+        );
+
+        session()->flash('success', 'Template criado com sucesso!');
+        $this->redirect('/settings?tab=whatsapp-templates');
+    }
+
+    /**
+     * Exibe formulário de edição de template WhatsApp
+     */
+    public function editWhatsAppTemplate(array $params): string
+    {
+        $this->checkAdminMaster();
+
+        $template = WhatsAppTemplate::find($params['id']);
+
+        if (!$template) {
+            abort(404, 'Template não encontrado.');
+        }
+
+        return $this->view('settings/whatsapp-templates/edit', ['template' => $template]);
+    }
+
+    /**
+     * Atualiza template WhatsApp
+     */
+    public function updateWhatsAppTemplate(array $params): void
+    {
+        $this->checkAdminMaster();
+
+        // Valida CSRF
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/settings/whatsapp-templates/' . $params['id'] . '/edit');
+        }
+
+        $template = WhatsAppTemplate::find($params['id']);
+
+        if (!$template) {
+            abort(404, 'Template não encontrado.');
+        }
+
+        $data = $this->validate([
+            'name' => 'required|max:255',
+            'slug' => 'required|unique:whatsapp_templates,slug,' . $template->id,
+            'message' => 'required'
+        ]);
+
+        $data['is_active'] = $this->request->has('is_active') ? 1 : 0;
+
+        $variables = $this->request->input('variables', '');
+        if (!empty($variables)) {
+            $data['variables'] = json_encode(explode(',', $variables));
+        } else {
+            $data['variables'] = null;
+        }
+
+        // Dados anteriores para log
+        $dadosAnteriores = [
+            'name' => $template->name,
+            'slug' => $template->slug,
+            'is_active' => $template->is_active
+        ];
+
+        $template->update($data);
+
+        // Registra log
+        SistemaLog::registrar(
+            'whatsapp_templates',
+            'UPDATE',
+            $template->id,
+            "Template de WhatsApp '{$template->name}' atualizado",
+            $dadosAnteriores,
+            ['name' => $data['name'], 'slug' => $data['slug'] ?? $template->slug, 'is_active' => $data['is_active']]
+        );
+
+        session()->flash('success', 'Template atualizado com sucesso!');
+        $this->redirect('/settings?tab=whatsapp-templates');
+    }
+
+    /**
+     * Deleta template WhatsApp
+     */
+    public function deleteWhatsAppTemplate(array $params): void
+    {
+        $this->checkAdminMaster();
+
+        $template = WhatsAppTemplate::find($params['id']);
+
+        if (!$template) {
+            abort(404, 'Template não encontrado.');
+        }
+
+        // Dados para log antes de deletar
+        $dadosTemplate = [
+            'name' => $template->name,
+            'slug' => $template->slug
+        ];
+
+        $template->delete();
+
+        // Registra log
+        SistemaLog::registrar(
+            'whatsapp_templates',
+            'DELETE',
+            $params['id'],
+            "Template de WhatsApp '{$dadosTemplate['name']}' deletado",
+            $dadosTemplate,
+            null
+        );
+
+        session()->flash('success', 'Template deletado com sucesso!');
+        $this->redirect('/settings?tab=whatsapp-templates');
     }
 
     /**

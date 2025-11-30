@@ -65,6 +65,17 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <button class="nav-link <?php echo $tab === 'whatsapp-templates' ? 'active' : ''; ?>" 
+                                id="whatsapp-templates-tab" 
+                                data-bs-toggle="tab" 
+                                data-bs-target="#whatsapp-templates" 
+                                type="button" 
+                                role="tab">
+                            <i class="ti ti-brand-whatsapp me-2"></i>
+                            Templates de WhatsApp
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link <?php echo $tab === 'integrations' ? 'active' : ''; ?>" 
                                 id="integrations-tab" 
                                 data-bs-toggle="tab" 
@@ -272,6 +283,84 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                                                             <i class="ti ti-edit"></i>
                                                         </a>
                                                         <form action="<?php echo url('/settings/templates/' . $template->id . '/delete'); ?>" 
+                                                              method="POST" 
+                                                              class="d-inline" 
+                                                              onsubmit="return confirm('Tem certeza que deseja deletar este template?');">
+                                                            <?php echo csrf_field(); ?>
+                                                            <button type="submit" class="btn btn-sm btn-danger" title="Deletar">
+                                                                <i class="ti ti-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Aba Templates de WhatsApp -->
+                    <div class="tab-pane fade <?php echo $tab === 'whatsapp-templates' ? 'show active' : ''; ?>" 
+                         id="whatsapp-templates" 
+                         role="tabpanel">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <div>
+                                <h5 class="mb-2">Templates de WhatsApp</h5>
+                                <p class="text-muted mb-0">Gerencie os templates de mensagens WhatsApp do sistema</p>
+                            </div>
+                            <a href="<?php echo url('/settings/whatsapp-templates/create'); ?>" class="btn btn-primary">
+                                <i class="ti ti-plus me-2"></i>
+                                Novo Template
+                            </a>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Slug</th>
+                                        <th>Mensagem</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($whatsappTemplates)): ?>
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                Nenhum template encontrado.
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($whatsappTemplates as $template): ?>
+                                            <tr>
+                                                <td><?php echo $template->id; ?></td>
+                                                <td><?php echo e($template->name); ?></td>
+                                                <td><code><?php echo e($template->slug); ?></code></td>
+                                                <td>
+                                                    <span class="text-truncate d-inline-block" style="max-width: 300px;" title="<?php echo e($template->message); ?>">
+                                                        <?php echo e(strlen($template->message) > 50 ? substr($template->message, 0, 50) . '...' : $template->message); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <?php if ($template->is_active): ?>
+                                                        <span class="badge bg-success">Ativo</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary">Inativo</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="btn-group">
+                                                        <a href="<?php echo url('/settings/whatsapp-templates/' . $template->id . '/edit'); ?>" 
+                                                           class="btn btn-sm btn-warning" 
+                                                           title="Editar">
+                                                            <i class="ti ti-edit"></i>
+                                                        </a>
+                                                        <form action="<?php echo url('/settings/whatsapp-templates/' . $template->id . '/delete'); ?>" 
                                                               method="POST" 
                                                               class="d-inline" 
                                                               onsubmit="return confirm('Tem certeza que deseja deletar este template?');">
