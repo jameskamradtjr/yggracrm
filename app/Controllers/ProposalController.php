@@ -14,6 +14,7 @@ use App\Models\Project;
 use App\Models\SistemaLog;
 use App\Services\ResendService;
 use App\Services\SmtpService;
+use App\Services\Automation\AutomationEventDispatcher;
 
 class ProposalController extends Controller
 {
@@ -144,6 +145,9 @@ class ProposalController extends Controller
                 $proposal->gerarNumeroProposta();
                 $proposal->save();
             }
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onProposal('created', $proposal->id, auth()->getDataUserId());
             
             // Processa upload de imagem de capa após criar a proposta (para ter o ID)
             if ($this->request->hasFile('imagem_capa')) {
@@ -701,6 +705,9 @@ class ProposalController extends Controller
             }
             
             $proposal->status = 'enviada';
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onProposal('sent', $proposal->id, auth()->getDataUserId());
             $proposal->data_envio = date('Y-m-d H:i:s');
             $proposal->save();
             

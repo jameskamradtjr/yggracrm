@@ -180,6 +180,21 @@
                     </a>
                 </li>
                 <?php endif; ?>
+                
+                <!-- Automações -->
+                <?php if (auth()->check()): ?>
+                <li class="nav-small-cap">
+                    <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+                    <span class="hide-menu">Automações</span>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/automations'); ?>">
+                        <span><i class="ti ti-robot"></i></span>
+                        <span class="hide-menu">Automações</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+                
                 <?php if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('super-admin')): ?>
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="<?php echo url('/settings'); ?>">

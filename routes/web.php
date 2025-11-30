@@ -20,6 +20,7 @@ use App\Controllers\CalendarController;
 use App\Controllers\ContractController;
 use App\Controllers\ContractTemplateController;
 use App\Controllers\ProposalController;
+use App\Controllers\AutomationController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -268,5 +269,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/contracts/{id}/setup-signatures', [ContractController::class, 'setupSignatures']);
     $router->post('/contracts/{id}/send-for-signature', [ContractController::class, 'sendForSignature']);
     $router->get('/contracts/{id}/pdf', [ContractController::class, 'generatePdf']);
+    
+    // Automações
+    $router->get('/automations', [AutomationController::class, 'index']);
+    $router->get('/automations/builder', [AutomationController::class, 'builder']);
+    $router->get('/automations/builder/{id}', [AutomationController::class, 'edit']);
+    $router->post('/automations', [AutomationController::class, 'store']);
+    $router->post('/automations/{id}', [AutomationController::class, 'update']);
+    $router->post('/automations/{id}/delete', [AutomationController::class, 'destroy']);
+    $router->get('/automations/{id}/executions', [AutomationController::class, 'executions']);
+    $router->get('/api/automations/components', [AutomationController::class, 'getComponents']);
 });
 

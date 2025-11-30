@@ -10,6 +10,7 @@ use App\Models\SistemaLog;
 use App\Models\Client;
 use App\Models\Lead;
 use App\Models\Project;
+use App\Services\Automation\AutomationEventDispatcher;
 
 class CalendarController extends Controller
 {
@@ -302,6 +303,9 @@ class CalendarController extends Controller
                 null,
                 $event->toArray()
             );
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onCalendarEvent('created', $event->id, auth()->getDataUserId());
 
             json_response([
                 'success' => true,

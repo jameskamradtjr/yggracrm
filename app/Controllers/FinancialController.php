@@ -16,6 +16,7 @@ use App\Models\Tag;
 use App\Models\Supplier;
 use App\Models\PaymentMethod;
 use App\Models\SistemaLog;
+use App\Services\Automation\AutomationEventDispatcher;
 
 /**
  * Controller Financeiro
@@ -549,6 +550,14 @@ class FinancialController extends Controller
             
             // Cria o lançamento
             $entry = FinancialEntry::create($entryData);
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onFinancialEntryCreated(
+                $entry->id, 
+                $entry->tipo, 
+                (float)$entry->valor, 
+                auth()->getDataUserId()
+            );
             
             // Adiciona tags
             $tags = $this->request->input('tags', []);

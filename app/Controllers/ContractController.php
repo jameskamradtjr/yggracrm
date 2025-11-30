@@ -16,6 +16,7 @@ use App\Services\ContractService as ContractServiceHelper;
 use App\Services\PdfService;
 use App\Services\ResendService;
 use App\Services\SmtpService;
+use App\Services\Automation\AutomationEventDispatcher;
 
 class ContractController extends Controller
 {
@@ -138,6 +139,9 @@ class ContractController extends Controller
                 'observacoes' => $data['observacoes'] ?? null
             ]);
 
+            // Dispara evento de automação
+            AutomationEventDispatcher::onContract('created', $contract->id, $userId);
+            
             SistemaLog::registrar(
                 'contracts',
                 'CREATE',
@@ -949,6 +953,9 @@ class ContractController extends Controller
                 'codigo_validado_em' => date('Y-m-d H:i:s'),
                 'assinado' => true,
                 'assinado_em' => date('Y-m-d H:i:s'),
+                
+                // Dispara evento de automação
+                // (será verificado após salvar)
                 'ip_assinatura' => $ip,
                 'geolocalizacao' => json_encode($geolocalizacao),
                 'dispositivo' => $userAgent,
@@ -975,6 +982,11 @@ class ContractController extends Controller
                 null,
                 $signature->toArray()
             );
+            
+            // Dispara evento de automação se todas as assinaturas foram concluídas
+            if ($contract->todasAssinaturasConcluidas()) {
+                AutomationEventDispatcher::onContract('signed', $contract->id, $contract->user_id);
+            }
 
             json_response([
                 'success' => true,

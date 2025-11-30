@@ -8,6 +8,7 @@ use Core\Controller;
 use App\Models\Lead;
 use App\Models\SystemSetting;
 use App\Models\SistemaLog;
+use App\Services\Automation\AutomationEventDispatcher;
 
 /**
  * Controller de Leads
@@ -348,6 +349,9 @@ class LeadController extends Controller
                 null,
                 $lead->toArray()
             );
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onLeadCreated($lead->id, $userId);
 
             $message = 'Lead cadastrado com sucesso!';
             if ($existingClient) {
@@ -923,6 +927,9 @@ Dados do lead:
                 null,
                 $lead->toArray()
             );
+            
+            // Dispara evento de automação
+            AutomationEventDispatcher::onLeadCreated($lead->id, $userId);
 
             session()->flash('success', 'Lead cadastrado com sucesso!');
             $this->redirect('/leads');
@@ -1139,6 +1146,11 @@ Dados do lead:
 
         $etapaAnterior = $lead->etapa_funil;
         $lead->updateEtapaFunil($etapa);
+        
+        // Dispara evento de automação (card movido no Kanban)
+        if ($etapaAnterior !== $etapa) {
+            AutomationEventDispatcher::onKanbanCard('moved', $lead->id, $etapa, $lead->user_id);
+        }
         
         // Registra log
         SistemaLog::registrar(
