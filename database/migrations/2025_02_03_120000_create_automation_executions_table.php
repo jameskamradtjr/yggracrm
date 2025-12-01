@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('status', 50)->default('running'); // running, completed, failed
             $table->text('trigger_data')->nullable(); // Dados do trigger que iniciou a execução
             $table->text('execution_log')->nullable(); // Log de execução
+            $table->text('executed_nodes')->nullable()->comment('JSON array de IDs de nós já executados');
             $table->text('error_message')->nullable();
             $table->timestamp('started_at');
             $table->timestamp('completed_at')->nullable();

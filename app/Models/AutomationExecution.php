@@ -13,7 +13,7 @@ class AutomationExecution extends Model
     
     protected array $fillable = [
         'automation_id', 'status', 'trigger_data', 'execution_log', 
-        'error_message', 'started_at', 'completed_at'
+        'executed_nodes', 'error_message', 'started_at', 'completed_at'
     ];
     
     protected array $casts = [

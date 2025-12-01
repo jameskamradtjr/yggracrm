@@ -6,6 +6,7 @@ namespace App\Services\Automation;
 
 use App\Models\Automation;
 use App\Models\AutomationExecution;
+use App\Models\AutomationDelay;
 
 /**
  * Engine de execução de automações
@@ -94,6 +95,12 @@ class AutomationEngine
                 continue; // Condição não satisfeita, não continua
             }
             
+            // Se o resultado for 'delayed', pausa o workflow
+            if ($result === 'delayed') {
+                $execution->addLog("Workflow pausado devido a delay no nó '{$nodeId}'", ['node_id' => $nodeId]);
+                break; // Para a execução do workflow
+            }
+            
             // Encontra nós conectados
             $nextNodes = $this->findConnectedNodes($nodeId, $connections, $nodes);
             $queue = array_merge($queue, $nextNodes);
@@ -140,7 +147,24 @@ class AutomationEngine
             }
             
             $action->setConfig($config);
-            $result = $action->execute($triggerData, $config);
+            
+            // Adiciona informações do contexto para ações que precisam (como DelayAction)
+            $actionTriggerData = array_merge($triggerData, [
+                'automation_id' => $execution->automation_id,
+                'execution_id' => $execution->id,
+                'node_id' => $node['id'] ?? null
+            ]);
+            
+            $result = $action->execute($actionTriggerData, $config);
+            
+            // Se for uma ação de delay, não continua o workflow imediatamente
+            if ($actionId === 'delay' && $result === true) {
+                $execution->addLog("Delay agendado para o nó '{$node['id']}'", [
+                    'node' => $node,
+                    'result' => 'agendado'
+                ]);
+                return 'delayed'; // Retorna 'delayed' para indicar que o workflow foi pausado
+            }
             
             $execution->addLog("Ação '{$actionId}' executada: " . ($result ? 'sucesso' : 'falha'), [
                 'node' => $node,
@@ -188,6 +212,119 @@ class AutomationEngine
         }
         
         return $connected;
+    }
+    
+    /**
+     * Continua a execução de um workflow após um delay
+     */
+    public function continueAfterDelay(AutomationDelay $delay): void
+    {
+        $automation = $delay->automation();
+        if (!$automation || !$automation->is_active) {
+            $delay->markAsCancelled();
+            return;
+        }
+        
+        $execution = $delay->execution();
+        if (!$execution) {
+            $delay->markAsCancelled();
+            return;
+        }
+        
+        $workflow = $automation->getWorkflowData();
+        $nodes = $workflow['nodes'] ?? [];
+        $connections = $workflow['connections'] ?? [];
+        $triggerData = $delay->trigger_data ?? [];
+        
+        // Encontra o nó de delay
+        $delayNode = null;
+        foreach ($nodes as $node) {
+            if (($node['id'] ?? null) === $delay->node_id) {
+                $delayNode = $node;
+                break;
+            }
+        }
+        
+        if (!$delayNode) {
+            $delay->markAsCancelled();
+            $execution->addLog("Nó de delay '{$delay->node_id}' não encontrado", ['delay_id' => $delay->id]);
+            return;
+        }
+        
+        // Marca o delay como processado
+        $delay->markAsProcessed();
+        
+        // Continua o workflow a partir dos nós conectados ao delay
+        $nextNodes = $this->findConnectedNodes($delay->node_id, $connections, $nodes);
+        
+        if (empty($nextNodes)) {
+            $execution->addLog("Nenhum nó conectado após o delay '{$delay->node_id}'", ['delay_id' => $delay->id]);
+            $execution->markAsCompleted();
+            return;
+        }
+        
+        // Continua a execução
+        $executedNodes = json_decode($execution->executed_nodes ?? '[]', true) ?: [];
+        $queue = $nextNodes;
+        
+        while (!empty($queue)) {
+            $currentNode = array_shift($queue);
+            $nodeId = $currentNode['id'] ?? null;
+            
+            if (!$nodeId || in_array($nodeId, $executedNodes)) {
+                continue;
+            }
+            
+            $executedNodes[] = $nodeId;
+            $execution->addLog("Continuando workflow após delay: {$currentNode['type']}", ['node_id' => $nodeId]);
+            
+            // Processa o nó
+            $result = $this->processNode($currentNode, $triggerData, $execution);
+            
+            if ($result === false) {
+                continue; // Condição não satisfeita, não continua
+            }
+            
+            // Se o resultado for 'delayed', pausa novamente
+            if ($result === 'delayed') {
+                $execution->addLog("Workflow pausado novamente devido a delay no nó '{$nodeId}'", ['node_id' => $nodeId]);
+                break;
+            }
+            
+            // Encontra nós conectados
+            $nextNodes = $this->findConnectedNodes($nodeId, $connections, $nodes);
+            $queue = array_merge($queue, $nextNodes);
+        }
+        
+        // Atualiza nós executados
+        $execution->update(['executed_nodes' => json_encode($executedNodes)]);
+        
+        // Se não há mais nós na fila e não foi pausado, marca como concluído
+        if (empty($queue)) {
+            $execution->markAsCompleted();
+        }
+    }
+    
+    /**
+     * Processa delays agendados que já devem ser executados
+     */
+    public static function processScheduledDelays(): void
+    {
+        $now = date('Y-m-d H:i:s');
+        
+        $delays = AutomationDelay::where('status', 'pending')
+            ->where('execute_at', '<=', $now)
+            ->get();
+        
+        foreach ($delays as $delay) {
+            try {
+                $engine = new self();
+                $engine->continueAfterDelay($delay);
+            } catch (\Exception $e) {
+                error_log("Erro ao processar delay {$delay->id}: " . $e->getMessage());
+                $delay->markAsCancelled();
+            }
+        }
     }
 }
 

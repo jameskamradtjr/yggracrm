@@ -282,5 +282,6 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/api/tags', [AutomationController::class, 'getTags']);
     $router->get('/api/users', [AutomationController::class, 'getUsers']);
     $router->get('/api/lead-origins', [AutomationController::class, 'getLeadOrigins']);
+    $router->get('/api/automations/automations', [AutomationController::class, 'getAutomations']);
 });
 

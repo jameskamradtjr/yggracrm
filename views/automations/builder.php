@@ -591,7 +591,29 @@ function configureNode(nodeId) {
     const body = document.getElementById('nodeConfigModalBody');
     body.innerHTML = generateConfigForm(component, node.config);
     
-    const modal = new bootstrap.Modal(document.getElementById('nodeConfigModal'));
+    // Carrega opções dinâmicas após o modal ser exibido
+    const modalElement = document.getElementById('nodeConfigModal');
+    modalElement.addEventListener('shown.bs.modal', () => {
+        if (component && component.schema) {
+            component.schema.forEach(field => {
+                if (field.loadOptions === 'tags') {
+                    loadTagsForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                } else if (field.loadOptions === 'users') {
+                    loadUsersForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                } else if (field.loadOptions === 'origins') {
+                    loadOriginsForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                } else if (field.loadOptions === 'email-templates') {
+                    loadEmailTemplatesForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                } else if (field.loadOptions === 'whatsapp-templates') {
+                    loadWhatsAppTemplatesForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                } else if (field.loadOptions === 'automations') {
+                    loadAutomationsForSelect(`select[name="${field.name}"]`, node.config[field.name]);
+                }
+            });
+        }
+    }, { once: true }); // Executa apenas uma vez
+    
+    const modal = new bootstrap.Modal(modalElement);
     modal.show();
 }
 
@@ -631,11 +653,17 @@ function generateConfigForm(component, currentConfig) {
             
             // Se precisa carregar opções dinamicamente
             if (field.loadOptions === 'tags') {
-                loadTagsForSelect(field.name);
+                loadTagsForSelect(`select[name="${field.name}"]`);
             } else if (field.loadOptions === 'users') {
-                loadUsersForSelect(field.name);
+                loadUsersForSelect(`select[name="${field.name}"]`);
             } else if (field.loadOptions === 'origins') {
-                loadOriginsForSelect(field.name);
+                loadOriginsForSelect(`select[name="${field.name}"]`);
+            } else if (field.loadOptions === 'email-templates') {
+                loadEmailTemplatesForSelect(`select[name="${field.name}"]`);
+            } else if (field.loadOptions === 'whatsapp-templates') {
+                loadWhatsAppTemplatesForSelect(`select[name="${field.name}"]`);
+            } else if (field.loadOptions === 'automations') {
+                loadAutomationsForSelect(`select[name="${field.name}"]`);
             }
         } else if (field.type === 'textarea') {
             html += `<textarea class="form-control" name="${field.name}" rows="4" ${field.required ? 'required' : ''}>${value}</textarea>`;
@@ -650,14 +678,13 @@ function generateConfigForm(component, currentConfig) {
     return html;
 }
 
-function loadTagsForSelect(selectName) {
+function loadTagsForSelect(selector, selectedValue = null) {
     fetch('<?php echo url('/api/tags'); ?>')
         .then(response => response.json())
         .then(data => {
-            const select = document.querySelector(`select[name="${selectName}"]`);
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
             if (!select) return;
             
-            // Limpa opções de carregamento
             select.innerHTML = '<option value="">Selecione uma tag...</option>';
             
             if (data.success && data.tags && Array.isArray(data.tags)) {
@@ -665,6 +692,9 @@ function loadTagsForSelect(selectName) {
                     const option = document.createElement('option');
                     option.value = tag.id;
                     option.textContent = tag.name;
+                    if (selectedValue == tag.id) {
+                        option.selected = true;
+                    }
                     select.appendChild(option);
                 });
             }
@@ -674,11 +704,11 @@ function loadTagsForSelect(selectName) {
         });
 }
 
-function loadUsersForSelect(selectName) {
+function loadUsersForSelect(selector, selectedValue = null) {
     fetch('<?php echo url('/api/users'); ?>')
         .then(response => response.json())
         .then(data => {
-            const select = document.querySelector(`select[name="${selectName}"]`);
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
             if (!select) return;
             
             select.innerHTML = '<option value="">Selecione um usuário...</option>';
@@ -688,6 +718,9 @@ function loadUsersForSelect(selectName) {
                     const option = document.createElement('option');
                     option.value = user.id;
                     option.textContent = user.name || user.email;
+                    if (selectedValue == user.id) {
+                        option.selected = true;
+                    }
                     select.appendChild(option);
                 });
             }
@@ -697,11 +730,11 @@ function loadUsersForSelect(selectName) {
         });
 }
 
-function loadOriginsForSelect(selectName) {
+function loadOriginsForSelect(selector, selectedValue = null) {
     fetch('<?php echo url('/api/lead-origins'); ?>')
         .then(response => response.json())
         .then(data => {
-            const select = document.querySelector(`select[name="${selectName}"]`);
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
             if (!select) return;
             
             select.innerHTML = '<option value="">Selecione uma origem...</option>';
@@ -711,12 +744,93 @@ function loadOriginsForSelect(selectName) {
                     const option = document.createElement('option');
                     option.value = origin.id;
                     option.textContent = origin.nome;
+                    if (selectedValue == origin.id) {
+                        option.selected = true;
+                    }
                     select.appendChild(option);
                 });
             }
         })
         .catch(error => {
             console.error('Erro ao carregar origens:', error);
+        });
+}
+
+function loadEmailTemplatesForSelect(selector, selectedValue = null) {
+    fetch('<?php echo url('/api/automations/email-templates'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecione um template de email...</option>';
+            
+            if (data.success && data.email_templates && Array.isArray(data.email_templates)) {
+                data.email_templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.slug;
+                    option.textContent = template.name;
+                    if (selectedValue == template.slug) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar templates de email:', error);
+        });
+}
+
+function loadWhatsAppTemplatesForSelect(selector, selectedValue = null) {
+    fetch('<?php echo url('/api/automations/whatsapp-templates'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecione um template de WhatsApp...</option>';
+            
+            if (data.success && data.whatsapp_templates && Array.isArray(data.whatsapp_templates)) {
+                data.whatsapp_templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.slug;
+                    option.textContent = template.name;
+                    if (selectedValue == template.slug) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar templates de WhatsApp:', error);
+        });
+}
+
+function loadAutomationsForSelect(selector, selectedValue = null) {
+    fetch('<?php echo url('/api/automations/automations'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecione uma automação...</option>';
+            
+            if (data.success && data.automations && Array.isArray(data.automations)) {
+                data.automations.forEach(automation => {
+                    const option = document.createElement('option');
+                    option.value = automation.id;
+                    option.textContent = automation.name;
+                    if (selectedValue == automation.id) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar automações:', error);
         });
 }
 

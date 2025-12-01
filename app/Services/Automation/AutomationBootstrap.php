@@ -32,6 +32,10 @@ class AutomationBootstrap
         AutomationRegistry::registerAction(new Actions\WebhookAction());
         AutomationRegistry::registerAction(new Actions\AssignResponsibleAction());
         AutomationRegistry::registerAction(new Actions\MoveCardAction());
+        AutomationRegistry::registerAction(new Actions\DelayAction());
+        AutomationRegistry::registerAction(new Actions\AddTagAction());
+        AutomationRegistry::registerAction(new Actions\RemoveTagAction());
+        AutomationRegistry::registerAction(new Actions\TriggerAutomationAction());
     }
 }
 
