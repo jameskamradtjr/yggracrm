@@ -325,13 +325,29 @@ document.getElementById('subcategoryForm').addEventListener('submit', function(e
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        // Verifica se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // Se não for JSON, tenta ler como texto para debug
+            return response.text().then(text => {
+                console.error('Resposta não é JSON:', text);
+                throw new Error('Resposta do servidor não é JSON válido. Verifique o console para mais detalhes.');
+            });
+        }
+    })
     .then(data => {
         if (data.success) {
             location.reload();
         } else {
-            alert('Erro: ' + data.message);
+            alert('Erro: ' + (data.message || 'Erro desconhecido'));
         }
+    })
+    .catch(error => {
+        console.error('Erro ao salvar subcategoria:', error);
+        alert('Erro ao salvar subcategoria: ' + error.message);
     });
 });
 </script>

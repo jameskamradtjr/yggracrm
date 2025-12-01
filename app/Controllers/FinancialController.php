@@ -1501,16 +1501,32 @@ class FinancialController extends Controller
         
         if (!auth()->check()) {
             json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
         }
 
         if (!verify_csrf($this->request->input('_csrf_token'))) {
             json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
         }
 
-        $data = $this->validate([
+        // Validação manual para retornar JSON em caso de erro
+        $validator = new \Core\Validator($this->request->all(), [
             'name' => 'required',
             'category_id' => 'required|integer'
         ]);
+
+        if (!$validator->passes()) {
+            $errors = $validator->errors();
+            $firstError = !empty($errors) ? reset($errors)[0] : 'Dados inválidos';
+            json_response([
+                'success' => false,
+                'message' => $firstError,
+                'errors' => $errors
+            ], 422);
+            return;
+        }
+
+        $data = $validator->validated();
 
         try {
             $userId = auth()->getDataUserId();
@@ -1548,16 +1564,32 @@ class FinancialController extends Controller
         
         if (!auth()->check()) {
             json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
         }
 
         if (!verify_csrf($this->request->input('_csrf_token'))) {
             json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
         }
 
-        $data = $this->validate([
+        // Validação manual para retornar JSON em caso de erro
+        $validator = new \Core\Validator($this->request->all(), [
             'id' => 'required|integer',
             'name' => 'required'
         ]);
+
+        if (!$validator->passes()) {
+            $errors = $validator->errors();
+            $firstError = !empty($errors) ? reset($errors)[0] : 'Dados inválidos';
+            json_response([
+                'success' => false,
+                'message' => $firstError,
+                'errors' => $errors
+            ], 422);
+            return;
+        }
+
+        $data = $validator->validated();
 
         try {
             $userId = auth()->getDataUserId();
