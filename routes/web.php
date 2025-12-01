@@ -227,6 +227,8 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/cost-centers', [FinancialController::class, 'costCenters']);
     $router->get('/financial/cost-centers/create', [FinancialController::class, 'createCostCenter']);
     $router->post('/financial/cost-centers', [FinancialController::class, 'storeCostCenter']);
+    $router->get('/financial/cost-centers/{id}/edit', [FinancialController::class, 'editCostCenter']);
+    $router->post('/financial/cost-centers/{id}', [FinancialController::class, 'updateCostCenter']);
     $router->post('/financial/cost-centers/subcenters', [FinancialController::class, 'storeSubCostCenter']);
     
     // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas

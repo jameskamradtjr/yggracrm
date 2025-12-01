@@ -1809,6 +1809,77 @@ class FinancialController extends Controller
     }
     
     /**
+     * Exibe formulário de edição de centro de custo
+     */
+    public function editCostCenter(): string
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        $id = $this->request->param('id');
+        $userId = auth()->getDataUserId();
+        
+        $costCenter = CostCenter::where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$costCenter) {
+            session()->flash('error', 'Centro de custo não encontrado.');
+            $this->redirect('/financial/cost-centers');
+        }
+
+        return $this->view('financial/cost_centers/edit', [
+            'title' => 'Editar Centro de Custo',
+            'costCenter' => $costCenter
+        ]);
+    }
+    
+    /**
+     * Atualiza centro de custo
+     */
+    public function updateCostCenter(): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            session()->flash('error', 'Token de segurança inválido.');
+            $this->redirect('/financial/cost-centers');
+        }
+
+        $id = $this->request->param('id');
+        $userId = auth()->getDataUserId();
+        
+        $costCenter = CostCenter::where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$costCenter) {
+            session()->flash('error', 'Centro de custo não encontrado.');
+            $this->redirect('/financial/cost-centers');
+        }
+
+        $data = $this->validate([
+            'name' => 'required'
+        ]);
+
+        try {
+            $costCenter->update([
+                'name' => $data['name']
+            ]);
+            
+            session()->flash('success', 'Centro de custo atualizado com sucesso!');
+            $this->redirect('/financial/cost-centers');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao atualizar centro de custo: ' . $e->getMessage());
+            $this->redirect('/financial/cost-centers/' . $id . '/edit');
+        }
+    }
+    
+    /**
      * Salva novo subcentro de custo
      */
     public function storeSubCostCenter(): void
