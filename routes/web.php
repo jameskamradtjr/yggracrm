@@ -209,14 +209,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/financial/payment-methods/{id}', [PaymentMethodController::class, 'update']);
     $router->post('/financial/payment-methods/{id}/delete', [PaymentMethodController::class, 'destroy']);
     
-    // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
-    $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
-    $router->post('/financial/{id}', [FinancialController::class, 'update']);
-    $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
-    $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
-    $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
-    
-    // Categorias
+    // Categorias - DEVEM VIR ANTES das rotas genéricas com {id}
     $router->get('/financial/categories', [FinancialController::class, 'categories']);
     $router->get('/financial/categories/create', [FinancialController::class, 'createCategory']);
     $router->post('/financial/categories', [FinancialController::class, 'storeCategory']);
@@ -227,6 +220,13 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/financial/categories/subcategories/update', [FinancialController::class, 'updateSubcategory']);
     $router->post('/financial/categories/subcategories/delete', [FinancialController::class, 'deleteSubcategory']);
     $router->get('/financial/categories/subcategories/info', [FinancialController::class, 'getSubcategoryInfo']);
+    
+    // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
+    $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
+    $router->post('/financial/{id}', [FinancialController::class, 'update']);
+    $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
+    $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
+    $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
     
     // Centros de Custo
     $router->get('/financial/cost-centers', [FinancialController::class, 'costCenters']);
