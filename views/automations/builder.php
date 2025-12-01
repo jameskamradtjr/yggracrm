@@ -418,43 +418,59 @@ function renderNode(node) {
     const typeLabel = node.type.startsWith('trigger_') ? 'Gatilho' : 
                       node.type.startsWith('condition_') ? 'Condição' : 'Ação';
     
-    nodeEl.innerHTML = `
-        <div class="node-header">
-            <span>${component?.name || typeLabel}</span>
-            <div>
-                <button type="button" class="btn btn-sm btn-link p-0" onclick="configureNode('${node.id}')" title="Configurar">
-                    <i class="ti ti-settings"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-link p-0 text-danger" onclick="removeNode('${node.id}')" title="Remover">
-                    <i class="ti ti-x"></i>
-                </button>
-            </div>
+    // Cria estrutura do nó
+    const header = document.createElement('div');
+    header.className = 'node-header';
+    header.innerHTML = `
+        <span>${component?.name || typeLabel}</span>
+        <div>
+            <button type="button" class="btn btn-sm btn-link p-0" onclick="configureNode('${node.id}')" title="Configurar">
+                <i class="ti ti-settings"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-link p-0 text-danger" onclick="removeNode('${node.id}')" title="Remover">
+                <i class="ti ti-x"></i>
+            </button>
         </div>
-        <div class="node-body">${component?.description || ''}</div>
-        ${node.type.startsWith('trigger_') ? '' : `<div class="node-connector input" data-node-id="${node.id}" title="Conectar aqui"></div>`}
-        ${node.type.startsWith('action_') ? '' : `<div class="node-connector output" data-node-id="${node.id}" title="Iniciar conexão"></div>`}
     `;
+    
+    const body = document.createElement('div');
+    body.className = 'node-body';
+    body.textContent = component?.description || '';
+    
+    nodeEl.appendChild(header);
+    nodeEl.appendChild(body);
+    
+    // Adiciona conectores
+    if (!node.type.startsWith('trigger_')) {
+        const inputConnector = document.createElement('div');
+        inputConnector.className = 'node-connector input';
+        inputConnector.setAttribute('data-node-id', node.id);
+        inputConnector.setAttribute('title', 'Conectar aqui');
+        inputConnector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('Input connector clicked for node:', node.id);
+            endConnection(node.id);
+        });
+        nodeEl.appendChild(inputConnector);
+    }
+    
+    if (!node.type.startsWith('action_')) {
+        const outputConnector = document.createElement('div');
+        outputConnector.className = 'node-connector output';
+        outputConnector.setAttribute('data-node-id', node.id);
+        outputConnector.setAttribute('title', 'Iniciar conexão');
+        outputConnector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('Output connector clicked for node:', node.id);
+            startConnection(node.id);
+        });
+        nodeEl.appendChild(outputConnector);
+    }
     
     // Torna o nó arrastável
     makeNodeDraggable(nodeEl, node);
-    
-    // Adiciona event listeners aos conectores
-    const inputConnector = nodeEl.querySelector('.node-connector.input');
-    const outputConnector = nodeEl.querySelector('.node-connector.output');
-    
-    if (inputConnector) {
-        inputConnector.addEventListener('click', (e) => {
-            e.stopPropagation();
-            endConnection(node.id);
-        });
-    }
-    
-    if (outputConnector) {
-        outputConnector.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startConnection(node.id);
-        });
-    }
     
     container.appendChild(nodeEl);
 }
@@ -696,75 +712,133 @@ function updateWorkflowData() {
         nodes: nodes,
         connections: connections
     });
-    renderConnections();
+    // Pequeno delay para garantir que os nós foram renderizados
+    setTimeout(() => {
+        renderConnections();
+    }, 10);
 }
 
 function renderConnections() {
+    console.log('renderConnections called, connections:', connections);
+    
     // Remove conexões antigas
     document.querySelectorAll('.connection-line').forEach(el => el.remove());
     
     const canvas = document.getElementById('nodes-container');
-    connections.forEach(conn => {
+    if (!canvas) {
+        console.warn('Canvas not found');
+        return;
+    }
+    
+    // Garante que o marker da seta existe
+    ensureArrowMarker();
+    
+    connections.forEach((conn, index) => {
+        console.log(`Rendering connection ${index}:`, conn);
+        
         const sourceNode = document.getElementById(conn.source);
         const targetNode = document.getElementById(conn.target);
         
-        if (!sourceNode || !targetNode) return;
+        if (!sourceNode) {
+            console.warn('Source node not found:', conn.source);
+            return;
+        }
+        if (!targetNode) {
+            console.warn('Target node not found:', conn.target);
+            return;
+        }
         
+        // Calcula posições relativas ao canvas
         const sourceRect = sourceNode.getBoundingClientRect();
         const targetRect = targetNode.getBoundingClientRect();
         const canvasRect = canvas.getBoundingClientRect();
         
-        const sourceX = sourceRect.left - canvasRect.left + sourceRect.width;
+        // Ponto de saída do nó fonte (lado direito)
+        const sourceX = sourceRect.right - canvasRect.left;
         const sourceY = sourceRect.top - canvasRect.top + sourceRect.height / 2;
+        
+        // Ponto de entrada do nó destino (lado esquerdo)
         const targetX = targetRect.left - canvasRect.left;
         const targetY = targetRect.top - canvasRect.top + targetRect.height / 2;
         
-        const line = document.createElement('svg');
-        line.className = 'connection-line';
-        line.style.position = 'absolute';
-        line.style.left = '0';
-        line.style.top = '0';
-        line.style.width = '100%';
-        line.style.height = '100%';
-        line.style.pointerEvents = 'none';
-        line.style.zIndex = '1';
+        console.log(`Connection positions - Source: (${sourceX}, ${sourceY}), Target: (${targetX}, ${targetY})`);
+        console.log(`Source rect:`, sourceRect);
+        console.log(`Target rect:`, targetRect);
+        console.log(`Canvas rect:`, canvasRect);
+        
+        // Cria SVG para a linha
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.className = 'connection-line';
+        svg.style.position = 'absolute';
+        svg.style.left = '0';
+        svg.style.top = '0';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '1';
+        svg.setAttribute('data-connection', `${conn.source}-${conn.target}`);
+        
+        // Calcula pontos de controle para curva suave
+        const midX = (sourceX + targetX) / 2;
+        const controlOffset = Math.abs(targetX - sourceX) * 0.5;
         
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const midX = (sourceX + targetX) / 2;
-        path.setAttribute('d', `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`);
+        path.setAttribute('d', `M ${sourceX} ${sourceY} C ${sourceX + controlOffset} ${sourceY}, ${targetX - controlOffset} ${targetY}, ${targetX} ${targetY}`);
         path.setAttribute('stroke', '#0d6efd');
         path.setAttribute('stroke-width', '2');
         path.setAttribute('fill', 'none');
         path.setAttribute('marker-end', 'url(#arrowhead)');
         
-        line.appendChild(path);
-        canvas.appendChild(line);
+        svg.appendChild(path);
+        canvas.appendChild(svg);
+        
+        console.log('Connection line added to canvas');
     });
     
-    // Adiciona marker para seta
-    if (!document.getElementById('arrowhead-def')) {
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        defs.id = 'arrowhead-def';
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.id = 'arrowhead';
-        marker.setAttribute('markerWidth', '10');
-        marker.setAttribute('markerHeight', '10');
-        marker.setAttribute('refX', '9');
-        marker.setAttribute('refY', '3');
-        marker.setAttribute('orient', 'auto');
-        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        polygon.setAttribute('points', '0 0, 10 3, 0 6');
-        polygon.setAttribute('fill', '#0d6efd');
-        marker.appendChild(polygon);
-        defs.appendChild(marker);
-        
+    console.log('renderConnections completed');
+}
+
+function ensureArrowMarker() {
+    if (document.getElementById('arrowhead-def')) {
+        return; // Já existe
+    }
+    
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.id = 'arrowhead-def';
+    
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    marker.id = 'arrowhead';
+    marker.setAttribute('markerWidth', '10');
+    marker.setAttribute('markerHeight', '10');
+    marker.setAttribute('refX', '9');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    marker.setAttribute('markerUnits', 'strokeWidth');
+    
+    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    polygon.setAttribute('points', '0 0, 10 3, 0 6');
+    polygon.setAttribute('fill', '#0d6efd');
+    
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    
+    // Adiciona ao body ou ao primeiro SVG encontrado
+    const existingSvg = document.querySelector('svg');
+    if (existingSvg) {
+        existingSvg.appendChild(defs);
+    } else {
+        // Cria SVG oculto para armazenar as definições
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.style.position = 'absolute';
         svg.style.width = '0';
         svg.style.height = '0';
+        svg.style.overflow = 'hidden';
         svg.appendChild(defs);
         document.body.appendChild(svg);
     }
+}
+    
+    // Marker da seta é criado pela função ensureArrowMarker()
 }
 
 // Adiciona funcionalidade de conectar nós
@@ -772,28 +846,41 @@ let connectingFrom = null;
 let tempLine = null;
 
 function startConnection(nodeId) {
+    console.log('startConnection called with nodeId:', nodeId);
+    
     if (connectingFrom) {
         // Já está conectando, cancela
+        console.log('Canceling previous connection');
         connectingFrom = null;
         if (tempLine) {
             tempLine.remove();
             tempLine = null;
         }
-        document.getElementById('workflow-canvas').style.cursor = 'default';
+        const canvas = document.getElementById('workflow-canvas');
+        if (canvas) canvas.style.cursor = 'default';
         return;
     }
     
     const node = nodes.find(n => n.id === nodeId);
-    if (!node || node.type.startsWith('action_')) {
+    if (!node) {
+        console.warn('Node not found:', nodeId);
+        return;
+    }
+    
+    if (node.type.startsWith('action_')) {
+        console.warn('Actions do not have output connectors');
         return; // Ações não têm saída
     }
     
     connectingFrom = nodeId;
-    document.getElementById('workflow-canvas').style.cursor = 'crosshair';
+    console.log('Starting connection from node:', nodeId);
     
-    // Adiciona listener para desenhar linha temporária
     const canvas = document.getElementById('workflow-canvas');
-    canvas.addEventListener('mousemove', drawTempLine);
+    if (canvas) {
+        canvas.style.cursor = 'crosshair';
+        // Adiciona listener para desenhar linha temporária
+        canvas.addEventListener('mousemove', drawTempLine);
+    }
 }
 
 function drawTempLine(e) {
@@ -838,8 +925,12 @@ function drawTempLine(e) {
 }
 
 function endConnection(nodeId) {
+    console.log('endConnection called with nodeId:', nodeId, 'connectingFrom:', connectingFrom);
+    
     const canvas = document.getElementById('workflow-canvas');
-    canvas.removeEventListener('mousemove', drawTempLine);
+    if (canvas) {
+        canvas.removeEventListener('mousemove', drawTempLine);
+    }
     
     if (tempLine) {
         tempLine.remove();
@@ -848,10 +939,18 @@ function endConnection(nodeId) {
     
     if (connectingFrom && connectingFrom !== nodeId) {
         const targetNode = nodes.find(n => n.id === nodeId);
-        if (!targetNode || targetNode.type.startsWith('trigger_')) {
-            // Triggers não podem receber conexões
+        if (!targetNode) {
+            console.warn('Target node not found:', nodeId);
             connectingFrom = null;
-            document.getElementById('workflow-canvas').style.cursor = 'default';
+            if (canvas) canvas.style.cursor = 'default';
+            return;
+        }
+        
+        if (targetNode.type.startsWith('trigger_')) {
+            // Triggers não podem receber conexões
+            console.warn('Cannot connect to trigger node');
+            connectingFrom = null;
+            if (canvas) canvas.style.cursor = 'default';
             return;
         }
         
@@ -865,11 +964,22 @@ function endConnection(nodeId) {
                 source: connectingFrom,
                 target: nodeId
             });
+            console.log('Connection created:', { source: connectingFrom, target: nodeId });
+            console.log('All connections:', connections);
+            // Força re-renderização imediata
+            setTimeout(() => {
+                renderConnections();
+            }, 50);
             updateWorkflowData();
+        } else {
+            console.log('Connection already exists');
         }
+    } else if (!connectingFrom) {
+        console.log('No active connection to end');
     }
+    
     connectingFrom = null;
-    document.getElementById('workflow-canvas').style.cursor = 'default';
+    if (canvas) canvas.style.cursor = 'default';
 }
 
 // Cancela conexão ao clicar fora
