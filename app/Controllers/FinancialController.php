@@ -105,8 +105,15 @@ class FinancialController extends Controller
         }
         
         if ($categoryId) {
-            $whereConditions[] = "`category_id` = ?";
-            $params[] = $categoryId;
+            // Verifica se é uma subcategoria (formato: "subcategory_{id}") ou categoria normal
+            if (strpos($categoryId, 'subcategory_') === 0) {
+                $subcategoryId = str_replace('subcategory_', '', $categoryId);
+                $whereConditions[] = "`subcategory_id` = ?";
+                $params[] = $subcategoryId;
+            } else {
+                $whereConditions[] = "`category_id` = ?";
+                $params[] = $categoryId;
+            }
         }
         
         if ($costCenterId) {
@@ -146,9 +153,28 @@ class FinancialController extends Controller
         // Dados para os filtros
         $bankAccounts = BankAccount::where('user_id', $userId)->get();
         $creditCards = CreditCard::where('user_id', $userId)->get();
-        $categories = Category::where('user_id', $userId)->get();
+        
+        // Busca categorias com suas subcategorias
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get();
+        $allSubcategories = Subcategory::where('user_id', $userId)->get();
+        
+        // Organiza subcategorias por category_id
+        $subcategoriesByCategory = [];
+        foreach ($allSubcategories as $subcategory) {
+            $catId = $subcategory->category_id;
+            if (!isset($subcategoriesByCategory[$catId])) {
+                $subcategoriesByCategory[$catId] = [];
+            }
+            $subcategoriesByCategory[$catId][] = $subcategory;
+        }
+        
+        // Adiciona subcategorias às categorias
+        foreach ($categories as $category) {
+            $category->subcategories = $subcategoriesByCategory[$category->id] ?? [];
+        }
+        
         $costCenters = CostCenter::where('user_id', $userId)->get();
-        $tags = Tag::where('user_id', $userId)->get();
+        $tags = Tag::where('user_id', $userId)->orderBy('name')->get();
         
         return $this->view('financial/index', [
             'title' => 'Financeiro - Lançamentos',
@@ -723,8 +749,14 @@ class FinancialController extends Controller
             'responsible_user_id' => $parent->responsible_user_id ?? $parent->user_id
         ];
         
+        // Calcula a diferença em dias entre competence_date e due_date do lançamento original
+        $parentCompetenceDate = new \DateTime($parent->competence_date);
+        $parentDueDate = new \DateTime($parent->due_date);
+        $daysDifference = (int)$parentCompetenceDate->diff($parentDueDate)->format('%r%a'); // %r para sinal, %a para dias absolutos
+        
         // Debug: log para verificar se está entrando no método
         error_log("Criando lançamentos recorrentes. Tipo: {$recurrenceType}, Data inicial: {$parent->competence_date}, Data final: {$endDate}");
+        error_log("Diferença entre competence_date e due_date: {$daysDifference} dias");
         
         while ($currentDate <= $endDateTime && $count < $maxEntries) {
             $currentDate->add($interval);
@@ -733,14 +765,32 @@ class FinancialController extends Controller
                 break;
             }
             
+            // Calcula a data de vencimento mantendo a diferença do lançamento original
+            $dueDate = clone $currentDate;
+            if ($daysDifference != 0) {
+                $dueDate->modify("{$daysDifference} days");
+            }
+            
             $entryData = $baseData;
             $entryData['competence_date'] = $currentDate->format('Y-m-d');
-            $entryData['due_date'] = $currentDate->format('Y-m-d');
+            $entryData['due_date'] = $dueDate->format('Y-m-d');
             
             try {
-                $created = FinancialEntry::create($entryData);
-                error_log("Lançamento recorrente criado: ID {$created->id}, Data: {$entryData['competence_date']}");
-                $count++;
+                // Verifica se já existe um lançamento com a mesma data de competência e descrição
+                $existing = FinancialEntry::where('competence_date', $entryData['competence_date'])
+                    ->where('description', $entryData['description'])
+                    ->where('value', $entryData['value'])
+                    ->where('user_id', $parent->user_id)
+                    ->where('parent_entry_id', $parent->id)
+                    ->first();
+                
+                if (!$existing) {
+                    $created = FinancialEntry::create($entryData);
+                    error_log("Lançamento recorrente criado: ID {$created->id}, Competence: {$entryData['competence_date']}, Due: {$entryData['due_date']}");
+                    $count++;
+                } else {
+                    error_log("Lançamento recorrente já existe (ID: {$existing->id}), pulando criação. Competence: {$entryData['competence_date']}");
+                }
             } catch (\Exception $e) {
                 // Log do erro mas continua criando os próximos
                 error_log("Erro ao criar lançamento recorrente: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());

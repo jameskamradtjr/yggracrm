@@ -61,8 +61,28 @@ ob_start();
                             <select name="category_id" class="form-select">
                                 <option value="">Todas</option>
                                 <?php foreach ($categories as $category): ?>
-                                    <option value="<?php echo $category->id; ?>" <?php echo ($filters['category_id'] ?? '') == $category->id ? 'selected' : ''; ?>>
-                                        <?php echo e($category->name); ?>
+                                    <optgroup label="<?php echo e($category->name); ?>">
+                                        <option value="<?php echo $category->id; ?>" <?php echo ($filters['category_id'] ?? '') == $category->id ? 'selected' : ''; ?>>
+                                            <?php echo e($category->name); ?>
+                                        </option>
+                                        <?php if (!empty($category->subcategories)): ?>
+                                            <?php foreach ($category->subcategories as $subcategory): ?>
+                                                <option value="subcategory_<?php echo $subcategory->id; ?>" <?php echo ($filters['category_id'] ?? '') == 'subcategory_' . $subcategory->id ? 'selected' : ''; ?>>
+                                                    └ <?php echo e($subcategory->name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Tag</label>
+                            <select name="tag_id" class="form-select">
+                                <option value="">Todas</option>
+                                <?php foreach ($tags as $tag): ?>
+                                    <option value="<?php echo $tag->id; ?>" <?php echo ($filters['tag_id'] ?? '') == $tag->id ? 'selected' : ''; ?>>
+                                        <?php echo e($tag->name); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
