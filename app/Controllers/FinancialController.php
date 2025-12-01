@@ -599,8 +599,8 @@ class FinancialController extends Controller
             // Dispara evento de automação
             AutomationEventDispatcher::onFinancialEntryCreated(
                 $entry->id, 
-                $entry->tipo, 
-                (float)$entry->valor, 
+                $entry->type, 
+                (float)$entry->value, 
                 auth()->getDataUserId()
             );
             
