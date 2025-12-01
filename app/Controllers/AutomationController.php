@@ -44,8 +44,13 @@ class AutomationController extends Controller
         // Registra componentes
         AutomationBootstrap::registerAll();
         
-        // Obtém componentes disponíveis
-        $components = AutomationRegistry::getAllComponents();
+        // Obtém componentes disponíveis e converte para arrays
+        $componentsRaw = AutomationRegistry::getAllComponents();
+        $components = [
+            'triggers' => array_values($componentsRaw['triggers'] ?? []),
+            'conditions' => array_values($componentsRaw['conditions'] ?? []),
+            'actions' => array_values($componentsRaw['actions'] ?? [])
+        ];
         
         return $this->view('automations/builder', [
             'title' => 'Criar Automação',
@@ -73,8 +78,13 @@ class AutomationController extends Controller
         // Registra componentes
         AutomationBootstrap::registerAll();
         
-        // Obtém componentes disponíveis
-        $components = AutomationRegistry::getAllComponents();
+        // Obtém componentes disponíveis e converte para arrays
+        $componentsRaw = AutomationRegistry::getAllComponents();
+        $components = [
+            'triggers' => array_values($componentsRaw['triggers'] ?? []),
+            'conditions' => array_values($componentsRaw['conditions'] ?? []),
+            'actions' => array_values($componentsRaw['actions'] ?? [])
+        ];
         
         return $this->view('automations/builder', [
             'title' => 'Editar Automação',
@@ -276,7 +286,14 @@ class AutomationController extends Controller
         
         try {
             AutomationBootstrap::registerAll();
-            $components = AutomationRegistry::getAllComponents();
+            $componentsRaw = AutomationRegistry::getAllComponents();
+            
+            // Converte objetos para arrays
+            $components = [
+                'triggers' => array_values($componentsRaw['triggers'] ?? []),
+                'conditions' => array_values($componentsRaw['conditions'] ?? []),
+                'actions' => array_values($componentsRaw['actions'] ?? [])
+            ];
             
             json_response([
                 'success' => true,
@@ -289,6 +306,83 @@ class AutomationController extends Controller
                 'message' => 'Erro ao carregar componentes: ' . $e->getMessage(),
                 'components' => ['triggers' => [], 'conditions' => [], 'actions' => []]
             ], 500);
+        }
+    }
+    
+    /**
+     * API: Obtém tags para selects dinâmicos
+     */
+    public function getTags(): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            $tags = \App\Models\Tag::where('user_id', $userId)
+                ->orderBy('name', 'ASC')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'tags' => $tags->map(fn($tag) => ['id' => $tag->id, 'name' => $tag->name])->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao obter tags: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao carregar tags'], 500);
+        }
+    }
+    
+    /**
+     * API: Obtém usuários para selects dinâmicos
+     */
+    public function getUsers(): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $users = \App\Models\User::where('status', 'active')
+                ->orderBy('name', 'ASC')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'users' => $users->map(fn($user) => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email])->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao obter usuários: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao carregar usuários'], 500);
+        }
+    }
+    
+    /**
+     * API: Obtém origens de leads para selects dinâmicos
+     */
+    public function getLeadOrigins(): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $userId = auth()->getDataUserId();
+            $origins = \App\Models\LeadOrigin::where('user_id', $userId)
+                ->orderBy('nome', 'ASC')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'origins' => $origins->map(fn($origin) => ['id' => $origin->id, 'nome' => $origin->nome])->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao obter origens: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao carregar origens'], 500);
         }
     }
     

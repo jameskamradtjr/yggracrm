@@ -22,6 +22,30 @@ abstract class BaseCondition
     }
     
     /**
+     * Retorna o ID da condição
+     */
+    public function getId(): string
+    {
+        return $this->id;
+    }
+    
+    /**
+     * Retorna o nome da condição
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    
+    /**
+     * Retorna a descrição da condição
+     */
+    public function getDescription(): string
+    {
+        return $this->description;
+    }
+    
+    /**
      * Retorna informações da condição para o frontend
      */
     public function getInfo(): array
@@ -30,7 +54,7 @@ abstract class BaseCondition
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'config' => $this->getConfigSchema()
+            'schema' => $this->getConfigSchema()
         ];
     }
     

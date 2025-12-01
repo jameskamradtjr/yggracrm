@@ -25,7 +25,7 @@ class HasTagCondition extends BaseCondition
                 'label' => 'Tag',
                 'type' => 'select',
                 'required' => true,
-                'options' => [] // Será preenchido dinamicamente
+                'loadOptions' => 'tags' // Carrega tags dinamicamente
             ],
             [
                 'name' => 'operator',

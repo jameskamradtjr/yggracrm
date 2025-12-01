@@ -18,8 +18,7 @@ class AutomationRegistry
      */
     public static function registerTrigger(BaseTrigger $trigger): void
     {
-        $info = $trigger->getInfo();
-        self::$triggers[$info['id']] = $trigger;
+        self::$triggers[$trigger->getId()] = $trigger;
     }
     
     /**
@@ -27,8 +26,7 @@ class AutomationRegistry
      */
     public static function registerCondition(BaseCondition $condition): void
     {
-        $info = $condition->getInfo();
-        self::$conditions[$info['id']] = $condition;
+        self::$conditions[$condition->getId()] = $condition;
     }
     
     /**
@@ -36,8 +34,7 @@ class AutomationRegistry
      */
     public static function registerAction(BaseAction $action): void
     {
-        $info = $action->getInfo();
-        self::$actions[$info['id']] = $action;
+        self::$actions[$action->getId()] = $action;
     }
     
     /**
@@ -69,7 +66,16 @@ class AutomationRegistry
      */
     public static function getAllTriggers(): array
     {
-        return array_map(fn($trigger) => $trigger->getInfo(), self::$triggers);
+        $triggers = [];
+        foreach (self::$triggers as $trigger) {
+            $triggers[] = [
+                'id' => $trigger->getId(),
+                'name' => $trigger->getName(),
+                'description' => $trigger->getDescription(),
+                'schema' => $trigger->getConfigSchema()
+            ];
+        }
+        return $triggers;
     }
     
     /**
@@ -77,7 +83,16 @@ class AutomationRegistry
      */
     public static function getAllConditions(): array
     {
-        return array_map(fn($condition) => $condition->getInfo(), self::$conditions);
+        $conditions = [];
+        foreach (self::$conditions as $condition) {
+            $conditions[] = [
+                'id' => $condition->getId(),
+                'name' => $condition->getName(),
+                'description' => $condition->getDescription(),
+                'schema' => $condition->getConfigSchema()
+            ];
+        }
+        return $conditions;
     }
     
     /**
@@ -85,7 +100,16 @@ class AutomationRegistry
      */
     public static function getAllActions(): array
     {
-        return array_map(fn($action) => $action->getInfo(), self::$actions);
+        $actions = [];
+        foreach (self::$actions as $action) {
+            $actions[] = [
+                'id' => $action->getId(),
+                'name' => $action->getName(),
+                'description' => $action->getDescription(),
+                'schema' => $action->getConfigSchema()
+            ];
+        }
+        return $actions;
     }
     
     /**

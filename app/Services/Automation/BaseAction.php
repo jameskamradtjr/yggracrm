@@ -22,6 +22,30 @@ abstract class BaseAction
     }
     
     /**
+     * Retorna o ID da ação
+     */
+    public function getId(): string
+    {
+        return $this->id;
+    }
+    
+    /**
+     * Retorna o nome da ação
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    
+    /**
+     * Retorna a descrição da ação
+     */
+    public function getDescription(): string
+    {
+        return $this->description;
+    }
+    
+    /**
      * Retorna informações da ação para o frontend
      */
     public function getInfo(): array
@@ -30,7 +54,7 @@ abstract class BaseAction
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'config' => $this->getConfigSchema()
+            'schema' => $this->getConfigSchema()
         ];
     }
     

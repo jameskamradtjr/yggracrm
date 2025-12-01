@@ -22,6 +22,30 @@ abstract class BaseTrigger
     }
     
     /**
+     * Retorna o ID do trigger
+     */
+    public function getId(): string
+    {
+        return $this->id;
+    }
+    
+    /**
+     * Retorna o nome do trigger
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    
+    /**
+     * Retorna a descrição do trigger
+     */
+    public function getDescription(): string
+    {
+        return $this->description;
+    }
+    
+    /**
      * Retorna informações do trigger para o frontend
      */
     public function getInfo(): array
@@ -30,7 +54,7 @@ abstract class BaseTrigger
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'config' => $this->getConfigSchema()
+            'schema' => $this->getConfigSchema()
         ];
     }
     

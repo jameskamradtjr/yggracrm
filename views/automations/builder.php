@@ -431,12 +431,30 @@ function renderNode(node) {
             </div>
         </div>
         <div class="node-body">${component?.description || ''}</div>
-        ${node.type.startsWith('trigger_') ? '' : `<div class="node-connector input" onclick="endConnection('${node.id}')" title="Conectar aqui"></div>`}
-        ${node.type.startsWith('action_') ? '' : `<div class="node-connector output" onclick="startConnection('${node.id}')" title="Iniciar conexão"></div>`}
+        ${node.type.startsWith('trigger_') ? '' : `<div class="node-connector input" data-node-id="${node.id}" title="Conectar aqui"></div>`}
+        ${node.type.startsWith('action_') ? '' : `<div class="node-connector output" data-node-id="${node.id}" title="Iniciar conexão"></div>`}
     `;
     
     // Torna o nó arrastável
     makeNodeDraggable(nodeEl, node);
+    
+    // Adiciona event listeners aos conectores
+    const inputConnector = nodeEl.querySelector('.node-connector.input');
+    const outputConnector = nodeEl.querySelector('.node-connector.output');
+    
+    if (inputConnector) {
+        inputConnector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            endConnection(node.id);
+        });
+    }
+    
+    if (outputConnector) {
+        outputConnector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startConnection(node.id);
+        });
+    }
     
     container.appendChild(nodeEl);
 }
@@ -503,29 +521,51 @@ function configureNode(nodeId) {
 }
 
 function generateConfigForm(component, currentConfig) {
-    if (!component || !component.config) {
+    if (!component) {
+        return '<p class="text-muted">Componente não encontrado.</p>';
+    }
+    
+    const schema = component.schema || [];
+    if (!Array.isArray(schema) || schema.length === 0) {
         return '<p class="text-muted">Este componente não requer configuração.</p>';
     }
     
     let html = '<form id="nodeConfigForm">';
-    component.config.forEach(field => {
-        const value = currentConfig[field.name] || '';
+    schema.forEach(field => {
+        const value = (currentConfig && currentConfig[field.name]) || '';
         html += `<div class="mb-3">`;
-        html += `<label class="form-label">${field.label}${field.required ? ' <span class="text-danger">*</span>' : ''}</label>`;
+        html += `<label class="form-label">${field.label || field.name}${field.required ? ' <span class="text-danger">*</span>' : ''}</label>`;
         
         if (field.type === 'select') {
-            html += `<select class="form-select" name="${field.name}" ${field.required ? 'required' : ''}>`;
+            html += `<select class="form-select" name="${field.name}" ${field.required ? 'required' : ''} data-field-type="select" data-field-name="${field.name}">`;
             html += `<option value="">Selecione...</option>`;
-            (field.options || []).forEach(option => {
-                const optValue = typeof option === 'object' ? option.value : option;
-                const optLabel = typeof option === 'object' ? option.label : option;
-                html += `<option value="${optValue}" ${value == optValue ? 'selected' : ''}>${optLabel}</option>`;
-            });
+            
+            // Se tem options, usa elas
+            if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+                field.options.forEach(option => {
+                    const optValue = typeof option === 'object' ? option.value : option;
+                    const optLabel = typeof option === 'object' ? option.label : option;
+                    html += `<option value="${optValue}" ${value == optValue ? 'selected' : ''}>${optLabel}</option>`;
+                });
+            } else if (field.loadOptions) {
+                // Campo que precisa carregar opções dinamicamente
+                html += `<option value="">Carregando...</option>`;
+            }
+            
             html += `</select>`;
+            
+            // Se precisa carregar opções dinamicamente
+            if (field.loadOptions === 'tags') {
+                loadTagsForSelect(field.name);
+            } else if (field.loadOptions === 'users') {
+                loadUsersForSelect(field.name);
+            } else if (field.loadOptions === 'origins') {
+                loadOriginsForSelect(field.name);
+            }
         } else if (field.type === 'textarea') {
             html += `<textarea class="form-control" name="${field.name}" rows="4" ${field.required ? 'required' : ''}>${value}</textarea>`;
         } else {
-            html += `<input type="${field.type}" class="form-control" name="${field.name}" value="${value}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">`;
+            html += `<input type="${field.type || 'text'}" class="form-control" name="${field.name}" value="${value}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">`;
         }
         
         html += `</div>`;
@@ -533,6 +573,76 @@ function generateConfigForm(component, currentConfig) {
     html += '</form>';
     
     return html;
+}
+
+function loadTagsForSelect(selectName) {
+    fetch('<?php echo url('/api/tags'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.querySelector(`select[name="${selectName}"]`);
+            if (!select) return;
+            
+            // Limpa opções de carregamento
+            select.innerHTML = '<option value="">Selecione uma tag...</option>';
+            
+            if (data.success && data.tags && Array.isArray(data.tags)) {
+                data.tags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.id;
+                    option.textContent = tag.name;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar tags:', error);
+        });
+}
+
+function loadUsersForSelect(selectName) {
+    fetch('<?php echo url('/api/users'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.querySelector(`select[name="${selectName}"]`);
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecione um usuário...</option>';
+            
+            if (data.success && data.users && Array.isArray(data.users)) {
+                data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name || user.email;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar usuários:', error);
+        });
+}
+
+function loadOriginsForSelect(selectName) {
+    fetch('<?php echo url('/api/lead-origins'); ?>')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.querySelector(`select[name="${selectName}"]`);
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecione uma origem...</option>';
+            
+            if (data.success && data.origins && Array.isArray(data.origins)) {
+                data.origins.forEach(origin => {
+                    const option = document.createElement('option');
+                    option.value = origin.id;
+                    option.textContent = origin.nome;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar origens:', error);
+        });
 }
 
 function saveNodeConfig() {

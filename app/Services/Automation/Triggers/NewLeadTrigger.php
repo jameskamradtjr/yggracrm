@@ -25,7 +25,7 @@ class NewLeadTrigger extends BaseTrigger
                 'label' => 'Origem Específica',
                 'type' => 'select',
                 'required' => false,
-                'options' => [] // Será preenchido dinamicamente
+                'loadOptions' => 'origins' // Carrega origens dinamicamente
             ]
         ];
     }

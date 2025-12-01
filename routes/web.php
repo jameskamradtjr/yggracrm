@@ -279,5 +279,8 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/automations/{id}/delete', [AutomationController::class, 'destroy']);
     $router->get('/automations/{id}/executions', [AutomationController::class, 'executions']);
     $router->get('/api/automations/components', [AutomationController::class, 'getComponents']);
+    $router->get('/api/tags', [AutomationController::class, 'getTags']);
+    $router->get('/api/users', [AutomationController::class, 'getUsers']);
+    $router->get('/api/lead-origins', [AutomationController::class, 'getLeadOrigins']);
 });
 

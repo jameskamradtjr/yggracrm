@@ -37,7 +37,7 @@ class AssignResponsibleAction extends BaseAction
                 'label' => 'Usuário Responsável',
                 'type' => 'select',
                 'required' => true,
-                'options' => [] // Será preenchido dinamicamente
+                'loadOptions' => 'users' // Carrega usuários dinamicamente
             ]
         ];
     }
