@@ -1811,13 +1811,13 @@ class FinancialController extends Controller
     /**
      * Exibe formulário de edição de centro de custo
      */
-    public function editCostCenter(): string
+    public function editCostCenter(array $params): string
     {
         if (!auth()->check()) {
             $this->redirect('/login');
         }
 
-        $id = $this->request->param('id');
+        $id = $params['id'];
         $userId = auth()->getDataUserId();
         
         $costCenter = CostCenter::where('id', $id)
@@ -1838,7 +1838,7 @@ class FinancialController extends Controller
     /**
      * Atualiza centro de custo
      */
-    public function updateCostCenter(): void
+    public function updateCostCenter(array $params): void
     {
         if (!auth()->check()) {
             $this->redirect('/login');
@@ -1849,7 +1849,7 @@ class FinancialController extends Controller
             $this->redirect('/financial/cost-centers');
         }
 
-        $id = $this->request->param('id');
+        $id = $params['id'];
         $userId = auth()->getDataUserId();
         
         $costCenter = CostCenter::where('id', $id)
