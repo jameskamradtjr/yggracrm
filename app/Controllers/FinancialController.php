@@ -324,6 +324,7 @@ class FinancialController extends Controller
                 ? SubCostCenter::where('cost_center_id', $entry->cost_center_id)->where('user_id', $userId)->get()
                 : [],
             'tags' => Tag::where('user_id', $userId)->get(),
+            'entryTags' => $entryTags ?: [],
             'entryTagIds' => $entryTagIds,
             'paymentMethods' => PaymentMethod::where('user_id', $userId)
                 ->where('ativo', true)
@@ -418,20 +419,37 @@ class FinancialController extends Controller
             $entry->removeAllTags();
             
             // Adiciona novas tags
-            $tags = $this->request->input('tags', []);
-            if (is_array($tags)) {
-                foreach ($tags as $tagId) {
-                    if (is_numeric($tagId)) {
-                        $entry->addTag((int) $tagId);
-                    } elseif (is_string($tagId) && !empty(trim($tagId))) {
-                        // Cria nova tag se não existir
-                        $tag = Tag::where('name', trim($tagId))
+            $tagsInput = $this->request->input('tags', '');
+            
+            // Se for string (separada por vírgula), converte para array
+            if (is_string($tagsInput) && !empty(trim($tagsInput))) {
+                $tagsArray = array_map('trim', explode(',', $tagsInput));
+                $tagsArray = array_filter($tagsArray); // Remove valores vazios
+            } elseif (is_array($tagsInput)) {
+                $tagsArray = $tagsInput;
+            } else {
+                $tagsArray = [];
+            }
+            
+            if (!empty($tagsArray)) {
+                foreach ($tagsArray as $tagValue) {
+                    $tagValue = trim($tagValue);
+                    if (empty($tagValue)) {
+                        continue;
+                    }
+                    
+                    // Se for numérico, assume que é ID de tag existente
+                    if (is_numeric($tagValue)) {
+                        $entry->addTag((int) $tagValue);
+                    } else {
+                        // Se for string, busca ou cria a tag pelo nome
+                        $tag = Tag::where('name', $tagValue)
                             ->where('user_id', $userId)
                             ->first();
                         
                         if (!$tag) {
                             $tag = Tag::create([
-                                'name' => trim($tagId),
+                                'name' => $tagValue,
                                 'user_id' => $userId
                             ]);
                         }
@@ -642,20 +660,37 @@ class FinancialController extends Controller
             );
             
             // Adiciona tags
-            $tags = $this->request->input('tags', []);
-            if (is_array($tags)) {
-                foreach ($tags as $tagId) {
-                    if (is_numeric($tagId)) {
-                        $entry->addTag((int) $tagId);
-                    } elseif (is_string($tagId) && !empty(trim($tagId))) {
-                        // Cria nova tag se não existir
-                        $tag = Tag::where('name', trim($tagId))
+            $tagsInput = $this->request->input('tags', '');
+            
+            // Se for string (separada por vírgula), converte para array
+            if (is_string($tagsInput) && !empty(trim($tagsInput))) {
+                $tagsArray = array_map('trim', explode(',', $tagsInput));
+                $tagsArray = array_filter($tagsArray); // Remove valores vazios
+            } elseif (is_array($tagsInput)) {
+                $tagsArray = $tagsInput;
+            } else {
+                $tagsArray = [];
+            }
+            
+            if (!empty($tagsArray)) {
+                foreach ($tagsArray as $tagValue) {
+                    $tagValue = trim($tagValue);
+                    if (empty($tagValue)) {
+                        continue;
+                    }
+                    
+                    // Se for numérico, assume que é ID de tag existente
+                    if (is_numeric($tagValue)) {
+                        $entry->addTag((int) $tagValue);
+                    } else {
+                        // Se for string, busca ou cria a tag pelo nome
+                        $tag = Tag::where('name', $tagValue)
                             ->where('user_id', $userId)
                             ->first();
                         
                         if (!$tag) {
                             $tag = Tag::create([
-                                'name' => trim($tagId),
+                                'name' => $tagValue,
                                 'user_id' => $userId
                             ]);
                         }
