@@ -355,6 +355,17 @@ class FinancialController extends Controller
             $this->redirect('/financial');
         }
 
+        // Pega o valor numérico do campo hidden se existir, senão usa o campo value
+        $valueInput = $this->request->input('value_numeric') ?: $this->request->input('value');
+        // Remove formatação de moeda se houver
+        if (is_string($valueInput)) {
+            $valueInput = str_replace(['R$', ' ', '.'], '', $valueInput);
+            $valueInput = str_replace(',', '.', $valueInput);
+            // Atualiza o request para usar o valor numérico
+            $_POST['value'] = $valueInput;
+            $this->request->merge(['value' => $valueInput]);
+        }
+
         $data = $this->validate([
             'type' => 'required|in:entrada,saida,transferencia',
             'description' => 'required',
@@ -496,6 +507,17 @@ class FinancialController extends Controller
         // Debug: verifica o que está sendo recebido
         $allInput = $this->request->all();
         error_log("Dados recebidos no store: " . print_r($allInput, true));
+        
+        // Pega o valor numérico do campo hidden se existir, senão usa o campo value
+        $valueInput = $this->request->input('value_numeric') ?: $this->request->input('value');
+        // Remove formatação de moeda se houver
+        if (is_string($valueInput)) {
+            $valueInput = str_replace(['R$', ' ', '.'], '', $valueInput);
+            $valueInput = str_replace(',', '.', $valueInput);
+            // Atualiza o request para usar o valor numérico
+            $_POST['value'] = $valueInput;
+            $this->request->merge(['value' => $valueInput]);
+        }
         
         $data = $this->validate([
             'type' => 'required|in:entrada,saida,transferencia',

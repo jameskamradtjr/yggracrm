@@ -25,7 +25,8 @@ ob_start();
                         
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Valor *</label>
-                            <input type="number" name="value" class="form-control" step="0.01" min="0.01" required>
+                            <input type="text" name="value" id="value_input" class="form-control" placeholder="R$ 0,00" required>
+                            <input type="hidden" name="value_numeric" id="value_numeric">
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -330,9 +331,11 @@ document.getElementById('payment_method_id').addEventListener('change', function
     }
     
     // Calcula e exibe taxa se houver
-    const valueInput = document.querySelector('input[name="value"]');
+    const valueInput = document.getElementById('value_input');
     if (taxa > 0 && valueInput && valueInput.value) {
-        const valorBruto = parseFloat(valueInput.value) || 0;
+        // Remove formatação para calcular
+        const unformattedValue = valueInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+        const valorBruto = parseFloat(unformattedValue) || 0;
         const valorTaxa = valorBruto * (taxa / 100);
         const valorLiquido = valorBruto - valorTaxa;
         
@@ -344,7 +347,7 @@ document.getElementById('payment_method_id').addEventListener('change', function
     }
     
     // Recalcula taxa quando o valor mudar
-    if (taxa > 0) {
+    if (taxa > 0 && valueInput) {
         if (!valueInput.hasAttribute('data-taxa-listener')) {
             valueInput.setAttribute('data-taxa-listener', 'true');
             valueInput.addEventListener('input', function() {
@@ -383,6 +386,97 @@ document.getElementById('cost_center_id').addEventListener('change', function() 
     const subCostCenterId = selectedOption.getAttribute('data-sub-cost-center-id');
     document.getElementById('sub_cost_center_id').value = subCostCenterId || '';
 });
+
+// Máscara de moeda brasileira
+(function() {
+    const valueInput = document.getElementById('value_input');
+    const valueNumeric = document.getElementById('value_numeric');
+    
+    function formatCurrency(value) {
+        // Remove tudo que não é número
+        value = value.replace(/\D/g, '');
+        
+        // Se estiver vazio, retorna R$ 0,00
+        if (!value || value === '0') {
+            return 'R$ 0,00';
+        }
+        
+        // Converte para número e divide por 100 para ter centavos
+        value = (parseFloat(value) / 100).toFixed(2);
+        
+        // Formata como moeda brasileira
+        value = value.replace('.', ',');
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        return 'R$ ' + value;
+    }
+    
+    function unformatCurrency(value) {
+        // Remove R$, espaços e pontos, substitui vírgula por ponto
+        return value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+    }
+    
+    if (valueInput) {
+        // Aplica máscara ao digitar
+        valueInput.addEventListener('input', function(e) {
+            let value = e.target.value;
+            const cursorPosition = e.target.selectionStart;
+            
+            // Remove formatação para calcular posição do cursor
+            const unformattedBefore = unformatCurrency(value);
+            const lengthBefore = value.length;
+            
+            // Aplica formatação
+            value = formatCurrency(value);
+            const lengthAfter = value.length;
+            
+            // Ajusta posição do cursor
+            const cursorOffset = lengthAfter - lengthBefore;
+            e.target.value = value;
+            const newPosition = Math.max(0, Math.min(cursorPosition + cursorOffset, value.length));
+            e.target.setSelectionRange(newPosition, newPosition);
+            
+            // Atualiza campo hidden com valor numérico
+            if (valueNumeric) {
+                const numericValue = unformatCurrency(value) || '0.00';
+                valueNumeric.value = numericValue;
+            }
+        });
+        
+        // Aplica máscara ao perder foco
+        valueInput.addEventListener('blur', function(e) {
+            let value = e.target.value;
+            if (!value || value.trim() === '' || value === 'R$') {
+                e.target.value = 'R$ 0,00';
+                if (valueNumeric) {
+                    valueNumeric.value = '0.00';
+                }
+            } else {
+                value = formatCurrency(value);
+                e.target.value = value;
+                if (valueNumeric) {
+                    valueNumeric.value = unformatCurrency(value);
+                }
+            }
+        });
+        
+        // Formata valor inicial
+        valueInput.value = 'R$ 0,00';
+    }
+    
+    // Antes de enviar o formulário, garante que o valor numérico está correto
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (valueInput && valueNumeric) {
+                const numericValue = unformatCurrency(valueInput.value);
+                valueNumeric.value = numericValue || '0.00';
+                // Atualiza o campo value para enviar o valor numérico
+                valueInput.value = numericValue;
+            }
+        });
+    }
+})();
 
 // Componente de Tags
 (function() {

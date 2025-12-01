@@ -25,7 +25,8 @@ ob_start();
                         
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Valor *</label>
-                            <input type="number" name="value" class="form-control" step="0.01" min="0.01" value="<?php echo $entry->value; ?>" required>
+                            <input type="text" name="value" id="value_input" class="form-control" placeholder="R$ 0,00" value="<?php echo 'R$ ' . number_format($entry->value, 2, ',', '.'); ?>" required>
+                            <input type="hidden" name="value_numeric" id="value_numeric" value="<?php echo $entry->value; ?>">
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -287,6 +288,90 @@ document.getElementById('cost_center_id').addEventListener('change', function() 
             });
     }
 });
+
+// Máscara de moeda brasileira
+(function() {
+    const valueInput = document.getElementById('value_input');
+    const valueNumeric = document.getElementById('value_numeric');
+    
+    function formatCurrency(value) {
+        // Remove tudo que não é número
+        value = value.replace(/\D/g, '');
+        
+        // Converte para número e divide por 100 para ter centavos
+        value = (value / 100).toFixed(2);
+        
+        // Formata como moeda brasileira
+        value = value.replace('.', ',');
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        return 'R$ ' + value;
+    }
+    
+    function unformatCurrency(value) {
+        // Remove R$, espaços e pontos, substitui vírgula por ponto
+        return value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+    }
+    
+    if (valueInput) {
+        // Aplica máscara ao digitar
+        valueInput.addEventListener('input', function(e) {
+            let value = e.target.value;
+            const cursorPosition = e.target.selectionStart;
+            
+            // Remove formatação para calcular posição do cursor
+            const unformattedValue = unformatCurrency(value);
+            const lengthBefore = value.length;
+            
+            // Aplica formatação
+            value = formatCurrency(value);
+            const lengthAfter = value.length;
+            
+            // Ajusta posição do cursor
+            const cursorOffset = lengthAfter - lengthBefore;
+            e.target.value = value;
+            e.target.setSelectionRange(cursorPosition + cursorOffset, cursorPosition + cursorOffset);
+            
+            // Atualiza campo hidden com valor numérico
+            if (valueNumeric) {
+                valueNumeric.value = unformatCurrency(value) || '0.00';
+            }
+        });
+        
+        // Aplica máscara ao perder foco
+        valueInput.addEventListener('blur', function(e) {
+            let value = e.target.value;
+            if (!value || value.trim() === '') {
+                e.target.value = 'R$ 0,00';
+                if (valueNumeric) {
+                    valueNumeric.value = '0.00';
+                }
+            } else {
+                value = formatCurrency(value);
+                e.target.value = value;
+                if (valueNumeric) {
+                    valueNumeric.value = unformatCurrency(value);
+                }
+            }
+        });
+        
+        // Formata valor inicial se houver
+        if (valueInput.value) {
+            const currentValue = unformatCurrency(valueInput.value);
+            valueInput.value = formatCurrency(currentValue);
+        }
+    }
+    
+    // Antes de enviar o formulário, garante que o valor numérico está correto
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (valueInput && valueNumeric) {
+            const numericValue = unformatCurrency(valueInput.value);
+            valueNumeric.value = numericValue || '0.00';
+            // Atualiza o campo value para enviar o valor numérico
+            valueInput.value = numericValue;
+        }
+    });
+})();
 
 // Campo de tags
 (function() {
