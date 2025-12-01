@@ -1497,38 +1497,44 @@ class FinancialController extends Controller
      */
     public function storeSubcategory(): void
     {
+        // Limpa qualquer output anterior
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        
+        // Define headers JSON antes de qualquer output
+        http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
         
-        if (!auth()->check()) {
-            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
-            return;
-        }
-
-        if (!verify_csrf($this->request->input('_csrf_token'))) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
-            return;
-        }
-
-        // Validação manual para retornar JSON em caso de erro
-        $validator = new \Core\Validator($this->request->all(), [
-            'name' => 'required',
-            'category_id' => 'required|integer'
-        ]);
-
-        if (!$validator->passes()) {
-            $errors = $validator->errors();
-            $firstError = !empty($errors) ? reset($errors)[0] : 'Dados inválidos';
-            json_response([
-                'success' => false,
-                'message' => $firstError,
-                'errors' => $errors
-            ], 422);
-            return;
-        }
-
-        $data = $validator->validated();
-
         try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+
+            if (!verify_csrf($this->request->input('_csrf_token'))) {
+                json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+                return;
+            }
+
+            // Validação manual para retornar JSON em caso de erro
+            $validator = new \Core\Validator($this->request->all(), [
+                'name' => 'required',
+                'category_id' => 'required|integer'
+            ]);
+
+            if (!$validator->passes()) {
+                $errors = $validator->errors();
+                $firstError = !empty($errors) ? reset($errors)[0] : 'Dados inválidos';
+                json_response([
+                    'success' => false,
+                    'message' => $firstError,
+                    'errors' => $errors
+                ], 422);
+                return;
+            }
+
+            $data = $validator->validated();
             $userId = auth()->getDataUserId();
             
             $subcategory = Subcategory::create([
@@ -1628,31 +1634,36 @@ class FinancialController extends Controller
             return;
         }
 
-        // Pega dados do POST (FormData)
-        $csrfToken = $_POST['_csrf_token'] ?? $this->request->input('_csrf_token') ?? null;
-        $id = $_POST['id'] ?? $this->request->input('id') ?? null;
-
-        if (!$csrfToken || !verify_csrf($csrfToken)) {
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
             json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
             return;
         }
 
-        // Validação manual para requisições AJAX
-        if (empty($id) || !is_numeric($id)) {
-            json_response(['success' => false, 'message' => 'ID inválido'], 400);
+        // Validação manual para retornar JSON em caso de erro
+        $validator = new \Core\Validator($this->request->all(), [
+            'id' => 'required|integer'
+        ]);
+
+        if (!$validator->passes()) {
+            $errors = $validator->errors();
+            $firstError = !empty($errors) ? reset($errors)[0] : 'Dados inválidos';
+            json_response([
+                'success' => false,
+                'message' => $firstError,
+                'errors' => $errors
+            ], 422);
             return;
         }
 
+        $data = $validator->validated();
+
         try {
             $userId = auth()->getDataUserId();
-            $subcategoryId = (int)$id;
+            $subcategoryId = (int)$data['id'];
             
-            // Busca a subcategoria usando where para ter mais controle
-            $subcategory = Subcategory::where('id', $subcategoryId)
-                ->where('user_id', $userId)
-                ->first();
+            $subcategory = Subcategory::find($subcategoryId);
             
-            if (!$subcategory) {
+            if (!$subcategory || $subcategory->user_id != $userId) {
                 json_response(['success' => false, 'message' => 'Subcategoria não encontrada ou você não tem permissão para excluí-la'], 404);
                 return;
             }

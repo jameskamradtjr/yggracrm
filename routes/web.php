@@ -213,13 +213,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/financial/categories', [FinancialController::class, 'categories']);
     $router->get('/financial/categories/create', [FinancialController::class, 'createCategory']);
     $router->post('/financial/categories', [FinancialController::class, 'storeCategory']);
-    $router->get('/financial/categories/{id}/edit', [FinancialController::class, 'editCategory']);
-    $router->post('/financial/categories/{id}', [FinancialController::class, 'updateCategory']);
-    $router->post('/financial/categories/{id}/delete', [FinancialController::class, 'deleteCategory']);
+    // Rotas de subcategorias DEVEM VIR ANTES das rotas com {id} para evitar conflito
     $router->post('/financial/categories/subcategories', [FinancialController::class, 'storeSubcategory']);
     $router->post('/financial/categories/subcategories/update', [FinancialController::class, 'updateSubcategory']);
     $router->post('/financial/categories/subcategories/delete', [FinancialController::class, 'deleteSubcategory']);
     $router->get('/financial/categories/subcategories/info', [FinancialController::class, 'getSubcategoryInfo']);
+    // Rotas com {id} vêm DEPOIS das rotas específicas
+    $router->get('/financial/categories/{id}/edit', [FinancialController::class, 'editCategory']);
+    $router->post('/financial/categories/{id}', [FinancialController::class, 'updateCategory']);
+    $router->post('/financial/categories/{id}/delete', [FinancialController::class, 'deleteCategory']);
     
     // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
     $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);

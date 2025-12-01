@@ -133,6 +133,8 @@ class Router
     {
         // Substitui {param} por regex capturando
         $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $path);
+        // Escapa apenas a barra para regex
+        $pattern = str_replace('/', '\/', $pattern);
         
         return '#^' . $pattern . '$#';
     }
@@ -145,9 +147,14 @@ class Router
         // Remove query string
         $uri = parse_url($uri, PHP_URL_PATH);
         $uri = '/' . trim($uri, '/');
+        
+        // Log de debug
+        error_log("Router dispatch - Method: {$method}, URI: {$uri}");
+        error_log("Total de rotas registradas: " . count($this->routes));
 
-        foreach ($this->routes as $route) {
+        foreach ($this->routes as $index => $route) {
             if ($route['method'] === $method && preg_match($route['regex'], $uri, $matches)) {
+                error_log("Rota encontrada! Index: {$index}, Path: {$route['path']}, Regex: {$route['regex']}");
                 // Extrai parâmetros da URL
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
@@ -188,6 +195,21 @@ class Router
         // Rota não encontrada - Log para debug
         error_log("Rota não encontrada: {$method} {$uri}");
         error_log("Rotas registradas: " . count($this->routes));
+        
+        // Verifica se é uma requisição AJAX/JSON
+        $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $isJsonRequest = $acceptsJson || $isAjax;
+        
+        if ($isJsonRequest) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Rota não encontrada: ' . $uri
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
         
         http_response_code(404);
         

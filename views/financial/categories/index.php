@@ -323,6 +323,10 @@ document.getElementById('subcategoryForm').addEventListener('submit', function(e
     
     fetch(url, {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
         body: formData
     })
     .then(response => {

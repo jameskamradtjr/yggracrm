@@ -187,6 +187,30 @@ class Application
     {
         error_log($e->getMessage() . "\n" . $e->getTraceAsString());
 
+        // Verifica se é uma requisição que espera JSON
+        $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $isJsonRequest = strpos($contentType, 'application/json') !== false || $acceptsJson || $isAjax;
+
+        // Se for uma requisição JSON/AJAX, retorna JSON
+        if ($isJsonRequest) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Erro na aplicação: ' . $e->getMessage(),
+                'file' => config('app.debug', false) ? $e->getFile() : null,
+                'line' => config('app.debug', false) ? $e->getLine() : null,
+                'trace' => config('app.debug', false) ? $e->getTraceAsString() : null
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        // Caso contrário, renderiza HTML
         if (config('app.debug')) {
             echo "<h1>Erro na aplicação</h1>";
             echo "<p><strong>Mensagem:</strong> {$e->getMessage()}</p>";
