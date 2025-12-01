@@ -361,9 +361,8 @@ class FinancialController extends Controller
         if (is_string($valueInput)) {
             $valueInput = str_replace(['R$', ' ', '.'], '', $valueInput);
             $valueInput = str_replace(',', '.', $valueInput);
-            // Atualiza o request para usar o valor numérico
+            // Atualiza o POST diretamente para usar o valor numérico
             $_POST['value'] = $valueInput;
-            $this->request->merge(['value' => $valueInput]);
         }
 
         $data = $this->validate([
