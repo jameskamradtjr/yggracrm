@@ -240,7 +240,23 @@ ob_start();
 </style>
 
 <script>
-let components = <?php echo json_encode($components ?? ['triggers' => [], 'conditions' => [], 'actions' => []]); ?>;
+let components = <?php 
+    // Garante que components existe e tem a estrutura correta
+    if (!isset($components) || !is_array($components)) {
+        $components = ['triggers' => [], 'conditions' => [], 'actions' => []];
+    }
+    // Garante que cada chave é um array
+    if (!isset($components['triggers']) || !is_array($components['triggers'])) {
+        $components['triggers'] = [];
+    }
+    if (!isset($components['conditions']) || !is_array($components['conditions'])) {
+        $components['conditions'] = [];
+    }
+    if (!isset($components['actions']) || !is_array($components['actions'])) {
+        $components['actions'] = [];
+    }
+    echo json_encode($components, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); 
+?>;
 let nodes = [];
 let connections = [];
 let currentNodeId = null;
@@ -251,6 +267,11 @@ let selectedNode = null;
 
 // Debug: verifica se componentes foram carregados
 console.log('Componentes carregados:', components);
+console.log('Tipo de components:', typeof components);
+console.log('É array?', Array.isArray(components));
+console.log('Tem triggers?', components?.triggers);
+console.log('Tem conditions?', components?.conditions);
+console.log('Tem actions?', components?.actions);
 
 // Inicializa o builder
 document.addEventListener('DOMContentLoaded', function() {
@@ -478,15 +499,20 @@ function renderNode(node) {
 function makeNodeDraggable(nodeEl, node) {
     let isDragging = false;
     let offset = { x: 0, y: 0 };
+    let updateTimeout = null;
     
     nodeEl.addEventListener('mousedown', (e) => {
-        if (e.target.closest('button')) return;
+        if (e.target.closest('button') || e.target.closest('.node-connector')) return;
         isDragging = true;
         const rect = nodeEl.getBoundingClientRect();
-        offset.x = e.clientX - rect.left;
-        offset.y = e.clientY - rect.top;
+        const canvas = document.getElementById('workflow-canvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        offset.x = e.clientX - canvasRect.left - parseFloat(nodeEl.style.left);
+        offset.y = e.clientY - canvasRect.top - parseFloat(nodeEl.style.top);
         nodeEl.style.cursor = 'grabbing';
     });
+    
+    let renderTimeout = null;
     
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
@@ -496,12 +522,45 @@ function makeNodeDraggable(nodeEl, node) {
         node.y = e.clientY - rect.top - offset.y;
         nodeEl.style.left = node.x + 'px';
         nodeEl.style.top = node.y + 'px';
-        updateWorkflowData();
+        
+        // Debounce para renderizar conexões (evita múltiplas renderizações)
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
+        }
+        renderTimeout = setTimeout(() => {
+            renderConnections();
+        }, 16); // ~60fps
+        
+        // Debounce para updateWorkflowData (não precisa salvar a cada pixel)
+        if (updateTimeout) {
+            clearTimeout(updateTimeout);
+        }
+        updateTimeout = setTimeout(() => {
+            updateWorkflowData();
+        }, 100);
     });
     
     document.addEventListener('mouseup', () => {
-        isDragging = false;
-        nodeEl.style.cursor = 'move';
+        if (isDragging) {
+            isDragging = false;
+            nodeEl.style.cursor = 'move';
+            
+            // Limpa timeouts
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+                renderTimeout = null;
+            }
+            if (updateTimeout) {
+                clearTimeout(updateTimeout);
+                updateTimeout = null;
+            }
+            
+            // Atualiza conexões uma última vez (garantir que está correto)
+            setTimeout(() => {
+                renderConnections();
+                updateWorkflowData();
+            }, 10);
+        }
     });
 }
 
@@ -719,33 +778,41 @@ function updateWorkflowData() {
 }
 
 function renderConnections() {
-    console.log('renderConnections called, connections:', connections);
-    
-    // Remove conexões antigas
-    document.querySelectorAll('.connection-line').forEach(el => el.remove());
-    
     const canvas = document.getElementById('nodes-container');
     if (!canvas) {
-        console.warn('Canvas not found');
         return;
+    }
+    
+    // Remove TODAS as conexões antigas de forma mais agressiva
+    // Busca especificamente por SVGs de conexão
+    const oldConnections = canvas.querySelectorAll('svg.connection-line, svg[data-connection]');
+    oldConnections.forEach(el => {
+        el.remove();
+    });
+    
+    // Também remove do canvas pai se houver
+    const workflowCanvas = document.getElementById('workflow-canvas');
+    if (workflowCanvas) {
+        const oldConnectionsCanvas = workflowCanvas.querySelectorAll('svg.connection-line, svg[data-connection]');
+        oldConnectionsCanvas.forEach(el => {
+            el.remove();
+        });
     }
     
     // Garante que o marker da seta existe
     ensureArrowMarker();
     
-    connections.forEach((conn, index) => {
-        console.log(`Rendering connection ${index}:`, conn);
-        
+    // Se não há conexões, para aqui
+    if (!connections || connections.length === 0) {
+        return;
+    }
+    
+    connections.forEach((conn) => {
         const sourceNode = document.getElementById(conn.source);
         const targetNode = document.getElementById(conn.target);
         
-        if (!sourceNode) {
-            console.warn('Source node not found:', conn.source);
-            return;
-        }
-        if (!targetNode) {
-            console.warn('Target node not found:', conn.target);
-            return;
+        if (!sourceNode || !targetNode) {
+            return; // Nó não encontrado, pula esta conexão
         }
         
         // Calcula posições relativas ao canvas
@@ -761,10 +828,11 @@ function renderConnections() {
         const targetX = targetRect.left - canvasRect.left;
         const targetY = targetRect.top - canvasRect.top + targetRect.height / 2;
         
-        console.log(`Connection positions - Source: (${sourceX}, ${sourceY}), Target: (${targetX}, ${targetY})`);
-        console.log(`Source rect:`, sourceRect);
-        console.log(`Target rect:`, targetRect);
-        console.log(`Canvas rect:`, canvasRect);
+        // Verifica se já existe uma conexão para este par (evita duplicatas)
+        const existingConnection = canvas.querySelector(`svg[data-connection="${conn.source}-${conn.target}"]`);
+        if (existingConnection) {
+            existingConnection.remove();
+        }
         
         // Cria SVG para a linha
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -791,11 +859,7 @@ function renderConnections() {
         
         svg.appendChild(path);
         canvas.appendChild(svg);
-        
-        console.log('Connection line added to canvas');
     });
-    
-    console.log('renderConnections completed');
 }
 
 function ensureArrowMarker() {
@@ -836,9 +900,6 @@ function ensureArrowMarker() {
         svg.appendChild(defs);
         document.body.appendChild(svg);
     }
-}
-    
-    // Marker da seta é criado pela função ensureArrowMarker()
 }
 
 // Adiciona funcionalidade de conectar nós
