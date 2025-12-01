@@ -185,16 +185,61 @@ class FinancialController extends Controller
         $userId = auth()->getDataUserId();
         $type = $this->request->query('type', 'saida'); // entrada, saida, transferencia
         
+        // Busca categorias com suas subcategorias
+        $categories = Category::where('user_id', $userId)
+            ->where('type', $type === 'entrada' ? 'entrada' : 'saida')
+            ->orderBy('name')
+            ->get();
+        
+        // Busca todas as subcategorias de uma vez
+        $allSubcategories = Subcategory::where('user_id', $userId)->get();
+        
+        // Organiza subcategorias por category_id
+        $subcategoriesByCategory = [];
+        foreach ($allSubcategories as $subcategory) {
+            $catId = $subcategory->category_id;
+            if (!isset($subcategoriesByCategory[$catId])) {
+                $subcategoriesByCategory[$catId] = [];
+            }
+            $subcategoriesByCategory[$catId][] = $subcategory;
+        }
+        
+        // Adiciona subcategorias às categorias
+        foreach ($categories as $category) {
+            $category->subcategories = $subcategoriesByCategory[$category->id] ?? [];
+        }
+        
+        // Busca centros de custo com seus subcentros
+        $costCenters = CostCenter::where('user_id', $userId)
+            ->orderBy('name')
+            ->get();
+        
+        // Busca todos os subcentros de uma vez
+        $allSubCostCenters = SubCostCenter::where('user_id', $userId)->get();
+        
+        // Organiza subcentros por cost_center_id
+        $subCostCentersByCostCenter = [];
+        foreach ($allSubCostCenters as $subCostCenter) {
+            $ccId = $subCostCenter->cost_center_id;
+            if (!isset($subCostCentersByCostCenter[$ccId])) {
+                $subCostCentersByCostCenter[$ccId] = [];
+            }
+            $subCostCentersByCostCenter[$ccId][] = $subCostCenter;
+        }
+        
+        // Adiciona subcentros aos centros de custo
+        foreach ($costCenters as $costCenter) {
+            $costCenter->subCostCenters = $subCostCentersByCostCenter[$costCenter->id] ?? [];
+        }
+        
         return $this->view('financial/create', [
             'title' => 'Novo Lançamento',
             'type' => $type,
             'bankAccounts' => BankAccount::where('user_id', $userId)->get(),
             'creditCards' => CreditCard::where('user_id', $userId)->get(),
             'suppliers' => Supplier::where('user_id', $userId)->get(),
-            'categories' => Category::where('user_id', $userId)
-                ->where('type', $type === 'entrada' ? 'entrada' : 'saida')
-                ->get(),
-            'costCenters' => CostCenter::where('user_id', $userId)->get(),
+            'categories' => $categories,
+            'costCenters' => $costCenters,
             'tags' => Tag::where('user_id', $userId)->get(),
             'paymentMethods' => PaymentMethod::where('user_id', $userId)
                 ->where('ativo', true)
@@ -1732,6 +1777,42 @@ class FinancialController extends Controller
         }
     }
     
+    /**
+     * Retorna subcategorias por categoria
+     */
+    public function getSubcategoriesByCategory(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $categoryId = $params['id'];
+            
+            $subcategories = Subcategory::where('category_id', $categoryId)
+                ->where('user_id', $userId)
+                ->orderBy('name')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'subcategories' => $subcategories->map(function($sub) {
+                    return ['id' => $sub->id, 'name' => $sub->name];
+                })->toArray()
+            ]);
+            
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
     // ==================== CENTROS DE CUSTO ====================
     
     /**
@@ -1876,6 +1957,42 @@ class FinancialController extends Controller
         } catch (\Exception $e) {
             session()->flash('error', 'Erro ao atualizar centro de custo: ' . $e->getMessage());
             $this->redirect('/financial/cost-centers/' . $id . '/edit');
+        }
+    }
+    
+    /**
+     * Retorna subcentros de custo por centro de custo
+     */
+    public function getSubCostCentersByCostCenter(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $costCenterId = $params['id'];
+            
+            $subCostCenters = SubCostCenter::where('cost_center_id', $costCenterId)
+                ->where('user_id', $userId)
+                ->orderBy('name')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'subCostCenters' => $subCostCenters->map(function($sub) {
+                    return ['id' => $sub->id, 'name' => $sub->name];
+                })->toArray()
+            ]);
+            
+        } catch (\Exception $e) {
+            json_response([
+                'success' => false,
+                'message' => 'Erro: ' . $e->getMessage()
+            ], 500);
         }
     }
     

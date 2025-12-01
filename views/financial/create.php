@@ -91,11 +91,21 @@ ob_start();
                             <select name="category_id" class="form-select" id="category_id">
                                 <option value="">Selecione</option>
                                 <?php foreach ($categories as $category): ?>
-                                    <option value="<?php echo $category->id; ?>">
-                                        <?php echo e($category->name); ?>
-                                    </option>
+                                    <optgroup label="<?php echo e($category->name); ?>">
+                                        <option value="<?php echo $category->id; ?>" data-subcategory-id="">
+                                            <?php echo e($category->name); ?>
+                                        </option>
+                                        <?php if (!empty($category->subcategories)): ?>
+                                            <?php foreach ($category->subcategories as $subcategory): ?>
+                                                <option value="<?php echo $category->id; ?>" data-subcategory-id="<?php echo $subcategory->id; ?>">
+                                                    └ <?php echo e($subcategory->name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
+                            <input type="hidden" name="subcategory_id" id="subcategory_id">
                         </div>
                         
                         <div class="col-md-6 mb-3">
@@ -125,20 +135,34 @@ ob_start();
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Centro de Custo</label>
-                            <select name="cost_center_id" class="form-select">
+                            <select name="cost_center_id" class="form-select" id="cost_center_id">
                                 <option value="">Selecione</option>
                                 <?php foreach ($costCenters as $costCenter): ?>
-                                    <option value="<?php echo $costCenter->id; ?>">
-                                        <?php echo e($costCenter->name); ?>
-                                    </option>
+                                    <optgroup label="<?php echo e($costCenter->name); ?>">
+                                        <option value="<?php echo $costCenter->id; ?>" data-sub-cost-center-id="">
+                                            <?php echo e($costCenter->name); ?>
+                                        </option>
+                                        <?php if (!empty($costCenter->subCostCenters)): ?>
+                                            <?php foreach ($costCenter->subCostCenters as $subCostCenter): ?>
+                                                <option value="<?php echo $costCenter->id; ?>" data-sub-cost-center-id="<?php echo $subCostCenter->id; ?>">
+                                                    └ <?php echo e($subCostCenter->name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
+                            <input type="hidden" name="sub_cost_center_id" id="sub_cost_center_id">
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tags</label>
-                            <input type="text" name="tags" class="form-control" placeholder="Digite as tags separadas por vírgula">
-                            <small class="text-muted">Ex: reforma, escritório, sede</small>
+                            <div id="tags-container" class="tags-input-container">
+                                <div class="tags-list" id="tags-list"></div>
+                                <input type="text" id="tags-input" class="form-control tags-input" placeholder="Digite e pressione Enter ou vírgula para adicionar">
+                            </div>
+                            <input type="hidden" name="tags" id="tags-hidden">
+                            <small class="text-muted">Digite e pressione Enter ou vírgula para adicionar tags</small>
                         </div>
                         
                         <div class="col-md-12 mb-3">
@@ -345,7 +369,108 @@ document.getElementById('payment_method_id').addEventListener('change', function
     }
 });
 <?php endif; ?>
+
+// Atualiza subcategoria quando categoria é selecionada
+document.getElementById('category_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const subcategoryId = selectedOption.getAttribute('data-subcategory-id');
+    document.getElementById('subcategory_id').value = subcategoryId || '';
+});
+
+// Atualiza subcentro de custo quando centro de custo é selecionado
+document.getElementById('cost_center_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const subCostCenterId = selectedOption.getAttribute('data-sub-cost-center-id');
+    document.getElementById('sub_cost_center_id').value = subCostCenterId || '';
+});
+
+// Componente de Tags
+(function() {
+    const tagsList = document.getElementById('tags-list');
+    const tagsInput = document.getElementById('tags-input');
+    const tagsHidden = document.getElementById('tags-hidden');
+    let tags = [];
+    
+    function updateHiddenInput() {
+        tagsHidden.value = tags.join(',');
+    }
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !tags.includes(tagText)) {
+            tags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            updateHiddenInput();
+        }
+    }
+    
+    function removeTag(tagText) {
+        tags = tags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        updateHiddenInput();
+    }
+    
+    window.removeTag = removeTag;
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value) {
+            addTag(value);
+            this.value = '';
+        }
+    });
+})();
 </script>
+
+<style>
+.tags-input-container {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    background-color: #fff;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background: transparent;
+}
+
+.tags-input:focus {
+    box-shadow: none;
+}
+</style>
 
 <?php
 $content = ob_get_clean();
