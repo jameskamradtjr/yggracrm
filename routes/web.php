@@ -223,18 +223,18 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/financial/categories/{id}', [FinancialController::class, 'updateCategory']);
     $router->post('/financial/categories/{id}/delete', [FinancialController::class, 'deleteCategory']);
     
+    // Centros de Custo - DEVEM VIR ANTES das rotas genéricas com {id}
+    $router->get('/financial/cost-centers', [FinancialController::class, 'costCenters']);
+    $router->get('/financial/cost-centers/create', [FinancialController::class, 'createCostCenter']);
+    $router->post('/financial/cost-centers', [FinancialController::class, 'storeCostCenter']);
+    $router->post('/financial/cost-centers/subcenters', [FinancialController::class, 'storeSubCostCenter']);
+    
     // Rotas genéricas com {id} devem vir DEPOIS das rotas específicas
     $router->get('/financial/{id}/edit', [FinancialController::class, 'edit']);
     $router->post('/financial/{id}', [FinancialController::class, 'update']);
     $router->post('/financial/{id}/delete', [FinancialController::class, 'delete']);
     $router->post('/financial/{id}/mark-paid', [FinancialController::class, 'markAsPaid']);
     $router->post('/financial/{id}/unmark-paid', [FinancialController::class, 'unmarkAsPaid']);
-    
-    // Centros de Custo
-    $router->get('/financial/cost-centers', [FinancialController::class, 'costCenters']);
-    $router->get('/financial/cost-centers/create', [FinancialController::class, 'createCostCenter']);
-    $router->post('/financial/cost-centers', [FinancialController::class, 'storeCostCenter']);
-    $router->post('/financial/cost-centers/subcenters', [FinancialController::class, 'storeSubCostCenter']);
     
     // Notificações
     $router->get('/api/notificacoes', [NotificacaoController::class, 'index']);
