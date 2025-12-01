@@ -77,15 +77,12 @@ ob_start();
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Tag</label>
-                            <select name="tag_id" class="form-select">
-                                <option value="">Todas</option>
-                                <?php foreach ($tags as $tag): ?>
-                                    <option value="<?php echo $tag->id; ?>" <?php echo ($filters['tag_id'] ?? '') == $tag->id ? 'selected' : ''; ?>>
-                                        <?php echo e($tag->name); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label class="form-label">Tags</label>
+                            <div id="filter-tags-container" class="tags-input-container">
+                                <div class="tags-list" id="filter-tags-list"></div>
+                                <input type="text" id="filter-tags-input" class="form-control tags-input" placeholder="Digite e pressione Enter ou vírgula">
+                            </div>
+                            <input type="hidden" name="tags" id="filter-tags-hidden" value="<?php echo htmlspecialchars($filters['tags'] ?? ''); ?>">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Período</label>
@@ -243,6 +240,75 @@ ob_start();
 </div>
 
 <script>
+// Campo de tags no filtro
+(function() {
+    const tagsList = document.getElementById('filter-tags-list');
+    const tagsInput = document.getElementById('filter-tags-input');
+    const tagsHidden = document.getElementById('filter-tags-hidden');
+    let tags = [];
+    
+    // Inicializa tags se já houver valores no filtro
+    const existingTags = tagsHidden.value;
+    if (existingTags) {
+        tags = existingTags.split(',').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+    }
+    
+    function updateHiddenInput() {
+        tagsHidden.value = tags.join(',');
+    }
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !tags.includes(tagText)) {
+            tags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            updateHiddenInput();
+        }
+    }
+    
+    function removeTag(tagText) {
+        tags = tags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        updateHiddenInput();
+    }
+    
+    window.removeFilterTag = removeTag;
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value) {
+            addTag(value);
+            this.value = '';
+        }
+    });
+})();
+
 // Mostra/oculta campos de data quando período muda
 document.getElementById('period_select').addEventListener('change', function() {
     const period = this.value;
@@ -485,6 +551,36 @@ function unmarkSelectedAsPaid() {
     }
 }
 </script>
+
+<style>
+.tags-input-container {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    background-color: #fff;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background: transparent;
+}
+
+.tags-input:focus {
+    box-shadow: none;
+}
+</style>
 
 <?php
 $content = ob_get_clean();

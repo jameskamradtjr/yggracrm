@@ -42,7 +42,7 @@ class FinancialController extends Controller
         $accountId = $this->request->query('account_id');
         $categoryId = $this->request->query('category_id');
         $costCenterId = $this->request->query('cost_center_id');
-        $tagId = $this->request->query('tag_id');
+        $tagsFilter = $this->request->query('tags'); // Recebe tags separadas por vírgula
         $search = $this->request->query('search');
         
         // Período
@@ -137,17 +137,28 @@ class FinancialController extends Controller
             return FinancialEntry::newInstance($row, true);
         }, $results);
         
-        // Filtra por tag se necessário
-        if ($tagId) {
-            $entries = array_filter($entries, function($entry) use ($tagId) {
-                $tags = $entry->getTags();
-                foreach ($tags as $tag) {
-                    if ($tag['id'] == $tagId) {
-                        return true;
+        // Filtra por tags se necessário
+        if ($tagsFilter) {
+            // Separa as tags por vírgula e remove espaços
+            $tagNames = array_map('trim', explode(',', $tagsFilter));
+            $tagNames = array_filter($tagNames); // Remove valores vazios
+            
+            if (!empty($tagNames)) {
+                $entries = array_filter($entries, function($entry) use ($tagNames) {
+                    $entryTags = $entry->getTags();
+                    $entryTagNames = array_map(function($tag) {
+                        return strtolower(trim($tag['name']));
+                    }, $entryTags);
+                    
+                    // Verifica se pelo menos uma das tags do filtro está presente no lançamento
+                    foreach ($tagNames as $filterTagName) {
+                        if (in_array(strtolower(trim($filterTagName)), $entryTagNames)) {
+                            return true;
+                        }
                     }
-                }
-                return false;
-            });
+                    return false;
+                });
+            }
         }
         
         // Dados para os filtros
@@ -190,7 +201,7 @@ class FinancialController extends Controller
                 'account_id' => $accountId,
                 'category_id' => $categoryId,
                 'cost_center_id' => $costCenterId,
-                'tag_id' => $tagId,
+                'tags' => $tagsFilter,
                 'search' => $search,
                 'period' => $period,
                 'start_date' => $startDate,
