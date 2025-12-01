@@ -355,9 +355,9 @@ class FinancialController extends Controller
             $this->redirect('/financial');
         }
 
-        // Pega o valor numérico do campo hidden se existir, senão usa o campo value
-        $valueInput = $this->request->input('value_numeric') ?: $this->request->input('value');
-        // Remove formatação de moeda se houver
+        // Pega o valor do campo hidden (já vem numérico do JavaScript)
+        $valueInput = $this->request->input('value');
+        // Remove formatação de moeda se houver (fallback de segurança)
         if (is_string($valueInput)) {
             $valueInput = str_replace(['R$', ' ', '.'], '', $valueInput);
             $valueInput = str_replace(',', '.', $valueInput);
@@ -513,9 +513,8 @@ class FinancialController extends Controller
         if (is_string($valueInput)) {
             $valueInput = str_replace(['R$', ' ', '.'], '', $valueInput);
             $valueInput = str_replace(',', '.', $valueInput);
-            // Atualiza o request para usar o valor numérico
+            // Atualiza o POST diretamente para usar o valor numérico
             $_POST['value'] = $valueInput;
-            $this->request->merge(['value' => $valueInput]);
         }
         
         $data = $this->validate([

@@ -25,8 +25,8 @@ ob_start();
                         
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Valor *</label>
-                            <input type="text" name="value" id="value_input" class="form-control" placeholder="R$ 0,00" value="<?php echo 'R$ ' . number_format($entry->value, 2, ',', '.'); ?>" required>
-                            <input type="hidden" name="value_numeric" id="value_numeric" value="<?php echo $entry->value; ?>">
+                            <input type="text" id="value_input" class="form-control" placeholder="R$ 0,00" value="<?php echo 'R$ ' . number_format($entry->value, 2, ',', '.'); ?>" required>
+                            <input type="hidden" name="value" id="value_numeric" value="<?php echo $entry->value; ?>">
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -366,9 +366,9 @@ document.getElementById('cost_center_id').addEventListener('change', function() 
     document.querySelector('form').addEventListener('submit', function(e) {
         if (valueInput && valueNumeric) {
             const numericValue = unformatCurrency(valueInput.value);
-            valueNumeric.value = numericValue || '0.00';
-            // Atualiza o campo value para enviar o valor numérico
-            valueInput.value = numericValue;
+            // Garante que o valor seja pelo menos 0.01
+            const finalValue = parseFloat(numericValue) > 0 ? numericValue : '0.01';
+            valueNumeric.value = finalValue;
         }
     });
 })();
