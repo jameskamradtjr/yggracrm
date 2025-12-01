@@ -93,6 +93,40 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Ignora erro - índice pode já existir
         }
+        
+        // Verifica e adiciona coluna 'origem' se não existir
+        $origemExists = false;
+        try {
+            $origemColumns = $db->query("SHOW COLUMNS FROM `leads` LIKE 'origem'");
+            $origemExists = !empty($origemColumns);
+        } catch (\Exception $e) {
+            $origemExists = false;
+        }
+        
+        if (!$origemExists) {
+            try {
+                $db->execute("ALTER TABLE `leads` ADD COLUMN `origem` VARCHAR(255) NULL");
+            } catch (\Exception $e) {
+                error_log("Erro ao adicionar coluna origem: " . $e->getMessage());
+            }
+        }
+        
+        // Verifica e adiciona coluna 'origem_conheceu' se não existir
+        $origemConheceuExists = false;
+        try {
+            $origemConheceuColumns = $db->query("SHOW COLUMNS FROM `leads` LIKE 'origem_conheceu'");
+            $origemConheceuExists = !empty($origemConheceuColumns);
+        } catch (\Exception $e) {
+            $origemConheceuExists = false;
+        }
+        
+        if (!$origemConheceuExists) {
+            try {
+                $db->execute("ALTER TABLE `leads` ADD COLUMN `origem_conheceu` VARCHAR(255) NULL");
+            } catch (\Exception $e) {
+                error_log("Erro ao adicionar coluna origem_conheceu: " . $e->getMessage());
+            }
+        }
     }
 
     public function down(): void
