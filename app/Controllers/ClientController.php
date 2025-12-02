@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use Core\Controller;
+use Core\FileHelper;
 use App\Models\Client;
 use App\Models\SistemaLog;
 
@@ -96,6 +97,20 @@ class ClientController extends Controller
                 'score' => $data['score'] ?? 50,
                 'observacoes' => $data['observacoes'] ?? null
             ]);
+            
+            // Processa foto se fornecida (após criar o cliente para ter o ID)
+            if ($this->request->has('foto_base64') && !empty($this->request->input('foto_base64'))) {
+                $fotoBase64 = trim($this->request->input('foto_base64', ''));
+                if (!empty($fotoBase64) && strlen($fotoBase64) > 100) {
+                    $filename = 'client_' . $client->id . '_' . time();
+                    $fotoPath = FileHelper::saveBase64Image($fotoBase64, 'storage/clients', $filename);
+                    
+                    if ($fotoPath) {
+                        // Atualiza o cliente com o caminho/URL da foto
+                        $client->update(['foto' => $fotoPath]);
+                    }
+                }
+            }
             
             // Adiciona tags
             $tagsInput = $this->request->input('tags', '');
@@ -273,7 +288,8 @@ class ClientController extends Controller
                 'observacoes' => 'nullable'
             ]);
 
-            $client->update([
+            // Processa foto se fornecida
+            $updateData = [
                 'tipo' => $data['tipo'],
                 'nome_razao_social' => $data['nome_razao_social'],
                 'nome_fantasia' => $data['nome_fantasia'] ?? null,
@@ -291,7 +307,27 @@ class ClientController extends Controller
                 'cep' => $data['cep'] ?? null,
                 'score' => $data['score'] ?? $client->score,
                 'observacoes' => $data['observacoes'] ?? null
-            ]);
+            ];
+            
+            // Processa foto se fornecida
+            if ($this->request->has('foto_base64') && !empty($this->request->input('foto_base64'))) {
+                $fotoBase64 = trim($this->request->input('foto_base64', ''));
+                if (!empty($fotoBase64) && strlen($fotoBase64) > 100) {
+                    // Remove foto antiga se existir
+                    if (!empty($client->foto)) {
+                        FileHelper::deleteFile($client->foto);
+                    }
+                    
+                    $filename = 'client_' . $client->id . '_' . time();
+                    $fotoPath = FileHelper::saveBase64Image($fotoBase64, 'storage/clients', $filename);
+                    
+                    if ($fotoPath) {
+                        $updateData['foto'] = $fotoPath;
+                    }
+                }
+            }
+            
+            $client->update($updateData);
             
             // Remove todas as tags e adiciona as novas
             $client->removeAllTags();

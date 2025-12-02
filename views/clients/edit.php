@@ -98,6 +98,40 @@ $title = $title ?? 'Editar Cliente';
 
             <hr class="my-4">
 
+            <h5 class="mb-3">Foto do Cliente</h5>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <?php if (!empty($client->foto)): ?>
+                                <img id="foto-preview" src="<?php echo asset($client->foto); ?>" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                                <div id="foto-placeholder" class="rounded-circle bg-primary-subtle d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px; display: none;">
+                                    <i class="ti ti-camera fs-1 text-primary"></i>
+                                </div>
+                            <?php else: ?>
+                                <img id="foto-preview" src="/tema/assets/images/profile/user-1.jpg" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover; display: none;">
+                                <div id="foto-placeholder" class="rounded-circle bg-primary-subtle d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                                    <i class="ti ti-camera fs-1 text-primary"></i>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('foto-input').click()">
+                                <i class="ti ti-camera me-1"></i> <?php echo !empty($client->foto) ? 'Alterar Foto' : 'Selecionar Foto'; ?>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger ms-2" id="remove-foto-btn" <?php echo empty($client->foto) ? 'style="display: none;"' : ''; ?> onclick="removeFoto()">
+                                <i class="ti ti-trash me-1"></i> Remover
+                            </button>
+                        </div>
+                        <input type="file" id="foto-input" accept="image/*" style="display: none;" onchange="handleFotoChange(this)">
+                        <input type="hidden" name="foto_base64" id="foto_base64">
+                        <small class="text-muted d-block mt-2">Formatos aceitos: JPG, PNG, GIF, WEBP (máx. 5MB)</small>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
             <h5 class="mb-3">Endereço</h5>
             <div class="row">
                 <div class="col-md-8 mb-3">
@@ -308,6 +342,59 @@ document.getElementById('cep')?.addEventListener('input', function(e) {
     }
     e.target.value = value;
 });
+
+// Manipulação de foto
+function handleFotoChange(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validação de tamanho (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Arquivo muito grande. Tamanho máximo: 5MB');
+            input.value = '';
+            return;
+        }
+        
+        // Validação de tipo
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('Formato inválido. Use JPG, PNG, GIF ou WEBP');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const img = document.getElementById('foto-preview');
+            const placeholder = document.getElementById('foto-placeholder');
+            const removeBtn = document.getElementById('remove-foto-btn');
+            const base64Input = document.getElementById('foto_base64');
+            
+            img.src = e.target.result;
+            img.style.display = 'block';
+            placeholder.style.display = 'none';
+            removeBtn.style.display = 'inline-block';
+            base64Input.value = e.target.result;
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeFoto() {
+    const img = document.getElementById('foto-preview');
+    const placeholder = document.getElementById('foto-placeholder');
+    const removeBtn = document.getElementById('remove-foto-btn');
+    const base64Input = document.getElementById('foto_base64');
+    const fileInput = document.getElementById('foto-input');
+    
+    img.style.display = 'none';
+    placeholder.style.display = 'inline-flex';
+    removeBtn.style.display = 'none';
+    base64Input.value = '';
+    fileInput.value = '';
+}
 </script>
 
 <?php
