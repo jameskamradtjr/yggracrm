@@ -343,3 +343,145 @@ if (!function_exists('json_response')) {
     }
 }
 
+// ============================================================================
+// AWS S3 Helpers
+// ============================================================================
+
+if (!function_exists('s3_public')) {
+    /**
+     * Obtém uma instância do serviço S3 público
+     */
+    function s3_public(): \App\Services\AWS\S3PublicService
+    {
+        return new \App\Services\AWS\S3PublicService();
+    }
+}
+
+if (!function_exists('s3_private')) {
+    /**
+     * Obtém uma instância do serviço S3 privado
+     */
+    function s3_private(): \App\Services\AWS\S3PrivateService
+    {
+        return new \App\Services\AWS\S3PrivateService();
+    }
+}
+
+if (!function_exists('s3_upload_public')) {
+    /**
+     * Faz upload de arquivo público e retorna a URL
+     * 
+     * @param string $localFilePath Caminho local do arquivo
+     * @param int $userId ID do usuário
+     * @param string $subfolder Subpasta opcional (ex: 'avatars', 'logos')
+     * @param array $allowedExtensions Extensões permitidas
+     * @return string|false URL pública ou false em caso de erro
+     */
+    function s3_upload_public(
+        string $localFilePath,
+        int $userId,
+        string $subfolder = '',
+        array $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']
+    ): string|false {
+        $s3 = s3_public();
+        
+        if (!$s3->validateFile($localFilePath, $allowedExtensions)) {
+            error_log('S3 Public Upload Validation Error: ' . $s3->getLastError());
+            return false;
+        }
+        
+        $originalFileName = basename($localFilePath);
+        $s3Key = $s3->generateUniqueKey($userId, $originalFileName, $subfolder);
+        
+        return $s3->uploadAndGetUrl($localFilePath, $s3Key);
+    }
+}
+
+if (!function_exists('s3_upload_private')) {
+    /**
+     * Faz upload de arquivo privado e retorna o caminho S3
+     * 
+     * @param string $localFilePath Caminho local do arquivo
+     * @param int $userId ID do usuário
+     * @param string $subfolder Subpasta opcional (ex: 'documents', 'contracts')
+     * @param int $maxSizeMB Tamanho máximo em MB
+     * @return string|false Caminho S3 ou false em caso de erro
+     */
+    function s3_upload_private(
+        string $localFilePath,
+        int $userId,
+        string $subfolder = '',
+        int $maxSizeMB = 50
+    ): string|false {
+        $s3 = s3_private();
+        
+        if (!$s3->validateFile($localFilePath, $maxSizeMB)) {
+            error_log('S3 Private Upload Validation Error: ' . $s3->getLastError());
+            return false;
+        }
+        
+        $originalFileName = basename($localFilePath);
+        $s3Key = $s3->generateUniqueKey($userId, $originalFileName, $subfolder);
+        
+        if ($s3->upload($localFilePath, $s3Key)) {
+            return $s3Key;
+        }
+        
+        error_log('S3 Private Upload Error: ' . $s3->getLastError());
+        return false;
+    }
+}
+
+if (!function_exists('s3_get_signed_url')) {
+    /**
+     * Gera URL assinada para download de arquivo privado
+     * 
+     * @param string $s3Key Caminho do arquivo no S3
+     * @param int $expirationMinutes Tempo de validade em minutos
+     * @return string|false URL assinada ou false em caso de erro
+     */
+    function s3_get_signed_url(string $s3Key, int $expirationMinutes = 15): string|false
+    {
+        return s3_private()->getSignedDownloadUrl($s3Key, $expirationMinutes);
+    }
+}
+
+if (!function_exists('s3_delete_public')) {
+    /**
+     * Deleta arquivo público do S3
+     * 
+     * @param string $s3Key Caminho do arquivo no S3
+     * @return bool
+     */
+    function s3_delete_public(string $s3Key): bool
+    {
+        return s3_public()->delete($s3Key);
+    }
+}
+
+if (!function_exists('s3_delete_private')) {
+    /**
+     * Deleta arquivo privado do S3
+     * 
+     * @param string $s3Key Caminho do arquivo no S3
+     * @return bool
+     */
+    function s3_delete_private(string $s3Key): bool
+    {
+        return s3_private()->delete($s3Key);
+    }
+}
+
+if (!function_exists('s3_public_url')) {
+    /**
+     * Retorna a URL pública de um arquivo no bucket público
+     * 
+     * @param string $s3Key Caminho do arquivo no S3
+     * @return string URL pública
+     */
+    function s3_public_url(string $s3Key): string
+    {
+        return s3_public()->getPublicUrl($s3Key);
+    }
+}
+
