@@ -3,7 +3,8 @@ ob_start();
 $title = $title ?? 'Drive';
 ?>
 
-<link rel="stylesheet" href="<?php echo asset('/tema/assets/libs/select2/dist/css/select2.min.css'); ?>">
+<!-- Tom Select - Alternativa moderna ao Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
 
 <div class="card bg-primary-subtle shadow-none position-relative overflow-hidden mb-4">
     <div class="card-body px-4 py-3">
@@ -267,7 +268,9 @@ $title = $title ?? 'Drive';
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Cliente</label>
-                            <select class="select2-data-ajax form-control" id="select2-client" name="client_id"></select>
+                            <select class="form-control" id="select2-client" name="client_id">
+                                <option value="">Selecione um cliente...</option>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Projeto</label>
@@ -283,7 +286,9 @@ $title = $title ?? 'Drive';
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Responsável</label>
-                            <select class="select2-data-ajax form-control" id="select2-user" name="responsible_user_id"></select>
+                            <select class="form-control" id="select2-user" name="responsible_user_id">
+                                <option value="">Selecione um responsável...</option>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Data de Vencimento</label>
@@ -416,7 +421,30 @@ $title = $title ?? 'Drive';
 
 async function submitUpload() {
     const form = document.getElementById('uploadForm');
+    
+    // Sincronizar valores do Tom Select com o formulário
+    const clientSelect = document.getElementById('select2-client');
+    const userSelect = document.getElementById('select2-user');
+    
+    if (clientSelect && clientSelect.tomselect) {
+        const value = clientSelect.tomselect.getValue();
+        console.log('Valor do cliente selecionado:', value);
+        clientSelect.value = value || '';
+    }
+    
+    if (userSelect && userSelect.tomselect) {
+        const value = userSelect.tomselect.getValue();
+        console.log('Valor do usuário selecionado:', value);
+        userSelect.value = value || '';
+    }
+    
     const formData = new FormData(form);
+    
+    // Debug: verificar o que está sendo enviado
+    console.log('FormData sendo enviado:');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ':', value);
+    }
     
     try {
         const response = await fetch('<?php echo url('/drive'); ?>', {
@@ -553,113 +581,150 @@ async function deleteFolder(folderId) {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
-
-/* Select2 - Fix completo */
-.select2-container {
-    width: 100% !important;
-}
-
-.select2-container .select2-selection--single {
-    height: 38px;
-}
-
-.select2-container--default .select2-selection--single {
-    border: 1px solid #ced4da;
-    border-radius: 0.375rem;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 36px;
-    padding-left: 12px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
-    right: 5px;
-}
-
-.select2-dropdown {
-    border: 1px solid #ced4da;
-    z-index: 10000 !important;
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: #5d87ff;
-    color: white;
-}
 </style>
 
 <?php
 $content = ob_get_clean();
 
-// Scripts adicionais para Select2
+// Scripts adicionais - Tom Select (moderno e limpo)
 $scripts = '
-<script src="' . asset('/tema/assets/libs/select2/dist/js/select2.full.min.js') . '"></script>
-<script>
-$(document).ready(function() {
-    // Inicializa Select2 para clientes (AJAX) - Padrão do tema
-    $("#select2-client").select2({
-        dropdownParent: $("#uploadModal"),
-        placeholder: "Buscar cliente...",
-        allowClear: true,
-        ajax: {
-            url: "' . url('/drive/search/clients') . '",
-            dataType: "json",
-            delay: 250,
-            data: function (params) {
-                return {
-                    q: params.term,
-                    page: params.page || 1
-                };
-            },
-            processResults: function (data, params) {
-                params.page = params.page || 1;
-                return {
-                    results: data.results,
-                    pagination: {
-                        more: data.pagination && data.pagination.more
-                    }
-                };
-            },
-            cache: true
-        },
-        escapeMarkup: function (markup) {
-            return markup;
-        },
-        minimumInputLength: 0
-    });
+<style>
+/* Tom Select - Ajustes para modal */
+.ts-wrapper {
+    width: 100% !important;
+}
 
-    // Inicializa Select2 para usuários (AJAX) - Padrão do tema
-    $("#select2-user").select2({
-        dropdownParent: $("#uploadModal"),
-        placeholder: "Buscar responsável...",
-        allowClear: true,
-        ajax: {
-            url: "' . url('/drive/search/users') . '",
-            dataType: "json",
-            delay: 250,
-            data: function (params) {
-                return {
-                    q: params.term,
-                    page: params.page || 1
-                };
+.ts-dropdown {
+    z-index: 10060 !important;
+}
+
+/* Tom Select dentro do modal */
+.modal .ts-dropdown {
+    z-index: 10060 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+console.log("=== INICIANDO TOM SELECT ===");
+
+document.addEventListener("DOMContentLoaded", function() {
+    console.log("Tom Select disponível:", typeof TomSelect);
+    
+    // Configuração do Tom Select de Clientes com AJAX
+    var clientInput = document.getElementById("select2-client");
+    console.log("Elemento cliente encontrado:", clientInput ? "sim" : "não");
+    
+    if (clientInput) {
+        var clientSelect = new TomSelect("#select2-client", {
+            valueField: "id",
+            labelField: "text",
+            searchField: "text",
+            placeholder: "Digite para buscar cliente...",
+            loadThrottle: 300,
+            loadingClass: "loading",
+            preload: false,
+            load: function(query, callback) {
+                if (query.length < 2) {
+                    console.log("Query muito curta:", query);
+                    return callback();
+                }
+                
+                console.log("→ Buscando clientes:", query);
+                
+                var url = "' . url('/drive/search/clients') . '?q=" + encodeURIComponent(query) + "&page=1";
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        console.log("← Resultados clientes:", json);
+                        callback(json.results || []);
+                    })
+                    .catch(error => {
+                        console.error("ERRO na busca de clientes:", error);
+                        callback();
+                    });
             },
-            processResults: function (data, params) {
-                params.page = params.page || 1;
-                return {
-                    results: data.results,
-                    pagination: {
-                        more: data.pagination && data.pagination.more
-                    }
-                };
+            render: {
+                option: function(data, escape) {
+                    return "<div>" + escape(data.text) + "</div>";
+                },
+                item: function(data, escape) {
+                    return "<div>" + escape(data.text) + "</div>";
+                },
+                no_results: function(data, escape) {
+                    return "<div class=\"no-results\">Nenhum cliente encontrado</div>";
+                }
             },
-            cache: true
-        },
-        escapeMarkup: function (markup) {
-            return markup;
-        },
-        minimumInputLength: 0
-    });
+            plugins: ["clear_button"]
+        });
+        
+        // Salvar a instância no elemento para acesso posterior
+        clientInput.tomselect = clientSelect;
+        
+        console.log("✓ Tom Select de clientes inicializado");
+    } else {
+        console.error("✗ Elemento #select2-client não encontrado!");
+    }
+    
+    // Configuração do Tom Select de Usuários com AJAX
+    var userInput = document.getElementById("select2-user");
+    console.log("Elemento usuário encontrado:", userInput ? "sim" : "não");
+    
+    if (userInput) {
+        var userSelect = new TomSelect("#select2-user", {
+            valueField: "id",
+            labelField: "text",
+            searchField: "text",
+            placeholder: "Digite para buscar responsável...",
+            loadThrottle: 300,
+            loadingClass: "loading",
+            preload: false,
+            load: function(query, callback) {
+                if (query.length < 2) {
+                    console.log("Query muito curta:", query);
+                    return callback();
+                }
+                
+                console.log("→ Buscando usuários:", query);
+                
+                var url = "' . url('/drive/search/users') . '?q=" + encodeURIComponent(query) + "&page=1";
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        console.log("← Resultados usuários:", json);
+                        callback(json.results || []);
+                    })
+                    .catch(error => {
+                        console.error("ERRO na busca de usuários:", error);
+                        callback();
+                    });
+            },
+            render: {
+                option: function(data, escape) {
+                    return "<div>" + escape(data.text) + "</div>";
+                },
+                item: function(data, escape) {
+                    return "<div>" + escape(data.text) + "</div>";
+                },
+                no_results: function(data, escape) {
+                    return "<div class=\"no-results\">Nenhum usuário encontrado</div>";
+                }
+            },
+            plugins: ["clear_button"]
+        });
+        
+        // Salvar a instância no elemento para acesso posterior
+        userInput.tomselect = userSelect;
+        
+        console.log("✓ Tom Select de usuários inicializado");
+    } else {
+        console.error("✗ Elemento #select2-user não encontrado!");
+    }
+    
+    console.log("=== TOM SELECT INICIALIZADO ===");
 });
 </script>
 ';

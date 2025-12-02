@@ -311,30 +311,30 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/quizzes/{id}/steps', [QuizController::class, 'saveStep']);
     $router->post('/quizzes/{id}/steps/delete', [QuizController::class, 'deleteStep']);
     $router->post('/quizzes/{id}/steps/reorder', [QuizController::class, 'reorderSteps']);
+    
+    // Rotas do Drive
+    // AJAX endpoints para Select2 (devem vir ANTES das rotas com {id})
+    $router->get('/drive/search/clients', [DriveController::class, 'searchClients']);
+    $router->get('/drive/search/users', [DriveController::class, 'searchUsers']);
+    $router->get('/drive/search/tags', [DriveController::class, 'searchTags']);
+    
+    // Pastas (antes das rotas genéricas)
+    $router->post('/drive/folders', [DriveController::class, 'createFolder']);
+    $router->delete('/drive/folders/{id}', [DriveController::class, 'deleteFolder']);
+    
+    // Listagem e upload
+    $router->get('/drive', [DriveController::class, 'index']);
+    $router->post('/drive', [DriveController::class, 'store']);
+    
+    // Detalhes e download
+    $router->get('/drive/{id}', [DriveController::class, 'show']);
+    $router->get('/drive/{id}/download', [DriveController::class, 'download']);
+    
+    // Ações de arquivo
+    $router->post('/drive/{id}/favorite', [DriveController::class, 'toggleFavorite']);
+    $router->post('/drive/{id}/trash', [DriveController::class, 'trash']);
+    $router->delete('/drive/{id}', [DriveController::class, 'destroy']);
 });
-
-// Rotas do Drive
-// Listagem e upload
-$router->get('/drive', [DriveController::class, 'index']);
-$router->post('/drive', [DriveController::class, 'store']);
-
-// AJAX endpoints para Select2
-$router->get('/drive/search/clients', [DriveController::class, 'searchClients']);
-$router->get('/drive/search/users', [DriveController::class, 'searchUsers']);
-$router->get('/drive/search/tags', [DriveController::class, 'searchTags']);
-
-// Detalhes e download
-$router->get('/drive/{id}', [DriveController::class, 'show']);
-$router->get('/drive/{id}/download', [DriveController::class, 'download']);
-
-// Ações de arquivo
-$router->post('/drive/{id}/favorite', [DriveController::class, 'toggleFavorite']);
-$router->post('/drive/{id}/trash', [DriveController::class, 'trash']);
-$router->delete('/drive/{id}', [DriveController::class, 'destroy']);
-
-// Pastas
-$router->post('/drive/folders', [DriveController::class, 'createFolder']);
-$router->delete('/drive/folders/{id}', [DriveController::class, 'deleteFolder']);
 
 // Rotas Públicas (sem autenticação)
 $router->get('/calendar/{slug}', [\App\Controllers\PublicCalendarController::class, 'show']);

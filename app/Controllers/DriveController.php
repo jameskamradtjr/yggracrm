@@ -89,11 +89,17 @@ class DriveController extends Controller
             'shared' => DriveFile::where('user_id', $userId)->where('is_shared', true)->whereNull('deleted_at')->count(),
         ];
 
+        // Busca projetos do usuário para o select
+        $projects = Project::where('user_id', $userId)
+            ->orderBy('titulo', 'ASC')
+            ->get();
+
         return $this->view('drive/index', [
             'title' => 'Drive',
             'currentFolder' => $currentFolder,
             'folders' => $folders,
             'files' => $files,
+            'projects' => $projects,
             'view' => $view,
             'filter' => $filter,
             'stats' => $stats
@@ -105,44 +111,79 @@ class DriveController extends Controller
      */
     public function searchClients(): void
     {
-        if (!auth()->check()) {
-            json_response(['results' => []], 401);
+        try {
+            if (!auth()->check()) {
+                error_log("Drive searchClients: Usuário não autenticado");
+                json_response(['results' => []], 401);
+                return;
+            }
+
+            $userId = auth()->getDataUserId();
+            $search = trim($this->request->get('q', ''));
+            $page = (int) $this->request->get('page', 1);
+            $perPage = 20;
+            $offset = ($page - 1) * $perPage;
+
+            error_log("Drive searchClients: user_id={$userId}, search={$search}, page={$page}");
+
+            // Query direta com SQL para evitar problemas com o Model
+            $db = \Core\Database::getInstance();
+            
+            if (!empty($search)) {
+                $searchLike = "%{$search}%";
+                
+                // Conta total
+                $countSql = "SELECT COUNT(*) as total FROM clients 
+                             WHERE user_id = ? 
+                             AND (nome_razao_social LIKE ? OR nome_fantasia LIKE ? OR email LIKE ?)";
+                $countResult = $db->queryOne($countSql, [$userId, $searchLike, $searchLike, $searchLike]);
+                $total = $countResult['total'] ?? 0;
+                
+                // Busca clientes
+                $sql = "SELECT id, nome_razao_social, nome_fantasia, email 
+                        FROM clients 
+                        WHERE user_id = ? 
+                        AND (nome_razao_social LIKE ? OR nome_fantasia LIKE ? OR email LIKE ?)
+                        ORDER BY nome_razao_social ASC 
+                        LIMIT ? OFFSET ?";
+                $clients = $db->query($sql, [$userId, $searchLike, $searchLike, $searchLike, $perPage, $offset]);
+            } else {
+                // Sem busca, retorna os primeiros
+                $countSql = "SELECT COUNT(*) as total FROM clients WHERE user_id = ?";
+                $countResult = $db->queryOne($countSql, [$userId]);
+                $total = $countResult['total'] ?? 0;
+                
+                $sql = "SELECT id, nome_razao_social, nome_fantasia, email 
+                        FROM clients 
+                        WHERE user_id = ? 
+                        ORDER BY nome_razao_social ASC 
+                        LIMIT ? OFFSET ?";
+                $clients = $db->query($sql, [$userId, $perPage, $offset]);
+            }
+
+            error_log("Drive searchClients: Encontrados {$total} clientes");
+
+            $results = array_map(function($client) {
+                return [
+                    'id' => $client['id'],
+                    'text' => $client['nome_razao_social'] . ($client['nome_fantasia'] ? ' (' . $client['nome_fantasia'] . ')' : '')
+                ];
+            }, $clients);
+
+            json_response([
+                'results' => $results,
+                'pagination' => [
+                    'more' => ($page * $perPage) < $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("Drive searchClients ERROR: " . $e->getMessage());
+            error_log("Drive searchClients TRACE: " . $e->getTraceAsString());
+            json_response([
+                'results' => [],
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $userId = auth()->getDataUserId();
-        $search = $this->request->get('q', '');
-        $page = (int) $this->request->get('page', 1);
-        $perPage = 20;
-
-        $query = Client::where('user_id', $userId);
-        
-        if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('nome_razao_social', 'LIKE', "%{$search}%")
-                  ->orWhere('nome_fantasia', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%");
-            });
-        }
-
-        $total = $query->count();
-        $clients = $query->orderBy('nome_razao_social', 'ASC')
-            ->limit($perPage)
-            ->offset(($page - 1) * $perPage)
-            ->get();
-
-        $results = array_map(function($client) {
-            return [
-                'id' => $client->id,
-                'text' => $client->nome_razao_social . ($client->nome_fantasia ? ' (' . $client->nome_fantasia . ')' : '')
-            ];
-        }, $clients);
-
-        json_response([
-            'results' => $results,
-            'pagination' => [
-                'more' => ($page * $perPage) < $total
-            ]
-        ]);
     }
 
     /**
@@ -150,43 +191,79 @@ class DriveController extends Controller
      */
     public function searchUsers(): void
     {
-        if (!auth()->check()) {
-            json_response(['results' => []], 401);
+        try {
+            if (!auth()->check()) {
+                error_log("Drive searchUsers: Usuário não autenticado");
+                json_response(['results' => []], 401);
+                return;
+            }
+
+            $userId = auth()->getDataUserId();
+            $search = trim($this->request->get('q', ''));
+            $page = (int) $this->request->get('page', 1);
+            $perPage = 20;
+            $offset = ($page - 1) * $perPage;
+
+            error_log("Drive searchUsers: user_id={$userId}, search={$search}, page={$page}");
+
+            // Query direta com SQL para evitar problemas com o Model
+            $db = \Core\Database::getInstance();
+            
+            if (!empty($search)) {
+                $searchLike = "%{$search}%";
+                
+                // Conta total
+                $countSql = "SELECT COUNT(*) as total FROM users 
+                             WHERE user_id = ? 
+                             AND (name LIKE ? OR email LIKE ?)";
+                $countResult = $db->queryOne($countSql, [$userId, $searchLike, $searchLike]);
+                $total = $countResult['total'] ?? 0;
+                
+                // Busca usuários
+                $sql = "SELECT id, name, email 
+                        FROM users 
+                        WHERE user_id = ? 
+                        AND (name LIKE ? OR email LIKE ?)
+                        ORDER BY name ASC 
+                        LIMIT ? OFFSET ?";
+                $users = $db->query($sql, [$userId, $searchLike, $searchLike, $perPage, $offset]);
+            } else {
+                // Sem busca, retorna os primeiros
+                $countSql = "SELECT COUNT(*) as total FROM users WHERE user_id = ?";
+                $countResult = $db->queryOne($countSql, [$userId]);
+                $total = $countResult['total'] ?? 0;
+                
+                $sql = "SELECT id, name, email 
+                        FROM users 
+                        WHERE user_id = ? 
+                        ORDER BY name ASC 
+                        LIMIT ? OFFSET ?";
+                $users = $db->query($sql, [$userId, $perPage, $offset]);
+            }
+
+            error_log("Drive searchUsers: Encontrados {$total} usuários");
+
+            $results = array_map(function($user) {
+                return [
+                    'id' => $user['id'],
+                    'text' => $user['name'] . ' (' . $user['email'] . ')'
+                ];
+            }, $users);
+
+            json_response([
+                'results' => $results,
+                'pagination' => [
+                    'more' => ($page * $perPage) < $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("Drive searchUsers ERROR: " . $e->getMessage());
+            error_log("Drive searchUsers TRACE: " . $e->getTraceAsString());
+            json_response([
+                'results' => [],
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $userId = auth()->getDataUserId();
-        $search = $this->request->get('q', '');
-        $page = (int) $this->request->get('page', 1);
-        $perPage = 20;
-
-        $query = User::where('user_id', $userId);
-        
-        if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%");
-            });
-        }
-
-        $total = $query->count();
-        $users = $query->orderBy('name', 'ASC')
-            ->limit($perPage)
-            ->offset(($page - 1) * $perPage)
-            ->get();
-
-        $results = array_map(function($user) {
-            return [
-                'id' => $user->id,
-                'text' => $user->name . ' (' . $user->email . ')'
-            ];
-        }, $users);
-
-        json_response([
-            'results' => $results,
-            'pagination' => [
-                'more' => ($page * $perPage) < $total
-            ]
-        ]);
     }
 
     /**
@@ -275,6 +352,25 @@ class DriveController extends Controller
             
             error_log("Drive Upload - S3 Key: " . $s3Key);
 
+            // Prepara os dados do arquivo
+            $clientId = $this->request->input('client_id') ?: null;
+            $responsibleUserId = $this->request->input('responsible_user_id') ?: null;
+            
+            // Valida e converte para inteiro se não for vazio
+            if ($clientId !== null && $clientId !== '') {
+                $clientId = (int) $clientId;
+                error_log("Drive Upload - Client ID: " . $clientId);
+            } else {
+                $clientId = null;
+            }
+            
+            if ($responsibleUserId !== null && $responsibleUserId !== '') {
+                $responsibleUserId = (int) $responsibleUserId;
+                error_log("Drive Upload - Responsible User ID: " . $responsibleUserId);
+            } else {
+                $responsibleUserId = null;
+            }
+            
             // Cria registro no banco
             $driveFile = DriveFile::create([
                 'user_id' => $userId,
@@ -284,13 +380,15 @@ class DriveController extends Controller
                 'mime_type' => $mimeType,
                 'size' => $size,
                 'extension' => $extension,
-                'client_id' => $this->request->input('client_id') ?: null,
+                'client_id' => $clientId,
                 'lead_id' => $this->request->input('lead_id') ?: null,
                 'project_id' => $this->request->input('project_id') ?: null,
-                'responsible_user_id' => $this->request->input('responsible_user_id') ?: null,
+                'responsible_user_id' => $responsibleUserId,
                 'description' => $this->request->input('description') ?: null,
                 'expiration_date' => $this->request->input('expiration_date') ?: null,
             ]);
+            
+            error_log("Drive Upload - Drive file criado com ID: " . $driveFile->id);
 
             // Adiciona tags
             $tagsInput = $this->request->input('tags', '');
