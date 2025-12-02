@@ -119,9 +119,15 @@ if (!function_exists('redirect')) {
 if (!function_exists('url')) {
     /**
      * Gera uma URL completa para rotas da aplicação
+     * Se o caminho for uma URL absoluta (http/https), retorna sem modificar
      */
     function url(string $path = ''): string
     {
+        // Se for URL absoluta (http:// ou https://), retorna sem modificar
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        
         // Detecta o base path do projeto (sem /public)
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         
@@ -140,9 +146,15 @@ if (!function_exists('url')) {
 if (!function_exists('asset')) {
     /**
      * Gera URL para assets (fora de public)
+     * Se o caminho for uma URL absoluta (http/https), retorna sem modificar
      */
     function asset(string $path): string
     {
+        // Se for URL absoluta (http:// ou https://), retorna sem modificar
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        
         // Detecta o base path do projeto (sem /public)
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         
@@ -482,6 +494,30 @@ if (!function_exists('s3_public_url')) {
     function s3_public_url(string $s3Key): string
     {
         return s3_public()->getPublicUrl($s3Key);
+    }
+}
+
+if (!function_exists('avatar_url')) {
+    /**
+     * Retorna a URL correta do avatar (S3 ou local)
+     * 
+     * @param string|null $avatarPath Caminho do avatar (URL S3 ou caminho local)
+     * @param string $default URL padrão se não houver avatar
+     * @return string URL do avatar
+     */
+    function avatar_url(?string $avatarPath, string $default = '/tema/assets/images/profile/user-1.jpg'): string
+    {
+        if (empty($avatarPath)) {
+            return asset($default);
+        }
+        
+        // Se for URL absoluta (S3), retorna sem modificar
+        if (str_starts_with($avatarPath, 'http://') || str_starts_with($avatarPath, 'https://')) {
+            return $avatarPath;
+        }
+        
+        // Se for caminho local, adiciona base path
+        return asset($avatarPath);
     }
 }
 
