@@ -139,6 +139,31 @@ class ProjectController extends Controller
                 'observacoes' => $data['observacoes'] ?? null
             ]);
             
+            // Adiciona tags
+            $tagsInput = $this->request->input('tags', '');
+            $tags = array_filter(array_map('trim', explode(',', $tagsInput)));
+            
+            if (!empty($tags)) {
+                $tagModel = \App\Models\Tag::class;
+                foreach ($tags as $tagNameOrId) {
+                    if (is_numeric($tagNameOrId)) {
+                        $project->addTag((int) $tagNameOrId);
+                    } else {
+                        $tag = $tagModel::where('name', $tagNameOrId)
+                            ->where('user_id', $userId)
+                            ->first();
+                        
+                        if (!$tag) {
+                            $tag = $tagModel::create([
+                                'name' => $tagNameOrId,
+                                'user_id' => $userId
+                            ]);
+                        }
+                        $project->addTag($tag->id);
+                    }
+                }
+            }
+            
             // Registra log
             SistemaLog::registrar(
                 'projects',
@@ -285,6 +310,34 @@ class ProjectController extends Controller
                 'progresso' => $data['progresso'] ?? 0,
                 'observacoes' => $data['observacoes'] ?? null
             ]);
+            
+            // Remove todas as tags e adiciona as novas
+            $project->removeAllTags();
+            
+            // Adiciona tags
+            $tagsInput = $this->request->input('tags', '');
+            $tags = array_filter(array_map('trim', explode(',', $tagsInput)));
+            
+            if (!empty($tags)) {
+                $tagModel = \App\Models\Tag::class;
+                foreach ($tags as $tagNameOrId) {
+                    if (is_numeric($tagNameOrId)) {
+                        $project->addTag((int) $tagNameOrId);
+                    } else {
+                        $tag = $tagModel::where('name', $tagNameOrId)
+                            ->where('user_id', $userId)
+                            ->first();
+                        
+                        if (!$tag) {
+                            $tag = $tagModel::create([
+                                'name' => $tagNameOrId,
+                                'user_id' => $userId
+                            ]);
+                        }
+                        $project->addTag($tag->id);
+                    }
+                }
+            }
             
             // Registra log
             SistemaLog::registrar(

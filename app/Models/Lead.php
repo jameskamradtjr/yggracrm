@@ -145,5 +145,83 @@ class Lead extends Model
         }
         return is_array($value) ? $value : [];
     }
+    
+    /**
+     * Retorna tags do lead
+     */
+    public function getTags(): array
+    {
+        $db = \Core\Database::getInstance();
+        $tags = $db->query(
+            "SELECT t.* FROM tags t 
+             INNER JOIN lead_tags lt ON t.id = lt.tag_id 
+             WHERE lt.lead_id = ?",
+            [$this->id]
+        );
+        
+        return $tags ?: [];
+    }
+    
+    /**
+     * Adiciona uma tag ao lead
+     */
+    public function addTag(int $tagId): bool
+    {
+        $db = \Core\Database::getInstance();
+        
+        // Verifica se já existe
+        $existing = $db->query(
+            "SELECT id FROM lead_tags WHERE lead_id = ? AND tag_id = ?",
+            [$this->id, $tagId]
+        );
+        
+        if (!empty($existing)) {
+            return true; // Já existe
+        }
+        
+        try {
+            $db->execute(
+                "INSERT INTO lead_tags (lead_id, tag_id, created_at, updated_at) VALUES (?, ?, NOW(), NOW())",
+                [$this->id, $tagId]
+            );
+            return true;
+        } catch (\Exception $e) {
+            error_log("Erro ao adicionar tag ao lead: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Remove uma tag do lead
+     */
+    public function removeTag(int $tagId): bool
+    {
+        $db = \Core\Database::getInstance();
+        try {
+            $db->execute(
+                "DELETE FROM lead_tags WHERE lead_id = ? AND tag_id = ?",
+                [$this->id, $tagId]
+            );
+            return true;
+        } catch (\Exception $e) {
+            error_log("Erro ao remover tag do lead: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Remove todas as tags do lead
+     */
+    public function removeAllTags(): bool
+    {
+        $db = \Core\Database::getInstance();
+        try {
+            $db->execute("DELETE FROM lead_tags WHERE lead_id = ?", [$this->id]);
+            return true;
+        } catch (\Exception $e) {
+            error_log("Erro ao remover todas as tags do lead: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 

@@ -96,6 +96,31 @@ class ClientController extends Controller
                 'score' => $data['score'] ?? 50,
                 'observacoes' => $data['observacoes'] ?? null
             ]);
+            
+            // Adiciona tags
+            $tagsInput = $this->request->input('tags', '');
+            $tags = array_filter(array_map('trim', explode(',', $tagsInput)));
+            
+            if (!empty($tags)) {
+                $tagModel = \App\Models\Tag::class;
+                foreach ($tags as $tagNameOrId) {
+                    if (is_numeric($tagNameOrId)) {
+                        $client->addTag((int) $tagNameOrId);
+                    } else {
+                        $tag = $tagModel::where('name', $tagNameOrId)
+                            ->where('user_id', $userId)
+                            ->first();
+                        
+                        if (!$tag) {
+                            $tag = $tagModel::create([
+                                'name' => $tagNameOrId,
+                                'user_id' => $userId
+                            ]);
+                        }
+                        $client->addTag($tag->id);
+                    }
+                }
+            }
 
             SistemaLog::registrar(
                 'clients',
@@ -267,6 +292,34 @@ class ClientController extends Controller
                 'score' => $data['score'] ?? $client->score,
                 'observacoes' => $data['observacoes'] ?? null
             ]);
+            
+            // Remove todas as tags e adiciona as novas
+            $client->removeAllTags();
+            
+            // Adiciona tags
+            $tagsInput = $this->request->input('tags', '');
+            $tags = array_filter(array_map('trim', explode(',', $tagsInput)));
+            
+            if (!empty($tags)) {
+                $tagModel = \App\Models\Tag::class;
+                foreach ($tags as $tagNameOrId) {
+                    if (is_numeric($tagNameOrId)) {
+                        $client->addTag((int) $tagNameOrId);
+                    } else {
+                        $tag = $tagModel::where('name', $tagNameOrId)
+                            ->where('user_id', $userId)
+                            ->first();
+                        
+                        if (!$tag) {
+                            $tag = $tagModel::create([
+                                'name' => $tagNameOrId,
+                                'user_id' => $userId
+                            ]);
+                        }
+                        $client->addTag($tag->id);
+                    }
+                }
+            }
 
             SistemaLog::registrar(
                 'clients',

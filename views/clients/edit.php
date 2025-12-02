@@ -143,6 +143,19 @@ $title = $title ?? 'Editar Cliente';
                     <label for="score" class="form-label">Score (0-100)</label>
                     <input type="number" class="form-control" id="score" name="score" min="0" max="100" value="<?php echo $client->score ?? 50; ?>">
                 </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tags</label>
+                    <div id="tags-container" class="tags-input-container">
+                        <div class="tags-list" id="tags-list"></div>
+                        <input type="text" id="tags-input" class="form-control tags-input" placeholder="Digite e pressione Enter ou vírgula para adicionar">
+                    </div>
+                    <input type="hidden" name="tags" id="tags-hidden" value="<?php 
+                        $clientTags = $client->getTags();
+                        echo htmlspecialchars(implode(',', array_column($clientTags, 'name')));
+                    ?>">
+                    <small class="text-muted">Digite e pressione Enter ou vírgula para adicionar tags</small>
+                </div>
             </div>
 
             <div class="row">
@@ -163,6 +176,75 @@ $title = $title ?? 'Editar Cliente';
 </div>
 
 <script>
+// Componente de Tags
+(function() {
+    const tagsList = document.getElementById('tags-list');
+    const tagsInput = document.getElementById('tags-input');
+    const tagsHidden = document.getElementById('tags-hidden');
+    let tags = [];
+    
+    // Inicializa tags existentes
+    const existingTags = tagsHidden.value;
+    if (existingTags) {
+        tags = existingTags.split(',').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+    }
+    
+    function updateHiddenInput() {
+        tagsHidden.value = tags.join(',');
+    }
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !tags.includes(tagText)) {
+            tags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            updateHiddenInput();
+        }
+    }
+    
+    function removeTag(tagText) {
+        tags = tags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        updateHiddenInput();
+    }
+    
+    window.removeTag = removeTag;
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value) {
+            addTag(value);
+            this.value = '';
+        }
+    });
+})();
+
 function toggleTipoCliente() {
     const tipo = document.querySelector('input[name="tipo"]:checked').value;
     const nomeLabel = document.getElementById('label_nome');

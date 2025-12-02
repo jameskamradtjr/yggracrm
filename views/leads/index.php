@@ -123,51 +123,41 @@ ob_start();
 </div>
 <?php endif; ?>
 
-<!-- Card Informativo -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-info">
-            <div class="card-body bg-info-subtle">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h5 class="card-title mb-2">
-                            <i class="ti ti-info-circle me-2"></i>
-                            Formulário Público de Captura
-                        </h5>
-                        <p class="text-muted mb-0">
-                            <strong>⚠️ IMPORTANTE:</strong> O quiz cria <strong>LEADS</strong>, não clientes! 
-                            Os leads aparecem aqui em <strong>/leads</strong> (CRM de Leads). 
-                            Para convertê-los em clientes, acesse o lead e clique em "Converter em Cliente". 
-                            Só então o cliente aparecerá em <strong>/clients</strong>.
-                        </p>
-                    </div>
-                    <div class="ms-3">
-                        <button type="button" class="btn btn-primary" onclick="gerarLinkUnico()">
-                            <i class="ti ti-link me-2"></i>
-                            Gerar Link do Quiz
-                        </button>
-                        <div id="quiz-link-container" class="mt-3" style="display: none;">
-                            <div class="input-group">
-                                <input type="text" id="quiz-link-input" class="form-control" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="copiarLinkUnico()">
-                                    <i class="ti ti-copy me-2"></i>
-                                    Copiar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Kanban Board -->
+<!-- Abas de Navegação -->
 <div class="row">
     <div class="col-12">
-        <div class="action-btn layout-top-spacing mb-4 d-flex align-items-center justify-content-between flex-wrap gap-6">
-            <h5 class="mb-0 fs-5">Funil de Vendas</h5>
-        </div>
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="leadsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="kanban-tab" data-bs-toggle="tab" data-bs-target="#kanban-pane" type="button" role="tab" aria-controls="kanban-pane" aria-selected="true">
+                            <i class="ti ti-layout-kanban me-2"></i>
+                            Funil de Vendas (Kanban)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="oportunidades-tab" data-bs-toggle="tab" data-bs-target="#oportunidades-pane" type="button" role="tab" aria-controls="oportunidades-pane" aria-selected="false">
+                            <i class="ti ti-briefcase me-2"></i>
+                            Oportunidades
+                            <span class="badge bg-primary ms-2"><?php echo count($oportunidades); ?></span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="leads-tab" data-bs-toggle="tab" data-bs-target="#leads-pane" type="button" role="tab" aria-controls="leads-pane" aria-selected="false">
+                            <i class="ti ti-users me-2"></i>
+                            Todos os Leads
+                            <span class="badge bg-info ms-2"><?php echo count($allLeads); ?></span>
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="leadsTabsContent">
+                    <!-- Aba: Kanban -->
+                    <div class="tab-pane fade show active" id="kanban-pane" role="tabpanel" aria-labelledby="kanban-tab">
+                        <div class="action-btn layout-top-spacing mb-4 d-flex align-items-center justify-content-between flex-wrap gap-6 mt-4">
+                            <h5 class="mb-0 fs-5">Funil de Vendas</h5>
+                        </div>
         
         <div class="scrumboard" id="cancel-row">
             <div class="layout-spacing pb-3">
@@ -272,6 +262,166 @@ ob_start();
                 </div>
             </div>
         </div>
+                    </div>
+                    
+                    <!-- Aba: Oportunidades -->
+                    <div class="tab-pane fade" id="oportunidades-pane" role="tabpanel" aria-labelledby="oportunidades-tab">
+                        <div class="mt-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Email</th>
+                                            <th>Telefone</th>
+                                            <th>Valor Oportunidade</th>
+                                            <th>Etapa</th>
+                                            <th>Score</th>
+                                            <th>Responsável</th>
+                                            <th>Data</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($oportunidades)): ?>
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted py-4">
+                                                    <i class="ti ti-briefcase fs-1 d-block mb-2"></i>
+                                                    Nenhuma oportunidade encontrada
+                                                </td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($oportunidades as $lead): ?>
+                                                <tr>
+                                                    <td><?php echo e($lead->nome); ?></td>
+                                                    <td><?php echo e($lead->email); ?></td>
+                                                    <td><?php echo e($lead->telefone); ?></td>
+                                                    <td>
+                                                        <?php if ($lead->valor_oportunidade): ?>
+                                                            <strong class="text-success">R$ <?php echo number_format($lead->valor_oportunidade, 2, ',', '.'); ?></strong>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                        $etapaLabels = [
+                                                            'interessados' => '<span class="badge bg-info">Interessados</span>',
+                                                            'negociacao_proposta' => '<span class="badge bg-warning">Negociação</span>',
+                                                            'fechamento' => '<span class="badge bg-success">Fechamento</span>'
+                                                        ];
+                                                        echo $etapaLabels[$lead->etapa_funil] ?? '<span class="badge bg-secondary">' . e($lead->etapa_funil) . '</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary"><?php echo $lead->score_potencial ?? 0; ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                        $responsible = $lead->responsible();
+                                                        echo $responsible ? e($responsible->name) : '<span class="text-muted">-</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td><?php echo date('d/m/Y', strtotime($lead->created_at)); ?></td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <a href="<?php echo url('/leads/' . $lead->id); ?>" class="btn btn-sm btn-info" title="Ver">
+                                                                <i class="ti ti-eye"></i>
+                                                            </a>
+                                                            <button class="btn btn-sm btn-primary" onclick="editarLead(<?php echo $lead->id; ?>)" title="Editar">
+                                                                <i class="ti ti-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aba: Todos os Leads -->
+                    <div class="tab-pane fade" id="leads-pane" role="tabpanel" aria-labelledby="leads-tab">
+                        <div class="mt-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Email</th>
+                                            <th>Telefone</th>
+                                            <th>Etapa</th>
+                                            <th>Score</th>
+                                            <th>Origem</th>
+                                            <th>Responsável</th>
+                                            <th>Data</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($allLeads)): ?>
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted py-4">
+                                                    <i class="ti ti-users fs-1 d-block mb-2"></i>
+                                                    Nenhum lead encontrado
+                                                </td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($allLeads as $lead): ?>
+                                                <tr>
+                                                    <td><?php echo e($lead->nome); ?></td>
+                                                    <td><?php echo e($lead->email); ?></td>
+                                                    <td><?php echo e($lead->telefone); ?></td>
+                                                    <td>
+                                                        <?php
+                                                        $etapaLabels = [
+                                                            'interessados' => '<span class="badge bg-info">Interessados</span>',
+                                                            'negociacao_proposta' => '<span class="badge bg-warning">Negociação</span>',
+                                                            'fechamento' => '<span class="badge bg-success">Fechamento</span>'
+                                                        ];
+                                                        echo $etapaLabels[$lead->etapa_funil] ?? '<span class="badge bg-secondary">' . e($lead->etapa_funil) . '</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary"><?php echo $lead->score_potencial ?? 0; ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($lead->origem): ?>
+                                                            <span class="badge bg-secondary"><?php echo e($lead->origem); ?></span>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                        $responsible = $lead->responsible();
+                                                        echo $responsible ? e($responsible->name) : '<span class="text-muted">-</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td><?php echo date('d/m/Y', strtotime($lead->created_at)); ?></td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <a href="<?php echo url('/leads/' . $lead->id); ?>" class="btn btn-sm btn-info" title="Ver">
+                                                                <i class="ti ti-eye"></i>
+                                                            </a>
+                                                            <button class="btn btn-sm btn-primary" onclick="editarLead(<?php echo $lead->id; ?>)" title="Editar">
+                                                                <i class="ti ti-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -365,48 +515,6 @@ ob_start();
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
-// Função para gerar link único do quiz
-function gerarLinkUnico() {
-    const btn = event.target.closest('button');
-    const originalText = btn.innerHTML;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="ti ti-loader me-2"></i>Gerando...';
-    
-    fetch('<?php echo url('/leads/generate-link'); ?>', {
-        method: 'GET',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('quiz-link-input').value = data.url;
-            document.getElementById('quiz-link-container').style.display = 'block';
-            btn.innerHTML = '<i class="ti ti-refresh me-2"></i>Gerar Novo Link';
-        } else {
-            alert('Erro: ' + data.message);
-            btn.innerHTML = originalText;
-        }
-        btn.disabled = false;
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao gerar link.');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    });
-}
-
-function copiarLinkUnico() {
-    const input = document.getElementById('quiz-link-input');
-    input.select();
-    navigator.clipboard.writeText(input.value).then(function() {
-        alert('Link copiado!');
-    });
-}
-
 // Inicializa Kanban com SortableJS
 document.addEventListener('DOMContentLoaded', function() {
     const columns = document.querySelectorAll('[data-etapa]');

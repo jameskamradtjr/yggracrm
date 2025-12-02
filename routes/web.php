@@ -21,6 +21,7 @@ use App\Controllers\ContractController;
 use App\Controllers\ContractTemplateController;
 use App\Controllers\ProposalController;
 use App\Controllers\AutomationController;
+use App\Controllers\QuizController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -34,7 +35,11 @@ $router->get('/', function() {
     }
 });
 
-// Rota pública do Quiz (aceita parâmetros ?u=USER_ID ou ?token=TOKEN)
+// Rotas públicas do Quiz customizado (devem vir antes da rota genérica)
+$router->get('/quiz/{slug}', [QuizController::class, 'publicQuiz']);
+$router->post('/quiz/{slug}/submit', [QuizController::class, 'submitQuiz']);
+
+// Rota pública do Quiz antigo (aceita parâmetros ?u=USER_ID ou ?token=TOKEN)
 $router->get('/quiz', [LeadController::class, 'quiz']);
 
 // API pública para buscar origens (usa token)
@@ -289,5 +294,17 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/api/users', [AutomationController::class, 'getUsers']);
     $router->get('/api/lead-origins', [AutomationController::class, 'getLeadOrigins']);
     $router->get('/api/automations/automations', [AutomationController::class, 'getAutomations']);
+    
+    // Quizzes
+    $router->get('/quizzes', [QuizController::class, 'index']);
+    $router->get('/quizzes/create', [QuizController::class, 'create']);
+    $router->post('/quizzes', [QuizController::class, 'store']);
+    $router->get('/quizzes/{id}/edit', [QuizController::class, 'edit']);
+    $router->post('/quizzes/{id}', [QuizController::class, 'update']);
+    $router->post('/quizzes/{id}/delete', [QuizController::class, 'destroy']);
+    $router->get('/quizzes/{id}/steps', [QuizController::class, 'getStep']);
+    $router->post('/quizzes/{id}/steps', [QuizController::class, 'saveStep']);
+    $router->post('/quizzes/{id}/steps/delete', [QuizController::class, 'deleteStep']);
+    $router->post('/quizzes/{id}/steps/reorder', [QuizController::class, 'reorderSteps']);
 });
 

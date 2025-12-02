@@ -148,7 +148,20 @@ $title = $title ?? 'Editar Projeto';
             </div>
             
             <div class="row">
-                <div class="col-md-12 mb-3">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tags</label>
+                    <div id="tags-container" class="tags-input-container">
+                        <div class="tags-list" id="tags-list"></div>
+                        <input type="text" id="tags-input" class="form-control tags-input" placeholder="Digite e pressione Enter ou vírgula para adicionar">
+                    </div>
+                    <input type="hidden" name="tags" id="tags-hidden" value="<?php 
+                        $projectTags = $project->getTags();
+                        echo htmlspecialchars(implode(',', array_column($projectTags, 'name')));
+                    ?>">
+                    <small class="text-muted">Digite e pressione Enter ou vírgula para adicionar tags</small>
+                </div>
+                
+                <div class="col-md-6 mb-3">
                     <label for="observacoes" class="form-label">Observações</label>
                     <textarea class="form-control" id="observacoes" name="observacoes" rows="4" placeholder="Observações adicionais..."><?php echo e($project->observacoes ?? ''); ?></textarea>
                 </div>
@@ -163,6 +176,107 @@ $title = $title ?? 'Editar Projeto';
         </form>
     </div>
 </div>
+
+<script>
+// Componente de Tags
+(function() {
+    const tagsList = document.getElementById('tags-list');
+    const tagsInput = document.getElementById('tags-input');
+    const tagsHidden = document.getElementById('tags-hidden');
+    let tags = [];
+    
+    // Inicializa tags existentes
+    const existingTags = tagsHidden.value;
+    if (existingTags) {
+        tags = existingTags.split(',').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+    }
+    
+    function updateHiddenInput() {
+        tagsHidden.value = tags.join(',');
+    }
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !tags.includes(tagText)) {
+            tags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            updateHiddenInput();
+        }
+    }
+    
+    function removeTag(tagText) {
+        tags = tags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        updateHiddenInput();
+    }
+    
+    window.removeTag = removeTag;
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value) {
+            addTag(value);
+            this.value = '';
+        }
+    });
+})();
+</script>
+
+<style>
+.tags-input-container {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    background-color: #fff;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background: transparent;
+}
+
+.tags-input:focus {
+    box-shadow: none;
+}
+</style>
 
 <?php
 $content = ob_get_clean();

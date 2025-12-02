@@ -295,8 +295,8 @@ class LeadController extends Controller
                 }
             }
 
-            // Chama Gemini para classificação (usa API key do usuário dono do lead)
-            $aiAnalysis = $this->analyzeWithGemini($promptData, $userId);
+            // Análise simples baseada nos dados (sem Gemini)
+            $aiAnalysis = $this->simpleAnalysis($promptData);
 
             // Salva lead no banco
             $tagsAi = $aiAnalysis['tags_ai'] ?? [];
@@ -464,7 +464,77 @@ class LeadController extends Controller
     }
 
     /**
-     * Analisa lead com Gemini AI
+     * Análise simples baseada nos dados (sem IA)
+     */
+    private function simpleAnalysis(array $data): array
+    {
+        $tags = [];
+        $score = 0;
+        $urgencia = 'baixa';
+        $resumo = '';
+
+        // Calcula score baseado nos dados
+        if (!empty($data['investimento_software'])) {
+            $investimento = strtolower($data['investimento_software']);
+            if (strpos($investimento, '50k') !== false || strpos($investimento, '50') !== false) {
+                $score += 30;
+                $tags[] = 'Alto Investimento';
+            } elseif (strpos($investimento, '25k') !== false || strpos($investimento, '25') !== false) {
+                $score += 20;
+                $tags[] = 'Médio-Alto Investimento';
+            } elseif (strpos($investimento, '10k') !== false || strpos($investimento, '10') !== false) {
+                $score += 15;
+                $tags[] = 'Médio Investimento';
+            } else {
+                $score += 10;
+                $tags[] = 'Baixo Investimento';
+            }
+        }
+
+        if (!empty($data['tem_software']) && $data['tem_software'] === 'não') {
+            $score += 20;
+            $tags[] = 'Sem Sistema';
+            $urgencia = 'alta';
+        }
+
+        if (!empty($data['ramo'])) {
+            $tags[] = 'Ramo: ' . $data['ramo'];
+        }
+
+        if (!empty($data['objetivo'])) {
+            $tags[] = 'Objetivo Definido';
+            $score += 10;
+        }
+
+        // Determina urgência baseada no score
+        if ($score >= 50) {
+            $urgencia = 'alta';
+        } elseif ($score >= 30) {
+            $urgencia = 'media';
+        }
+
+        // Gera resumo simples
+        $resumo = "Lead qualificado através de quiz. ";
+        if (!empty($data['ramo'])) {
+            $resumo .= "Ramo: " . $data['ramo'] . ". ";
+        }
+        if (!empty($data['objetivo'])) {
+            $resumo .= "Objetivo: " . $data['objetivo'] . ". ";
+        }
+        if (!empty($data['investimento_software'])) {
+            $resumo .= "Investimento: " . $data['investimento_software'] . ". ";
+        }
+
+        return [
+            'tags_ai' => $tags,
+            'score_potencial' => min($score, 100), // Limita a 100
+            'urgencia' => $urgencia,
+            'resumo' => trim($resumo)
+        ];
+    }
+
+    /**
+     * Analisa lead com Gemini AI (DEPRECATED - não usado mais)
      * @param array $data Dados do lead
      * @param int|null $userId ID do usuário dono do lead (para buscar sua API key)
      */
@@ -709,7 +779,7 @@ Dados do lead:
 
         $userId = auth()->getDataUserId();
         
-        // Busca leads por etapa do funil
+        // Busca leads por etapa do funil (para o Kanban)
         $leads = [
             'interessados' => Lead::where('etapa_funil', 'interessados')
                 ->where('user_id', $userId)
@@ -724,6 +794,29 @@ Dados do lead:
                 ->orderBy('score_potencial', 'DESC')
                 ->get()
         ];
+        
+        // Busca todas as oportunidades (leads com valor_oportunidade ou em negociação/fechamento)
+        $db = \Core\Database::getInstance();
+        $oportunidadesData = $db->query(
+            "SELECT * FROM leads 
+             WHERE user_id = ? 
+             AND (
+                 (valor_oportunidade IS NOT NULL AND valor_oportunidade > 0)
+                 OR etapa_funil IN ('negociacao_proposta', 'fechamento')
+             )
+             ORDER BY valor_oportunidade DESC, score_potencial DESC",
+            [$userId]
+        );
+        
+        $oportunidades = [];
+        foreach ($oportunidadesData as $data) {
+            $oportunidades[] = Lead::newInstance($data, true);
+        }
+        
+        // Busca todos os leads (todos os registros)
+        $allLeads = Lead::where('user_id', $userId)
+            ->orderBy('created_at', 'DESC')
+            ->get();
         
         // Busca usuários para atribuir responsáveis
         $users = \App\Models\User::where('status', 'active')->get();
@@ -759,6 +852,8 @@ Dados do lead:
         return $this->view('leads/index', [
             'title' => 'CRM de Leads',
             'leads' => $leads,
+            'oportunidades' => $oportunidades,
+            'allLeads' => $allLeads,
             'users' => $users,
             'metrics' => $metrics,
             'origens' => $origens
@@ -877,8 +972,8 @@ Dados do lead:
                 'origem_conheceu' => $data['origem_conheceu'] ?? ''
             ];
 
-            // Chama Gemini para classificação (usa API key do usuário logado)
-            $aiAnalysis = $this->analyzeWithGemini($promptData, $userId);
+            // Análise simples baseada nos dados (sem Gemini)
+            $aiAnalysis = $this->simpleAnalysis($promptData);
 
             // Salva lead no banco
             $tagsAi = $aiAnalysis['tags_ai'] ?? [];
@@ -1325,9 +1420,8 @@ Dados do lead:
                 'faz_trafego' => $lead->faz_trafego ? 'sim' : 'não'
             ];
 
-            // Usa a API key do usuário dono do lead
-            $userId = $lead->user_id ?? auth()->getDataUserId();
-            $aiAnalysis = $this->analyzeWithGemini($promptData, $userId);
+            // Análise simples baseada nos dados (sem Gemini)
+            $aiAnalysis = $this->simpleAnalysis($promptData);
 
             // Garante que tags_ai seja sempre uma string JSON válida
             $tagsAi = $aiAnalysis['tags_ai'] ?? [];

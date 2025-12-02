@@ -105,6 +105,12 @@
                     </a>
                 </li>
                 <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/quizzes'); ?>">
+                        <span><i class="ti ti-clipboard-list"></i></span>
+                        <span class="hide-menu">Quizzes</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
                     <a class="sidebar-link" href="<?php echo url('/clients'); ?>">
                         <span><i class="ti ti-user"></i></span>
                         <span class="hide-menu">Clientes</span>
