@@ -417,13 +417,15 @@ if (!function_exists('s3_upload_private')) {
      * @param int $userId ID do usuário
      * @param string $subfolder Subpasta opcional (ex: 'documents', 'contracts')
      * @param int $maxSizeMB Tamanho máximo em MB
+     * @param string|null $originalFileName Nome original do arquivo (para preservar extensão)
      * @return string|false Caminho S3 ou false em caso de erro
      */
     function s3_upload_private(
         string $localFilePath,
         int $userId,
         string $subfolder = '',
-        int $maxSizeMB = 50
+        int $maxSizeMB = 50,
+        ?string $originalFileName = null
     ): string|false {
         $s3 = s3_private();
         
@@ -432,8 +434,9 @@ if (!function_exists('s3_upload_private')) {
             return false;
         }
         
-        $originalFileName = basename($localFilePath);
-        $s3Key = $s3->generateUniqueKey($userId, $originalFileName, $subfolder);
+        // Usa nome original se fornecido, senão usa basename do arquivo local
+        $fileName = $originalFileName ?: basename($localFilePath);
+        $s3Key = $s3->generateUniqueKey($userId, $fileName, $subfolder);
         
         if ($s3->upload($localFilePath, $s3Key)) {
             return $s3Key;

@@ -135,6 +135,12 @@
                     </a>
                 </li>
                 <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/drive'); ?>">
+                        <span><i class="ti ti-cloud"></i></span>
+                        <span class="hide-menu">Drive</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
                     <a class="sidebar-link" href="<?php echo url('/proposals'); ?>">
                         <span><i class="ti ti-file-description"></i></span>
                         <span class="hide-menu">Propostas</span>

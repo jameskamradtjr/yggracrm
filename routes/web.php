@@ -22,6 +22,7 @@ use App\Controllers\ContractTemplateController;
 use App\Controllers\ProposalController;
 use App\Controllers\AutomationController;
 use App\Controllers\QuizController;
+use App\Controllers\DriveController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -311,6 +312,29 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/quizzes/{id}/steps/delete', [QuizController::class, 'deleteStep']);
     $router->post('/quizzes/{id}/steps/reorder', [QuizController::class, 'reorderSteps']);
 });
+
+// Rotas do Drive
+// Listagem e upload
+$router->get('/drive', [DriveController::class, 'index']);
+$router->post('/drive', [DriveController::class, 'store']);
+
+// AJAX endpoints para Select2
+$router->get('/drive/search/clients', [DriveController::class, 'searchClients']);
+$router->get('/drive/search/users', [DriveController::class, 'searchUsers']);
+$router->get('/drive/search/tags', [DriveController::class, 'searchTags']);
+
+// Detalhes e download
+$router->get('/drive/{id}', [DriveController::class, 'show']);
+$router->get('/drive/{id}/download', [DriveController::class, 'download']);
+
+// Ações de arquivo
+$router->post('/drive/{id}/favorite', [DriveController::class, 'toggleFavorite']);
+$router->post('/drive/{id}/trash', [DriveController::class, 'trash']);
+$router->delete('/drive/{id}', [DriveController::class, 'destroy']);
+
+// Pastas
+$router->post('/drive/folders', [DriveController::class, 'createFolder']);
+$router->delete('/drive/folders/{id}', [DriveController::class, 'deleteFolder']);
 
 // Rotas Públicas (sem autenticação)
 $router->get('/calendar/{slug}', [\App\Controllers\PublicCalendarController::class, 'show']);
