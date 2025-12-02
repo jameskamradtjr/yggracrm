@@ -32,12 +32,12 @@ $title = $title ?? 'Nova Proposta';
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="client_id" class="form-label">Cliente</label>
-                    <select name="client_id" id="client_id" class="form-select">
-                        <option value="">Selecione um cliente...</option>
-                        <?php foreach ($clients as $client): ?>
-                            <option value="<?php echo $client->id; ?>"><?php echo e($client->nome_razao_social); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?php 
+                    $id = 'client_id';
+                    $name = 'client_id';
+                    $placeholder = 'Digite para buscar cliente...';
+                    include base_path('views/components/tom-select-client.php'); 
+                    ?>
                 </div>
                 
                 <div class="col-md-6 mb-3">
@@ -117,6 +117,15 @@ $title = $title ?? 'Nova Proposta';
 
 <?php
 $content = ob_get_clean();
+
+// Tom Select Scripts
+$scripts = '';
+if (isset($GLOBALS['tom_select_inits'])) {
+    ob_start();
+    include base_path('views/components/tom-select-scripts.php');
+    $scripts = ob_get_clean();
+}
+
 include base_path('views/layouts/app.php');
 ?>
 

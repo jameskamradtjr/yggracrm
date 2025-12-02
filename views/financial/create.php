@@ -77,14 +77,23 @@ ob_start();
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><?php echo $type === 'entrada' ? 'Cliente' : 'Fornecedor'; ?></label>
-                            <select name="<?php echo $type === 'entrada' ? 'client_id' : 'supplier_id'; ?>" class="form-select">
-                                <option value="">Selecione</option>
-                                <?php foreach ($suppliers as $supplier): ?>
-                                    <option value="<?php echo $supplier->id; ?>">
-                                        <?php echo e($supplier->name); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                            <?php if ($type === 'entrada'): ?>
+                                <?php 
+                                $id = 'client_id';
+                                $name = 'client_id';
+                                $placeholder = 'Digite para buscar cliente...';
+                                include base_path('views/components/tom-select-client.php'); 
+                                ?>
+                            <?php else: ?>
+                                <select name="supplier_id" class="form-select">
+                                    <option value="">Selecione</option>
+                                    <?php foreach ($suppliers as $supplier): ?>
+                                        <option value="<?php echo $supplier->id; ?>">
+                                            <?php echo e($supplier->name); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
                         </div>
                         
                         <div class="col-md-6 mb-3">
@@ -568,6 +577,15 @@ document.getElementById('cost_center_id').addEventListener('change', function() 
 
 <?php
 $content = ob_get_clean();
+
+// Tom Select Scripts
+$scripts = '';
+if (isset($GLOBALS['tom_select_inits'])) {
+    ob_start();
+    include base_path('views/components/tom-select-scripts.php');
+    $scripts = ob_get_clean();
+}
+
 include base_path('views/layouts/app.php');
 ?>
 

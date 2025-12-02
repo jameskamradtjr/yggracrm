@@ -106,28 +106,32 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
                                     </p>
                                     
                                     <div class="mb-3">
-                                        <label for="logo" class="form-label">Logo</label>
-                                        <input type="file" 
-                                               class="form-control" 
-                                               id="logo" 
-                                               name="logo" 
-                                               accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/gif">
-                                        <small class="text-muted">Tamanho recomendado: 200x50px</small>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Preview</label>
-                                        <div class="border rounded p-3 bg-light">
-                                            <div class="d-flex align-items-center">
+                                        <label class="form-label">Logo do Sistema</label>
+                                        <div class="border rounded p-3 text-center">
+                                            <div id="logoPreviewContainer" class="mb-3">
                                                 <img src="<?php echo $logoDark; ?>" 
                                                      id="logoPreview" 
                                                      alt="Logo Preview" 
-                                                     style="max-height: 60px; max-width: 200px;">
+                                                     class="img-thumbnail" 
+                                                     style="max-height: 150px; max-width: 300px;">
                                             </div>
+                                            
+                                            <div class="mb-3">
+                                                <input type="file" 
+                                                       class="form-control" 
+                                                       id="logoFileInput" 
+                                                       accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/gif">
+                                                <small class="text-muted d-block mt-1">Tamanho recomendado: 200x50px | Formatos: PNG, JPG, SVG, GIF</small>
+                                            </div>
+                                            
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="limparLogo()">
+                                                <i class="ti ti-trash me-1"></i> Limpar
+                                            </button>
                                         </div>
+                                        <input type="hidden" id="logo_base64" name="logo_base64" value="">
                                     </div>
                                     
-                                    <button type="submit" class="btn btn-primary">
+                                    <button type="submit" class="btn btn-primary" id="btnSalvarLogo">
                                         <i class="ti ti-upload me-2"></i>
                                         Salvar Logo
                                     </button>
@@ -571,22 +575,90 @@ $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Preview da logo ao selecionar arquivo
-    const logoInput = document.getElementById('logo');
+// Função global para limpar logo
+function limparLogo() {
     const logoPreview = document.getElementById('logoPreview');
+    const logoBase64Input = document.getElementById('logo_base64');
+    const logoFileInput = document.getElementById('logoFileInput');
     
-    if (logoInput && logoPreview) {
+    if (logoPreview) logoPreview.src = '<?php echo asset('tema/assets/images/logos/dark-logo.svg'); ?>';
+    if (logoBase64Input) logoBase64Input.value = '';
+    if (logoFileInput) logoFileInput.value = '';
+    console.log('Logo limpa');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== Inicializando Settings ===');
+    
+    // Preview da logo ao selecionar arquivo e converter para base64
+    const logoInput = document.getElementById('logoFileInput');
+    const logoPreview = document.getElementById('logoPreview');
+    const logoBase64Input = document.getElementById('logo_base64');
+    
+    console.log('logoInput:', logoInput ? 'encontrado' : 'não encontrado');
+    console.log('logoPreview:', logoPreview ? 'encontrado' : 'não encontrado');
+    console.log('logoBase64Input:', logoBase64Input ? 'encontrado' : 'não encontrado');
+    
+    if (logoInput && logoPreview && logoBase64Input) {
         logoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
+            console.log('Arquivo selecionado:', file ? file.name : 'nenhum');
+            
             if (file) {
+                // Validar tamanho (máx 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Arquivo muito grande! Tamanho máximo: 5MB');
+                    logoInput.value = '';
+                    return;
+                }
+                
+                console.log('Tamanho do arquivo:', (file.size / 1024).toFixed(2) + ' KB');
+                console.log('Tipo do arquivo:', file.type);
+                
+                // Validar tipo
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Tipo de arquivo não permitido! Use PNG, JPG, SVG ou GIF');
+                    logoInput.value = '';
+                    return;
+                }
+                
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    logoPreview.src = e.target.result;
+                    const base64 = e.target.result;
+                    logoPreview.src = base64;
+                    logoBase64Input.value = base64;
+                    console.log('Logo convertida para base64 (tamanho:', base64.length, 'caracteres)');
+                };
+                reader.onerror = function(error) {
+                    console.error('Erro ao ler arquivo:', error);
+                    alert('Erro ao processar arquivo');
                 };
                 reader.readAsDataURL(file);
             }
         });
+        
+        console.log('✓ Event listener de logo configurado');
+    } else {
+        console.error('✗ Elementos da logo não encontrados');
+    }
+    
+    // Validação do formulário antes de enviar
+    const formLayout = document.querySelector('form[action*="settings/layout"]');
+    if (formLayout) {
+        formLayout.addEventListener('submit', function(e) {
+            const logoBase64Value = document.getElementById('logo_base64').value;
+            console.log('=== Enviando formulário ===');
+            console.log('logo_base64 preenchido?', logoBase64Value ? 'SIM (' + logoBase64Value.length + ' caracteres)' : 'NÃO (vazio)');
+            
+            if (!logoBase64Value) {
+                console.warn('⚠️ Campo logo_base64 está vazio!');
+                alert('Por favor, selecione uma imagem antes de salvar.');
+                e.preventDefault();
+                return false;
+            }
+        });
+        console.log('✓ Validação do formulário configurada');
     }
     
     // Ativa a aba correta baseada no parâmetro da URL

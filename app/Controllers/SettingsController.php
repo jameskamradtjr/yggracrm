@@ -65,68 +65,167 @@ class SettingsController extends Controller
     {
         $this->checkAdminMaster();
 
+        error_log("========== Settings saveLayout iniciado ==========");
+        error_log("POST data: " . json_encode($_POST));
+        error_log("REQUEST method: " . $_SERVER['REQUEST_METHOD']);
+
         // Valida CSRF
         if (!verify_csrf($this->request->input('_csrf_token'))) {
+            error_log("Settings: CSRF token inválido");
             session()->flash('error', 'Token de segurança inválido.');
             $this->redirect('/settings?tab=layout');
         }
 
-        // Upload de logo
-        if ($this->request->hasFile('logo')) {
-            $file = $this->request->file('logo');
-            
-            if ($file && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
-                $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/gif'];
+        error_log("Settings: CSRF validado com sucesso");
+
+        // Upload de logo via base64 para S3 (igual ao /profile)
+        $logoBase64 = trim($this->request->input('logo_base64', ''));
+        
+        error_log("Settings: logo_base64 recebido? " . (!empty($logoBase64) ? 'SIM (tamanho: ' . strlen($logoBase64) . ')' : 'NÃO (vazio)'));
+        
+        if (!empty($logoBase64) && strlen($logoBase64) > 100) {
+            try {
+                error_log("Settings: Processando upload de logo para S3");
                 
-                if (!in_array($file['type'], $allowedTypes)) {
+                // Remove prefixo data:image/...;base64,
+                if (strpos($logoBase64, 'data:image') === 0) {
+                    $logoBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $logoBase64);
+                }
+                
+                // Decodifica base64
+                $imageData = base64_decode($logoBase64);
+                
+                if ($imageData === false || empty($imageData)) {
+                    error_log("Settings: Erro ao decodificar base64");
+                    session()->flash('error', 'Erro ao processar imagem.');
+                    $this->redirect('/settings?tab=layout');
+                    return;
+                }
+                
+                error_log("Settings: Imagem decodificada, tamanho: " . strlen($imageData) . " bytes");
+                
+                // Cria arquivo temporário SEM extensão primeiro
+                $tempFile = tempnam(sys_get_temp_dir(), 'logo_');
+                file_put_contents($tempFile, $imageData);
+                
+                error_log("Settings: Arquivo temporário criado: {$tempFile}");
+                
+                // Detecta tipo MIME
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $tempFile);
+                finfo_close($finfo);
+                
+                error_log("Settings: Tipo MIME detectado: {$mimeType}");
+                
+                // Mapeia MIME para extensão
+                $mimeToExtension = [
+                    'image/png' => 'png',
+                    'image/jpeg' => 'jpg',
+                    'image/jpg' => 'jpg',
+                    'image/gif' => 'gif',
+                    'image/svg+xml' => 'svg'
+                ];
+                
+                if (!isset($mimeToExtension[$mimeType])) {
+                    @unlink($tempFile);
+                    error_log("Settings: Tipo de arquivo não permitido: {$mimeType}");
                     session()->flash('error', 'Tipo de arquivo não permitido. Use PNG, JPG, SVG ou GIF.');
                     $this->redirect('/settings?tab=layout');
+                    return;
                 }
-
-                // Cria diretório se não existir
-                $uploadDir = base_path('public/uploads/logos');
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+                
+                $extension = $mimeToExtension[$mimeType];
+                
+                // Renomeia arquivo temporário COM extensão
+                $tempFileWithExt = $tempFile . '.' . $extension;
+                rename($tempFile, $tempFileWithExt);
+                
+                error_log("Settings: Arquivo renomeado com extensão: {$tempFileWithExt}");
+                
+                // Upload para S3 público
+                $userId = auth()->getDataUserId();
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg'];
+                
+                error_log("Settings: Iniciando upload para S3");
+                error_log("Settings: - userId: {$userId}");
+                error_log("Settings: - subfolder: logos");
+                error_log("Settings: - arquivo: {$tempFileWithExt}");
+                error_log("Settings: - tamanho: " . filesize($tempFileWithExt) . " bytes");
+                error_log("Settings: - extensões permitidas: " . implode(', ', $allowedExtensions));
+                
+                // Verifica se S3 está configurado
+                try {
+                    $s3 = s3_public();
+                    error_log("Settings: S3 público inicializado: " . get_class($s3));
+                } catch (\Exception $e) {
+                    error_log("Settings: ✗ ERRO ao inicializar S3: " . $e->getMessage());
+                    @unlink($tempFileWithExt);
+                    session()->flash('error', 'S3 não está configurado corretamente: ' . $e->getMessage());
+                    $this->redirect('/settings?tab=layout');
+                    return;
                 }
-
-                // Gera nome único
-                $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-                $filename = 'logo_' . time() . '.' . $extension;
-                $filepath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
-
-                // Move arquivo
-                if (move_uploaded_file($file['tmp_name'], $filepath)) {
-                    // Remove logo antiga se existir
+                
+                $logoUrl = s3_upload_public($tempFileWithExt, $userId, 'logos', $allowedExtensions);
+                
+                error_log("Settings: Resultado do s3_upload_public: " . ($logoUrl ? "URL: {$logoUrl}" : 'FALSE (falhou)'));
+                
+                // Remove arquivo temporário
+                @unlink($tempFileWithExt);
+                
+                if ($logoUrl && $logoUrl !== false) {
+                    error_log("Settings: ✓ Logo enviada para S3 com sucesso: {$logoUrl}");
+                    
+                    // Remove logo antiga do S3 se existir
                     $oldLogo = SystemSetting::get('logo_dark');
-                    if ($oldLogo && strpos($oldLogo, '/uploads/') === 0) {
-                        $oldPath = base_path('public' . $oldLogo);
-                        if (file_exists($oldPath)) {
-                            @unlink($oldPath);
+                    if ($oldLogo && (strpos($oldLogo, 's3.') !== false || strpos($oldLogo, 'amazonaws.com') !== false)) {
+                        // Extrai a chave S3 da URL antiga
+                        if (preg_match('/amazonaws\.com\/(.+)$/', $oldLogo, $matches)) {
+                            $oldS3Key = urldecode($matches[1]);
+                            $deleted = s3_delete_public($oldS3Key);
+                            error_log("Settings: Logo antiga " . ($deleted ? '✓ removida' : '✗ não removida') . " do S3: {$oldS3Key}");
                         }
                     }
-
-                    // Salva caminho relativo
-                    $logoPath = '/uploads/logos/' . $filename;
-                    SystemSetting::set('logo_dark', $logoPath, 'image', 'layout', 'Logo escura do sistema');
-                    SystemSetting::set('logo_light', $logoPath, 'image', 'layout', 'Logo clara do sistema');
+                    
+                    // Salva URL do S3 no banco
+                    SystemSetting::set('logo_dark', $logoUrl, 'image', 'layout', 'Logo escura do sistema');
+                    SystemSetting::set('logo_light', $logoUrl, 'image', 'layout', 'Logo clara do sistema');
+                    
+                    error_log("Settings: ✓ URL da logo salva no banco de dados");
                     
                     // Registra log
                     SistemaLog::registrar(
                         'system_settings',
                         'UPDATE',
                         null,
-                        'Logo do sistema atualizada',
+                        'Logo do sistema atualizada (S3)',
                         ['logo_antiga' => $oldLogo],
-                        ['logo_nova' => $logoPath]
+                        ['logo_nova' => $logoUrl]
                     );
                     
                     session()->flash('success', 'Logo atualizada com sucesso!');
                 } else {
-                    session()->flash('error', 'Erro ao fazer upload da logo.');
+                    // Tenta capturar erro mais detalhado
+                    $s3 = s3_public();
+                    $errorMsg = $s3->getLastError() ?: 'Erro desconhecido';
+                    
+                    error_log("Settings: ✗ Upload falhou. Resultado: " . var_export($logoUrl, true));
+                    error_log("Settings: ✗ Erro S3: {$errorMsg}");
+                    error_log("Settings: ✗ Verificar se bucket S3 público está configurado");
+                    error_log("Settings: ✗ Verificar credenciais AWS no .env");
+                    
+                    session()->flash('error', 'Erro ao fazer upload da logo. Verifique a configuração do S3. Detalhes: ' . $errorMsg);
                 }
+            } catch (\Exception $e) {
+                error_log("Settings: ✗ Exceção: " . $e->getMessage());
+                error_log("Settings: Stack trace: " . $e->getTraceAsString());
+                session()->flash('error', 'Erro ao processar logo: ' . $e->getMessage());
             }
+        } else {
+            error_log("Settings: Nenhuma logo enviada ou base64 muito pequeno");
+            session()->flash('info', 'Nenhuma alteração foi feita. Selecione uma imagem.');
         }
 
+        error_log("Settings: Redirecionando para /settings?tab=layout");
         $this->redirect('/settings?tab=layout');
     }
 
