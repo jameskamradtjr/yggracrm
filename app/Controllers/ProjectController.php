@@ -28,6 +28,7 @@ class ProjectController extends Controller
         $status = $this->request->query('status', 'all');
         $prioridade = $this->request->query('prioridade', 'all');
         $search = $this->request->query('search');
+        $tagsFilter = $this->request->query('tags'); // Recebe tags separadas por vírgula
         
         $query = Project::where('user_id', $userId);
         
@@ -46,6 +47,33 @@ class ProjectController extends Controller
             });
         }
         
+        // Filtro por tags
+        if ($tagsFilter) {
+            $tagNames = array_map('trim', explode(',', $tagsFilter));
+            $tagNames = array_filter($tagNames); // Remove valores vazios
+            
+            if (!empty($tagNames)) {
+                $db = \Core\Database::getInstance();
+                $tagIds = $db->query("SELECT id FROM tags WHERE user_id = ? AND name IN (" . implode(',', array_fill(0, count($tagNames), '?')) . ")", array_merge([$userId], $tagNames));
+                $tagIds = array_column($tagIds, 'id');
+                
+                if (!empty($tagIds)) {
+                    $projectIds = $db->query("SELECT DISTINCT project_id FROM project_tags WHERE tag_id IN (" . implode(',', array_fill(0, count($tagIds), '?')) . ")", $tagIds);
+                    $projectIds = array_column($projectIds, 'project_id');
+                    
+                    if (!empty($projectIds)) {
+                        $query = $query->whereIn('id', $projectIds);
+                    } else {
+                        // Se não há projetos com essas tags, retorna vazio
+                        $query = $query->where('id', 0);
+                    }
+                } else {
+                    // Se não há tags com esses nomes, retorna vazio
+                    $query = $query->where('id', 0);
+                }
+            }
+        }
+        
         $projects = $query->orderBy('created_at', 'DESC')->get();
         
         // Busca clientes e usuários para os filtros
@@ -60,7 +88,8 @@ class ProjectController extends Controller
             'filters' => [
                 'status' => $status,
                 'prioridade' => $prioridade,
-                'search' => $search
+                'search' => $search,
+                'tags' => $tagsFilter
             ]
         ]);
     }

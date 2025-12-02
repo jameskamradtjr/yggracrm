@@ -53,19 +53,29 @@ $title = $title ?? 'Gestão de Projetos';
                     <option value="urgente" <?php echo ($filters['prioridade'] ?? '') === 'urgente' ? 'selected' : ''; ?>>Urgente</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Buscar</label>
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" placeholder="Título ou descrição..." value="<?php echo e($filters['search'] ?? ''); ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-search"></i>
-                    </button>
-                    <?php if ($filters['status'] !== 'all' || $filters['prioridade'] !== 'all' || !empty($filters['search'])): ?>
-                        <a href="<?php echo url('/projects'); ?>" class="btn btn-secondary">
-                            <i class="ti ti-x"></i>
-                        </a>
-                    <?php endif; ?>
                 </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tags</label>
+                <div id="filter-tags-container" class="tags-input-container">
+                    <div class="tags-list" id="filter-tags-list"></div>
+                    <input type="text" id="filter-tags-input" class="form-control tags-input" placeholder="Filtrar por tags">
+                </div>
+                <input type="hidden" name="tags" id="filter-tags-hidden" value="<?php echo htmlspecialchars($filters['tags'] ?? ''); ?>">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="ti ti-search"></i>
+                </button>
+                <?php if ($filters['status'] !== 'all' || $filters['prioridade'] !== 'all' || !empty($filters['search']) || !empty($filters['tags'])): ?>
+                    <a href="<?php echo url('/projects'); ?>" class="btn btn-secondary">
+                        <i class="ti ti-x"></i>
+                    </a>
+                <?php endif; ?>
             </div>
         </form>
     </div>
@@ -265,6 +275,75 @@ $title = $title ?? 'Gestão de Projetos';
 </div>
 
 <script>
+// Componente de Tags para Filtro
+(function() {
+    const tagsList = document.getElementById('filter-tags-list');
+    const tagsInput = document.getElementById('filter-tags-input');
+    const tagsHidden = document.getElementById('filter-tags-hidden');
+    let tags = [];
+    
+    // Inicializa tags existentes do filtro
+    const existingTags = tagsHidden.value;
+    if (existingTags) {
+        tags = existingTags.split(',').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+    }
+    
+    function updateHiddenInput() {
+        tagsHidden.value = tags.join(',');
+    }
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !tags.includes(tagText)) {
+            tags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            updateHiddenInput();
+        }
+    }
+    
+    function removeTag(tagText) {
+        tags = tags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeFilterTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        updateHiddenInput();
+    }
+    
+    window.removeFilterTag = removeTag;
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value) {
+            addTag(value);
+            this.value = '';
+        }
+    });
+})();
+
 function deleteProject(projectId) {
     const form = document.getElementById('deleteProjectForm');
     form.action = '<?php echo url('/projects'); ?>/' + projectId + '/delete';
@@ -272,6 +351,36 @@ function deleteProject(projectId) {
     modal.show();
 }
 </script>
+
+<style>
+.tags-input-container {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    background-color: #fff;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background: transparent;
+}
+
+.tags-input:focus {
+    box-shadow: none;
+}
+</style>
 
 <?php
 $content = ob_get_clean();

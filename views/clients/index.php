@@ -68,10 +68,17 @@ $title = $title ?? 'Clientes';
             <div class="min-width-340">
                 <div class="border-end user-chat-box h-100">
                     <div class="px-4 pt-9 pb-6 d-none d-lg-block">
-                        <form class="position-relative" id="searchFormDesktop">
+                        <form class="position-relative mb-3" id="searchFormDesktop">
                             <input type="text" class="form-control search-chat py-2 ps-5" id="searchInputDesktop" placeholder="Buscar" />
                             <i class="ti ti-search position-absolute top-50 start-0 translate-middle-y fs-6 text-dark ms-3"></i>
                         </form>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Filtrar por Tags</label>
+                            <div id="filter-tags-container" class="tags-input-container">
+                                <div class="tags-list" id="filter-tags-list"></div>
+                                <input type="text" id="filter-tags-input" class="form-control tags-input" placeholder="Digite e pressione Enter ou vírgula">
+                            </div>
+                        </div>
                     </div>
                     <div class="app-chat">
                         <ul class="chat-users mh-n100" data-simplebar id="clientsList">
@@ -104,7 +111,11 @@ $title = $title ?? 'Clientes';
                                     $hasLeads = !empty($clientLeads);
                                     ?>
                                     <li>
-                                        <a href="javascript:void(0)" class="px-4 py-3 bg-hover-light-black d-flex align-items-center chat-user" data-client-id="<?php echo $client->id; ?>" data-tipo="<?php echo $client->tipo; ?>">
+                                        <?php 
+                                        $clientTags = $client->getTags();
+                                        $tagsString = implode(',', array_column($clientTags, 'name'));
+                                        ?>
+                                        <a href="javascript:void(0)" class="px-4 py-3 bg-hover-light-black d-flex align-items-center chat-user" data-client-id="<?php echo $client->id; ?>" data-tipo="<?php echo $client->tipo; ?>" data-tags="<?php echo htmlspecialchars($tagsString); ?>">
                                             <span class="position-relative">
                                                 <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                     <i class="ti ti-<?php echo $client->tipo === 'juridica' ? 'building' : 'user'; ?> text-primary"></i>
@@ -251,6 +262,97 @@ document.getElementById('searchInputDesktop')?.addEventListener('input', functio
     handleSearch(this.value);
 });
 
+// Componente de Tags para Filtro
+(function() {
+    const tagsList = document.getElementById('filter-tags-list');
+    const tagsInput = document.getElementById('filter-tags-input');
+    let filterTags = [];
+    
+    function addTag(tagText) {
+        tagText = tagText.trim();
+        if (tagText && !filterTags.includes(tagText)) {
+            filterTags.push(tagText);
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tagText + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeClientFilterTag(\'' + tagText.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+            applyTagFilter();
+        }
+    }
+    
+    function removeTag(tagText) {
+        filterTags = filterTags.filter(t => t !== tagText);
+        tagsList.innerHTML = '';
+        filterTags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-primary me-1 mb-1';
+            tagElement.innerHTML = tag + ' <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeClientFilterTag(\'' + tag.replace(/'/g, "\\'") + '\')"></button>';
+            tagsList.appendChild(tagElement);
+        });
+        applyTagFilter();
+    }
+    
+    function applyTagFilter() {
+        const searchTerm = document.getElementById('searchInputDesktop')?.value || '';
+        handleSearch(searchTerm);
+    }
+    
+    window.removeClientFilterTag = removeTag;
+    
+    if (tagsInput) {
+        tagsInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const value = this.value.trim();
+                if (value) {
+                    addTag(value);
+                    this.value = '';
+                }
+            }
+        });
+        
+        tagsInput.addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+                this.value = '';
+            }
+        });
+    }
+    
+    // Atualiza handleSearch para incluir filtro de tags
+    const originalHandleSearch = window.handleSearch;
+    window.handleSearch = function(searchTerm) {
+        const items = document.querySelectorAll('#clientsList .chat-user');
+        items.forEach(item => {
+            const nome = item.querySelector('.chat-title')?.textContent.toLowerCase() || '';
+            const email = item.querySelector('.fs-2')?.textContent.toLowerCase() || '';
+            const tags = item.getAttribute('data-tags') || '';
+            const tipo = item.getAttribute('data-tipo') || '';
+            const currentFilter = document.querySelector('[data-filter].active')?.getAttribute('data-filter') || 'all';
+            
+            const matchesSearch = !searchTerm || nome.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase());
+            const matchesTipo = currentFilter === 'all' || tipo === currentFilter;
+            
+            // Verifica se o cliente tem alguma das tags filtradas
+            let matchesTags = true;
+            if (filterTags.length > 0) {
+                const clientTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+                const hasAnyTag = filterTags.some(filterTag => 
+                    clientTags.some(clientTag => clientTag === filterTag.toLowerCase())
+                );
+                matchesTags = hasAnyTag;
+            }
+            
+            if (matchesSearch && matchesTipo && matchesTags) {
+                item.closest('li').style.display = '';
+            } else {
+                item.closest('li').style.display = 'none';
+            }
+        });
+    };
+})();
+
 // Seleção de cliente
 document.querySelectorAll('[data-client-id]').forEach(link => {
     link.addEventListener('click', function() {
@@ -301,6 +403,36 @@ function deleteClient(clientId) {
     }
 }
 </script>
+
+<style>
+.tags-input-container {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    background-color: #fff;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background: transparent;
+}
+
+.tags-input:focus {
+    box-shadow: none;
+}
+</style>
 
 <?php
 $content = ob_get_clean();
