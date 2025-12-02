@@ -19,8 +19,8 @@ class Validator
     private array $messages = [
         'required' => 'O campo :field é obrigatório.',
         'email' => 'O campo :field deve ser um email válido.',
-        'min' => 'O campo :field deve ter no mínimo :param caracteres.',
-        'max' => 'O campo :field deve ter no máximo :param caracteres.',
+        'min' => 'O campo :field deve ter no mínimo :param.',
+        'max' => 'O campo :field deve ter no máximo :param.',
         'numeric' => 'O campo :field deve ser um número.',
         'confirmed' => 'A confirmação do campo :field não confere.',
         'unique' => 'Este :field já está em uso.',
@@ -113,6 +113,27 @@ class Validator
     private function addError(string $field, string $rule, ?string $params = null): void
     {
         $message = $this->messages[$rule] ?? 'O campo :field é inválido.';
+        
+        // Ajusta mensagem de min/max baseado no tipo do campo
+        if (in_array($rule, ['min', 'max']) && isset($this->data[$field])) {
+            $value = $this->data[$field];
+            if (is_numeric($value)) {
+                // Se for numérico, usa mensagem numérica
+                if ($rule === 'min') {
+                    $message = "O campo :field deve ser no mínimo :param.";
+                } else {
+                    $message = "O campo :field deve ser no máximo :param.";
+                }
+            } else {
+                // Se for string, usa mensagem de caracteres
+                if ($rule === 'min') {
+                    $message = "O campo :field deve ter no mínimo :param caracteres.";
+                } else {
+                    $message = "O campo :field deve ter no máximo :param caracteres.";
+                }
+            }
+        }
+        
         $message = str_replace(':field', $field, $message);
         $message = str_replace(':param', $params ?? '', $message);
 
@@ -134,12 +155,28 @@ class Validator
 
     private function validateMin(string $field, mixed $value, ?string $params): bool
     {
-        return strlen((string)$value) >= (int)$params;
+        $minValue = (int)$params;
+        
+        // Se o valor é numérico, compara numericamente
+        if (is_numeric($value)) {
+            return (float)$value >= $minValue;
+        }
+        
+        // Caso contrário, compara como string (comprimento)
+        return strlen((string)$value) >= $minValue;
     }
 
     private function validateMax(string $field, mixed $value, ?string $params): bool
     {
-        return strlen((string)$value) <= (int)$params;
+        $maxValue = (int)$params;
+        
+        // Se o valor é numérico, compara numericamente
+        if (is_numeric($value)) {
+            return (float)$value <= $maxValue;
+        }
+        
+        // Caso contrário, compara como string (comprimento)
+        return strlen((string)$value) <= $maxValue;
     }
 
     private function validateNumeric(string $field, mixed $value, ?string $params): bool

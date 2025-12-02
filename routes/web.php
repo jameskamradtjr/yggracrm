@@ -75,6 +75,10 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/profile', [UserController::class, 'profile']);
     $router->post('/profile', [UserController::class, 'updateProfile']);
     
+    // Configurações de Agenda
+    $router->post('/calendar-settings/update', [\App\Controllers\CalendarSettingsController::class, 'updateSettings']);
+    $router->post('/calendar-settings/working-hours', [\App\Controllers\CalendarSettingsController::class, 'updateWorkingHours']);
+    
     // CRUD de Usuários
     $router->get('/users', [UserController::class, 'index']);
     $router->get('/users/create', [UserController::class, 'create']);
@@ -307,4 +311,10 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/quizzes/{id}/steps/delete', [QuizController::class, 'deleteStep']);
     $router->post('/quizzes/{id}/steps/reorder', [QuizController::class, 'reorderSteps']);
 });
+
+// Rotas Públicas (sem autenticação)
+$router->get('/calendar/{slug}', [\App\Controllers\PublicCalendarController::class, 'show']);
+$router->post('/calendar/{slug}/book', [\App\Controllers\PublicCalendarController::class, 'book']);
+$router->get('/calendar/{slug}/available-times', [\App\Controllers\PublicCalendarController::class, 'getAvailableTimes']);
+$router->get('/calendar/{slug}/available-dates', [\App\Controllers\PublicCalendarController::class, 'getAvailableDates']);
 

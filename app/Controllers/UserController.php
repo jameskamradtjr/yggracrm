@@ -383,10 +383,18 @@ class UserController extends Controller
     {
         $user = auth()->user();
         $profile = $user->profile();
+        
+        // Busca configurações de agenda
+        $calendarSettings = \App\Models\UserCalendarSettings::where('user_id', $user->id)->first();
+        $workingHours = \App\Models\UserWorkingHours::where('user_id', $user->id)
+            ->orderByRaw("FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')")
+            ->get();
 
         return $this->view('users/profile', [
             'user' => $user,
-            'profile' => $profile
+            'profile' => $profile,
+            'calendarSettings' => $calendarSettings,
+            'workingHours' => $workingHours
         ]);
     }
 

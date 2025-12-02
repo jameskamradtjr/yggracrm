@@ -95,7 +95,10 @@ class Database
     public function query(string $sql, array $params = []): array
     {
         $stmt = $this->execute($sql, $params);
-        return $stmt->fetchAll();
+        $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Garante que retorna um array
+        return is_array($results) ? $results : [];
     }
 
     /**

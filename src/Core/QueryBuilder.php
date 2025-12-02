@@ -24,6 +24,22 @@ class QueryBuilder
         $this->model = $model;
         $this->db = Database::getInstance();
     }
+    
+    /**
+     * Retorna o array de wheres de forma segura
+     */
+    public function getWheres(): array
+    {
+        return is_array($this->wheres) ? $this->wheres : [];
+    }
+    
+    /**
+     * Retorna o array de bindings de forma segura
+     */
+    public function getBindings(): array
+    {
+        return is_array($this->bindings) ? $this->bindings : [];
+    }
 
     /**
      * Escapa nome de coluna com backticks
@@ -41,21 +57,85 @@ class QueryBuilder
 
     /**
      * Adiciona condição WHERE
+     * Suporta: 
+     *   - where('column', 'value') - usa '=' como operador padrão
+     *   - where('column', 'operator', 'value') - quando o segundo parâmetro é um operador válido
+     *   - where(function($q) { ... }) - para grupos de condições
      */
-    public function where(string $column, mixed $value, string $operator = '='): self
+    public function where(string|callable $column, mixed $value = null, mixed $operator = null): self
     {
-        $escapedColumn = $this->escapeColumn($column);
-        $this->wheres[] = "{$escapedColumn} {$operator} ?";
-        $this->bindings[] = $value;
+        // Se for uma closure, trata como grupo de condições
+        if (is_callable($column)) {
+            $groupBuilder = new self($this->model);
+            // Suprime warning de depreciação key() que pode ocorrer durante execução da closure
+            @$column($groupBuilder);
+            
+            // Usa métodos getter para evitar problemas com key()
+            $groupWheres = $groupBuilder->getWheres();
+            $groupBindings = $groupBuilder->getBindings();
+            
+            if (!empty($groupWheres)) {
+                $this->wheres[] = "(" . implode(' AND ', $groupWheres) . ")";
+                $this->bindings = array_merge($this->bindings, $groupBindings);
+            }
+            
+            return $this;
+        }
+        
+        // Lista de operadores válidos
+        $validOperators = ['=', '!=', '<>', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE', 'IN', 'NOT IN'];
+        
+        // Detecta se o segundo parâmetro é um operador válido
+        // Se for, trata como: where('column', 'operator', 'value')
+        // Caso contrário, trata como: where('column', 'value') ou where('column', 'value', 'operator')
+        if ($value !== null && is_string($value) && in_array($value, $validOperators)) {
+            // Formato: where('column', 'operator', 'value')
+            $actualOperator = $value;
+            $actualValue = $operator;
+            $escapedColumn = $this->escapeColumn($column);
+            $this->wheres[] = "{$escapedColumn} {$actualOperator} ?";
+            $this->bindings[] = $actualValue;
+        } else {
+            // Formato: where('column', 'value') ou where('column', 'value', 'operator')
+            $actualOperator = ($operator !== null && is_string($operator) && in_array($operator, $validOperators)) ? $operator : '=';
+            $actualValue = $value;
+            
+            $escapedColumn = $this->escapeColumn($column);
+            $this->wheres[] = "{$escapedColumn} {$actualOperator} ?";
+            if ($actualValue !== null) {
+                $this->bindings[] = $actualValue;
+            }
+        }
 
         return $this;
     }
 
     /**
      * Adiciona condição WHERE com OR
+     * Suporta: orWhere('column', 'value') ou orWhere(function($q) { ... })
      */
-    public function orWhere(string $column, mixed $value, string $operator = '='): self
+    public function orWhere(string|callable $column, mixed $value = null, string $operator = '='): self
     {
+        // Se for uma closure, trata como grupo de condições
+        if (is_callable($column)) {
+            $groupBuilder = new self($this->model);
+            // Suprime warning de depreciação key() que pode ocorrer durante execução da closure
+            @$column($groupBuilder);
+            
+            // Usa métodos getter para evitar problemas com key()
+            $groupWheres = $groupBuilder->getWheres();
+            $groupBindings = $groupBuilder->getBindings();
+            
+            if (!empty($groupWheres)) {
+                $conjunction = empty($this->wheres) ? '' : ' OR ';
+                $this->wheres[] = $conjunction . "(" . implode(' AND ', $groupWheres) . ")";
+                $this->bindings = array_merge($this->bindings, $groupBindings);
+            }
+            
+            return $this;
+        }
+        
+        // Caso contrário, trata como condição normal
         $escapedColumn = $this->escapeColumn($column);
         $conjunction = empty($this->wheres) ? '' : ' OR ';
         $this->wheres[] = $conjunction . "{$escapedColumn} {$operator} ?";
@@ -100,6 +180,54 @@ class QueryBuilder
     }
 
     /**
+     * Adiciona condição WHERE NOT EQUAL
+     */
+    public function whereNot(string $column, mixed $value): self
+    {
+        $escapedColumn = $this->escapeColumn($column);
+        $this->wheres[] = "{$escapedColumn} != ?";
+        $this->bindings[] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Adiciona condição WHERE BETWEEN
+     */
+    public function whereBetween(string $column, array $values): self
+    {
+        $escapedColumn = $this->escapeColumn($column);
+        $this->wheres[] = "{$escapedColumn} BETWEEN ? AND ?";
+        $this->bindings[] = $values[0];
+        $this->bindings[] = $values[1];
+
+        return $this;
+    }
+
+    /**
+     * Adiciona condição WHERE com SQL bruto
+     */
+    public function whereRaw(string $sql, array $bindings = []): self
+    {
+        $this->wheres[] = $sql;
+        $this->bindings = array_merge($this->bindings, $bindings);
+
+        return $this;
+    }
+
+    /**
+     * Adiciona condição WHERE DATE (filtra apenas pela data, ignorando hora)
+     */
+    public function whereDate(string $column, string $date): self
+    {
+        $escapedColumn = $this->escapeColumn($column);
+        $this->wheres[] = "DATE({$escapedColumn}) = ?";
+        $this->bindings[] = $date;
+
+        return $this;
+    }
+
+    /**
      * Adiciona ORDER BY
      */
     public function orderBy(string $column, string $direction = 'ASC'): self
@@ -112,6 +240,15 @@ class QueryBuilder
         $escapedColumn = $this->escapeColumn($column);
         $this->orderBy = "{$escapedColumn} {$direction}";
 
+        return $this;
+    }
+
+    /**
+     * Adiciona ORDER BY com SQL bruto
+     */
+    public function orderByRaw(string $sql): self
+    {
+        $this->orderBy = $sql;
         return $this;
     }
 
@@ -187,9 +324,17 @@ class QueryBuilder
         $sql = $this->buildSelectQuery();
         $results = $this->db->query($sql, $this->bindings);
 
-        return array_map(function($row) {
-            return ($this->model::class)::newInstance($row, true);
-        }, $results);
+        // Garante que $results é um array antes de usar array_map
+        if (!is_array($results)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($results as $row) {
+            $items[] = ($this->model::class)::newInstance($row, true);
+        }
+        
+        return $items;
     }
 
     /**

@@ -150,6 +150,14 @@ class Schema
     }
 
     /**
+     * Coluna time
+     */
+    public function time(string $name): ColumnDefinition
+    {
+        return $this->addColumn($name, "TIME");
+    }
+
+    /**
      * Coluna enum
      */
     public function enum(string $name, array $values): ColumnDefinition

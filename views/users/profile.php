@@ -231,6 +231,150 @@ ob_start();
                     </form>
                 </div>
             </div>
+            
+            <!-- Configurações de Agenda Pública -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="ti ti-calendar me-2"></i>Agenda Pública
+                    </h5>
+                    <p class="text-muted mb-4">Configure sua agenda para receber agendamentos do público, similar ao Calendly.</p>
+                    
+                    <!-- Configurações Gerais -->
+                    <form action="<?php echo url('/calendar-settings/update'); ?>" method="POST" class="mb-4">
+                        <?php echo csrf_field(); ?>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="public_calendar_enabled" name="public_calendar_enabled" value="1" <?php echo ($calendarSettings && $calendarSettings->public_calendar_enabled) ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="public_calendar_enabled">
+                                    <strong>Habilitar agenda pública</strong>
+                                </label>
+                            </div>
+                            <small class="text-muted">Permite que clientes agendem reuniões diretamente pela sua agenda</small>
+                        </div>
+                        
+                        <div id="calendarSettingsFields" style="<?php echo ($calendarSettings && $calendarSettings->public_calendar_enabled) ? '' : 'display: none;'; ?>">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Título da Agenda</label>
+                                    <input type="text" class="form-control" name="calendar_title" value="<?php echo e($calendarSettings->calendar_title ?? ''); ?>" placeholder="Ex: Agende uma reunião comigo">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Duração do Agendamento (minutos)</label>
+                                    <input type="number" class="form-control" name="appointment_duration" value="<?php echo e($calendarSettings->appointment_duration ?? 30); ?>" min="15" max="480" step="15">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Descrição</label>
+                                <textarea class="form-control" name="calendar_description" rows="2" placeholder="Descreva o tipo de reunião..."><?php echo e($calendarSettings->calendar_description ?? ''); ?></textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Tempo de Buffer Antes (min)</label>
+                                    <input type="number" class="form-control" name="buffer_time_before" value="<?php echo e($calendarSettings->buffer_time_before ?? 0); ?>" min="0" max="120">
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Tempo de Buffer Depois (min)</label>
+                                    <input type="number" class="form-control" name="buffer_time_after" value="<?php echo e($calendarSettings->buffer_time_after ?? 0); ?>" min="0" max="120">
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Dias de Antecedência</label>
+                                    <input type="number" class="form-control" name="advance_booking_days" value="<?php echo e($calendarSettings->advance_booking_days ?? 30); ?>" min="1" max="365">
+                                </div>
+                            </div>
+                            
+                            <?php if ($calendarSettings && $calendarSettings->calendar_slug): ?>
+                                <div class="alert alert-info">
+                                    <strong>Link da sua agenda:</strong><br>
+                                    <code><?php echo url('/calendar/' . $calendarSettings->calendar_slug); ?></code>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="copiarLink()">
+                                        <i class="ti ti-copy"></i> Copiar
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Horários de Trabalho -->
+                    <h6 class="mb-3">Horários de Trabalho</h6>
+                    <form action="<?php echo url('/calendar-settings/working-hours'); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        
+                        <?php 
+                        $days = [
+                            'monday' => 'Segunda-feira',
+                            'tuesday' => 'Terça-feira',
+                            'wednesday' => 'Quarta-feira',
+                            'thursday' => 'Quinta-feira',
+                            'friday' => 'Sexta-feira',
+                            'saturday' => 'Sábado',
+                            'sunday' => 'Domingo'
+                        ];
+                        
+                        $workingHoursByDay = [];
+                        foreach ($workingHours as $wh) {
+                            $workingHoursByDay[$wh->day_of_week] = $wh;
+                        }
+                        ?>
+                        
+                        <?php foreach ($days as $dayKey => $dayName): ?>
+                            <?php $wh = $workingHoursByDay[$dayKey] ?? null; ?>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="<?php echo $dayKey; ?>_available" name="<?php echo $dayKey; ?>_available" value="1" <?php echo ($wh && $wh->is_available) ? 'checked' : ''; ?> onchange="toggleDayHours('<?php echo $dayKey; ?>')">
+                                                <label class="form-check-label" for="<?php echo $dayKey; ?>_available">
+                                                    <strong><?php echo $dayName; ?></strong>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-10" id="<?php echo $dayKey; ?>_hours" style="<?php echo ($wh && $wh->is_available) ? '' : 'display: none;'; ?>">
+                                            <div class="row">
+                                                <div class="col-md-5">
+                                                    <label class="form-label small">Manhã</label>
+                                                    <div class="input-group">
+                                                        <input type="time" class="form-control form-control-sm" name="<?php echo $dayKey; ?>_start_morning" value="<?php echo e($wh->start_time_morning ?? ''); ?>">
+                                                        <span class="input-group-text">até</span>
+                                                        <input type="time" class="form-control form-control-sm" name="<?php echo $dayKey; ?>_end_morning" value="<?php echo e($wh->end_time_morning ?? ''); ?>">
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-5">
+                                                    <label class="form-label small">Tarde</label>
+                                                    <div class="input-group">
+                                                        <input type="time" class="form-control form-control-sm" name="<?php echo $dayKey; ?>_start_afternoon" value="<?php echo e($wh->start_time_afternoon ?? ''); ?>">
+                                                        <span class="input-group-text">até</span>
+                                                        <input type="time" class="form-control form-control-sm" name="<?php echo $dayKey; ?>_end_afternoon" value="<?php echo e($wh->end_time_afternoon ?? ''); ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="submit" class="btn btn-primary">Salvar Horários</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -304,6 +448,26 @@ function pararCamera() {
 
 // Para a câmera ao fechar o modal ou sair da página
 window.addEventListener('beforeunload', pararCamera);
+
+// Toggle campos de agenda
+document.getElementById('public_calendar_enabled')?.addEventListener('change', function() {
+    document.getElementById('calendarSettingsFields').style.display = this.checked ? 'block' : 'none';
+});
+
+// Toggle horários do dia
+function toggleDayHours(day) {
+    const checkbox = document.getElementById(day + '_available');
+    const hoursDiv = document.getElementById(day + '_hours');
+    hoursDiv.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+// Copiar link da agenda
+function copiarLink() {
+    const link = document.querySelector('.alert-info code').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+        alert('Link copiado para a área de transferência!');
+    });
+}
 </script>
 <?php
 $scripts = ob_get_clean();
