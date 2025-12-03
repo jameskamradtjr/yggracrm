@@ -4,111 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo e($title ?? 'Proposta Comercial'); ?></title>
-    
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="<?php echo asset('tema/assets/css/styles.css'); ?>">
-    
     <style>
         body {
             background: #f5f5f5;
-            padding: 20px 0;
+            font-family: Arial, sans-serif;
         }
         .proposal-container {
             max-width: 900px;
             margin: 0 auto;
             background: white;
             padding: 40px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            border-radius: 8px;
         }
-        .company-header {
-            text-align: center;
-            border-bottom: 3px solid #5d87ff;
-            padding-bottom: 20px;
+        .proposal-header {
             margin-bottom: 30px;
         }
-        .company-logo {
-            max-width: 200px;
-            max-height: 80px;
-            margin-bottom: 15px;
+        .proposal-cover {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 30px;
         }
         .proposal-title {
-            color: #2a3547;
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
         }
-        .proposal-number {
-            color: #5d87ff;
-            font-size: 18px;
-            font-weight: 500;
+        .proposal-info {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
         }
-        .info-section {
+        .service-item {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .pricing-summary {
+            background: #f0f0ff;
+            padding: 20px;
+            border-radius: 5px;
             margin: 30px 0;
         }
-        .info-label {
-            font-weight: 600;
-            color: #2a3547;
-            margin-bottom: 5px;
-        }
-        .info-value {
-            color: #5a6a85;
+        .condition-item {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
             margin-bottom: 15px;
         }
-        .services-table {
-            width: 100%;
-            margin: 30px 0;
+        .d-flex {
+            display: flex;
         }
-        .services-table th {
-            background: #5d87ff;
-            color: white;
-            padding: 12px;
-            text-align: left;
+        .justify-content-between {
+            justify-content: space-between;
         }
-        .services-table td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
+        .mb-2 {
+            margin-bottom: 0.5rem;
         }
-        .total-section {
-            text-align: right;
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 5px;
+        .mb-3 {
+            margin-bottom: 1rem;
         }
-        .total-label {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2a3547;
+        .mb-4 {
+            margin-bottom: 1.5rem;
         }
-        .total-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #5d87ff;
+        .mb-0 {
+            margin-bottom: 0;
         }
-        .conditions-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #fff8e1;
-            border-left: 4px solid #ffc107;
-            border-radius: 5px;
+        .text-muted {
+            color: #6c757d;
         }
-        .footer-note {
-            text-align: center;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            color: #7c8fac;
-            font-size: 14px;
+        .text-success {
+            color: #28a745;
+        }
+        .fs-4 {
+            font-size: 1.5rem;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #dee2e6;
+            margin: 1rem 0;
         }
         @media print {
             body {
                 background: white;
-                padding: 0;
-            }
-            .proposal-container {
-                box-shadow: none;
-                padding: 20px;
             }
             .no-print {
                 display: none;
@@ -118,167 +98,230 @@
 </head>
 <body>
     <div class="proposal-container">
-        <!-- Cabeçalho da Empresa -->
-        <div class="company-header">
-            <?php if (!empty($companyLogo)): ?>
-                <img src="<?php echo asset($companyLogo); ?>" alt="<?php echo e($companyName); ?>" class="company-logo">
-            <?php endif; ?>
-            <h1 class="company-name"><?php echo e($companyName); ?></h1>
-        </div>
-
-        <!-- Título da Proposta -->
-        <div class="text-center mb-4">
-            <h2 class="proposal-title"><?php echo e($proposal->titulo); ?></h2>
-            <p class="proposal-number">Proposta: <?php echo e($proposal->numero_proposta); ?></p>
+        <?php if (!empty($proposal->imagem_capa)): ?>
+            <img src="<?php echo asset($proposal->imagem_capa); ?>" alt="Capa" class="proposal-cover" style="width: 100%; height: 300px; object-fit: cover; border-radius: 5px; margin-bottom: 30px;">
+        <?php endif; ?>
+        
+        <div class="proposal-header">
+            <h1 class="proposal-title"><?php echo e($proposal->titulo); ?></h1>
+            <p class="text-muted">Proposta - <?php echo e($proposal->numero_proposta ?? 'N/A'); ?></p>
             <?php if ($proposal->data_validade): ?>
-                <p class="text-muted">Válida até: <?php echo date('d/m/Y', strtotime($proposal->data_validade)); ?></p>
+                <p class="text-muted">Data de Vencimento: <?php echo date('d/m/Y', strtotime($proposal->data_validade)); ?></p>
             <?php endif; ?>
         </div>
-
-        <!-- Informações do Cliente -->
-        <div class="info-section">
-            <h4 style="color: #2a3547; border-bottom: 2px solid #5d87ff; padding-bottom: 10px; margin-bottom: 15px;">
-                Informações do Cliente
-            </h4>
+        
+        <div class="proposal-info">
             <?php if ($client): ?>
-                <div class="info-label">Cliente:</div>
-                <div class="info-value"><?php echo e($client->nome_razao_social); ?></div>
-                
-                <?php if ($client->email): ?>
-                    <div class="info-label">E-mail:</div>
-                    <div class="info-value"><?php echo e($client->email); ?></div>
-                <?php endif; ?>
-                
-                <?php if ($client->telefone || $client->celular): ?>
-                    <div class="info-label">Telefone:</div>
-                    <div class="info-value">
-                        <?php echo e($client->telefone ?: $client->celular); ?>
+                <div class="mb-3">
+                    <strong>Cliente:</strong><br>
+                    <?php echo e($client->nome_razao_social); ?>
+                    <?php if ($client->email): ?>
+                        <br><small class="text-muted"><?php echo e($client->email); ?></small>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($lead): ?>
+                <div class="mb-3">
+                    <strong>Contato:</strong><br>
+                    <?php echo e($lead->nome); ?>
+                    <?php if ($lead->email): ?>
+                        <br><small class="text-muted"><?php echo e($lead->email); ?></small>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
+            <div>
+                <strong>Proposta elaborada por:</strong><br>
+                <?php 
+                // Busca o usuário que criou a proposta
+                $user = \App\Models\User::find($proposal->user_id);
+                echo e($user->name ?? 'Sistema');
+                ?>
+            </div>
+        </div>
+        
+        <?php if (!empty($proposal->video_youtube)): ?>
+            <div class="mb-4" style="margin-bottom: 30px;">
+                <?php
+                // Extrai o ID do vídeo do YouTube
+                $videoId = null;
+                if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $proposal->video_youtube, $matches)) {
+                    $videoId = $matches[1];
+                }
+                ?>
+                <?php if ($videoId): ?>
+                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 5px;">
+                        <iframe 
+                            src="https://www.youtube.com/embed/<?php echo $videoId; ?>" 
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
                     </div>
+                <?php else: ?>
+                    <p class="text-muted">URL do vídeo inválida.</p>
                 <?php endif; ?>
-            <?php elseif ($lead): ?>
-                <div class="info-label">Contato:</div>
-                <div class="info-value"><?php echo e($lead->nome); ?></div>
-                
-                <?php if ($lead->email): ?>
-                    <div class="info-label">E-mail:</div>
-                    <div class="info-value"><?php echo e($lead->email); ?></div>
-                <?php endif; ?>
-                
-                <?php if ($lead->telefone): ?>
-                    <div class="info-label">Telefone:</div>
-                    <div class="info-value"><?php echo e($lead->telefone); ?></div>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-
-        <!-- Descrição -->
-        <?php if (!empty($proposal->descricao)): ?>
-            <div class="info-section">
-                <h4 style="color: #2a3547; border-bottom: 2px solid #5d87ff; padding-bottom: 10px; margin-bottom: 15px;">
-                    Descrição
-                </h4>
-                <div><?php echo nl2br(e($proposal->descricao)); ?></div>
             </div>
         <?php endif; ?>
-
-        <!-- Serviços/Produtos -->
+        
+        <?php if ($proposal->apresentacao): ?>
+            <div class="mb-4">
+                <h3>Apresentação</h3>
+                <p><?php echo nl2br(e($proposal->apresentacao)); ?></p>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($proposal->objetivo): ?>
+            <div class="mb-4">
+                <h3>Objetivo</h3>
+                <p><?php echo nl2br(e($proposal->objetivo)); ?></p>
+            </div>
+        <?php endif; ?>
+        
         <?php if (!empty($services)): ?>
-            <div class="info-section">
-                <h4 style="color: #2a3547; border-bottom: 2px solid #5d87ff; padding-bottom: 10px; margin-bottom: 15px;">
-                    Serviços/Produtos
-                </h4>
-                <table class="services-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Descrição</th>
-                            <th style="text-align: center;">Qtd</th>
-                            <th style="text-align: right;">Valor Unit.</th>
-                            <th style="text-align: right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($services as $service): ?>
-                            <tr>
-                                <td><?php echo e($service->nome); ?></td>
-                                <td><?php echo e($service->descricao ?? '-'); ?></td>
-                                <td style="text-align: center;"><?php echo e($service->quantidade); ?></td>
-                                <td style="text-align: right;">R$ <?php echo number_format($service->valor_unitario, 2, ',', '.'); ?></td>
-                                <td style="text-align: right;">R$ <?php echo number_format($service->valor_total, 2, ',', '.'); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="mb-4">
+                <h3>Serviços</h3>
+                <?php foreach ($services as $service): ?>
+                    <div class="service-item">
+                        <h5><?php echo e($service->titulo); ?></h5>
+                        <?php if ($service->descricao): ?>
+                            <p><?php echo nl2br(e($service->descricao)); ?></p>
+                        <?php endif; ?>
+                        <p class="mb-0">
+                            <strong>Quantidade:</strong> <?php echo $service->quantidade; ?> | 
+                            <strong>Valor:</strong> R$ <?php echo number_format($service->valor_total, 2, ',', '.'); ?>
+                        </p>
+                    </div>
+                <?php endforeach; ?>
+                
+                <div class="pricing-summary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <strong>R$ <?php echo number_format($proposal->subtotal ?? 0, 2, ',', '.'); ?></strong>
+                    </div>
+                    <?php if ($proposal->desconto_valor > 0): ?>
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Desconto (<?php echo number_format($proposal->desconto_percentual ?? 0, 2, ',', '.'); ?>%):</span>
+                            <strong>- R$ <?php echo number_format($proposal->desconto_valor, 2, ',', '.'); ?></strong>
+                        </div>
+                    <?php endif; ?>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total:</strong></span>
+                        <strong class="fs-4">R$ <?php echo number_format($proposal->total ?? 0, 2, ',', '.'); ?></strong>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
-
-        <!-- Valores Totais -->
-        <div class="total-section">
-            <?php if ($proposal->subtotal > 0): ?>
-                <div class="mb-2">
-                    <span class="info-label">Subtotal:</span>
-                    <span class="info-value">R$ <?php echo number_format($proposal->subtotal, 2, ',', '.'); ?></span>
-                </div>
-            <?php endif; ?>
-            
-            <?php if ($proposal->desconto_valor > 0): ?>
-                <div class="mb-2">
-                    <span class="info-label">Desconto:</span>
-                    <span class="info-value text-danger">- R$ <?php echo number_format($proposal->desconto_valor, 2, ',', '.'); ?></span>
-                </div>
-            <?php endif; ?>
-            
-            <div class="mt-3 pt-3" style="border-top: 2px solid #5d87ff;">
-                <span class="total-label">Valor Total:</span><br>
-                <span class="total-value">R$ <?php echo number_format($proposal->total, 2, ',', '.'); ?></span>
-            </div>
-        </div>
-
-        <!-- Forma de Pagamento -->
-        <?php if (!empty($proposal->forma_pagamento)): ?>
-            <div class="info-section">
-                <h4 style="color: #2a3547; border-bottom: 2px solid #5d87ff; padding-bottom: 10px; margin-bottom: 15px;">
-                    Forma de Pagamento
-                </h4>
-                <div><?php echo nl2br(e($proposal->forma_pagamento)); ?></div>
+        
+        <?php if ($proposal->duracao_dias || $proposal->data_estimada_conclusao): ?>
+            <div class="mb-4">
+                <h3>Prazo</h3>
+                <?php if ($proposal->duracao_dias): ?>
+                    <p><strong>Duração:</strong> <?php echo $proposal->duracao_dias; ?> dias corridos</p>
+                <?php endif; ?>
+                <?php if ($proposal->data_estimada_conclusao): ?>
+                    <p><strong>Data estimada para conclusão:</strong> <?php echo date('d/m/Y', strtotime($proposal->data_estimada_conclusao)); ?> iniciando hoje.</p>
+                <?php endif; ?>
+                <?php if ($proposal->disponibilidade_inicio_imediato): ?>
+                    <p class="text-success"><i class="ti ti-check"></i> Disponibilidade para início imediato</p>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
-
-        <!-- Condições -->
+        
+        <?php if ($proposal->forma_pagamento): ?>
+            <div class="mb-4">
+                <h3>Pagamento</h3>
+                <p><strong>Forma de pagamento:</strong> 
+                    <?php 
+                    $formas = [
+                        'a_vista' => 'À vista',
+                        'parcelado' => 'Parcelado'
+                    ];
+                    echo $formas[$proposal->forma_pagamento] ?? $proposal->forma_pagamento;
+                    ?>
+                </p>
+            </div>
+        <?php endif; ?>
+        
         <?php if (!empty($conditions)): ?>
-            <div class="conditions-section">
-                <h5 style="color: #2a3547; margin-bottom: 15px;">Condições Gerais</h5>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <?php foreach ($conditions as $condition): ?>
-                        <li style="margin-bottom: 8px;"><?php echo e($condition->descricao); ?></li>
-                    <?php endforeach; ?>
-                </ul>
+            <div class="mb-4">
+                <h3>Condições</h3>
+                <?php foreach ($conditions as $condition): ?>
+                    <div class="condition-item">
+                        <h5><?php echo e($condition->titulo); ?></h5>
+                        <?php if ($condition->descricao): ?>
+                            <p class="mb-0"><?php echo nl2br(e($condition->descricao)); ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
-
-        <!-- Observações -->
-        <?php if (!empty($proposal->observacoes)): ?>
-            <div class="info-section">
-                <h4 style="color: #2a3547; border-bottom: 2px solid #5d87ff; padding-bottom: 10px; margin-bottom: 15px;">
-                    Observações
-                </h4>
-                <div><?php echo nl2br(e($proposal->observacoes)); ?></div>
+        
+        <?php if ($proposal->observacoes): ?>
+            <div class="mb-4">
+                <h3>Observações</h3>
+                <p><?php echo nl2br(e($proposal->observacoes)); ?></p>
             </div>
         <?php endif; ?>
-
-        <!-- Rodapé -->
-        <div class="footer-note">
-            <p>Esta proposta foi gerada eletronicamente e é válida sem assinatura.</p>
-            <p>Em caso de dúvidas, entre em contato conosco.</p>
-        </div>
-
-        <!-- Botão de Impressão -->
-        <div class="text-center mt-4 no-print">
-            <button onclick="window.print()" class="btn btn-primary">
-                <i class="ti ti-printer"></i> Imprimir Proposta
-            </button>
+        
+        <!-- Footer com botões de ação -->
+        <div class="proposal-footer" style="background: #1a1a1a; color: white; padding: 40px; margin-top: 50px; border-radius: 5px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <?php 
+                $user = \App\Models\User::find($proposal->user_id);
+                if ($user):
+                ?>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="font-size: 18px;"><?php echo e($user->name ?? 'Sistema'); ?></strong>
+                    </div>
+                    <?php if ($user->email): ?>
+                        <div style="color: #ccc; font-size: 14px;">
+                            <?php echo e($user->email); ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <h3 style="color: white; margin-bottom: 15px;">Vamos trabalhar juntos?</h3>
+                <p style="color: #ccc; margin-bottom: 30px;">Será um prazer realizar o seu projeto!</p>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary no-print" onclick="enviarMensagem()" style="padding: 12px 30px; font-size: 16px;">
+                        Enviar mensagem
+                    </button>
+                    <button type="button" class="btn btn-success no-print" onclick="aceitarProposta()" style="padding: 12px 30px; font-size: 16px; background: #28a745; border-color: #28a745;">
+                        Aceitar proposta
+                    </button>
+                    <button type="button" class="btn btn-danger no-print" onclick="recusarProposta()" style="padding: 12px 30px; font-size: 16px; background: #dc3545; border-color: #dc3545;">
+                        Recusar proposta
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <script>
+    function enviarMensagem() {
+        alert('Funcionalidade de enviar mensagem será implementada em breve.');
+    }
+    
+    function aceitarProposta() {
+        if (confirm('Tem certeza que deseja aceitar esta proposta?')) {
+            // TODO: Implementar endpoint para aceitar proposta
+            alert('Funcionalidade de aceitar proposta será implementada em breve.');
+        }
+    }
+    
+    function recusarProposta() {
+        if (confirm('Tem certeza que deseja recusar esta proposta?')) {
+            // TODO: Implementar endpoint para recusar proposta
+            alert('Funcionalidade de recusar proposta será implementada em breve.');
+        }
+    }
+    </script>
 </body>
 </html>
-

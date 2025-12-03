@@ -40,6 +40,8 @@ class PublicContractController extends Controller
         // Carrega dados relacionados
         $client = $contract->client();
         $proposal = $contract->proposal();
+        $services = $contract->services();
+        $conditions = $contract->conditions();
         
         // Busca dados da empresa
         $companyName = \App\Models\SystemSetting::get('company_name', config('app.name'));
@@ -50,6 +52,8 @@ class PublicContractController extends Controller
             'contract' => $contract,
             'client' => $client,
             'proposal' => $proposal,
+            'services' => $services,
+            'conditions' => $conditions,
             'companyName' => $companyName,
             'companyLogo' => $companyLogo,
             'isPublicView' => true
