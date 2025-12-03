@@ -10,6 +10,7 @@ class ProposalView extends Model
 {
     protected string $table = 'proposal_views';
     protected bool $multiTenant = false; // Não precisa de multi-tenancy (é log público)
+    protected bool $timestamps = false; // Desabilita created_at/updated_at (usamos viewed_at)
     
     protected array $fillable = [
         'proposal_id',
