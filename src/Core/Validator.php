@@ -76,6 +76,11 @@ class Validator
             if ($fieldValidated && !isset($this->validated[$field]) && !isset($this->errors[$field])) {
                 $this->validated[$field] = $value;
             }
+            
+            // CORREÇÃO: Se o campo é nullable e não tem outras regras, adiciona ao validated
+            if ($isNullable && !$fieldValidated && !isset($this->validated[$field]) && !isset($this->errors[$field])) {
+                $this->validated[$field] = $value;
+            }
         }
     }
 

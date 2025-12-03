@@ -76,8 +76,9 @@ class ClientController extends Controller
             ]);
 
             $userId = auth()->getDataUserId();
-
-            $client = Client::create([
+            
+            // Prepara dados para salvar
+            $clientData = [
                 'user_id' => $userId,
                 'tipo' => $data['tipo'],
                 'nome_razao_social' => $data['nome_razao_social'],
@@ -96,7 +97,16 @@ class ClientController extends Controller
                 'cep' => !empty($data['cep']) ? $data['cep'] : null,
                 'score' => isset($data['score']) && $data['score'] !== '' ? (int)$data['score'] : 50,
                 'observacoes' => !empty($data['observacoes']) ? $data['observacoes'] : null
-            ]);
+            ];
+            
+            error_log("Dados a serem salvos:");
+            error_log(print_r($clientData, true));
+            
+            $client = Client::create($clientData);
+            
+            error_log("Cliente criado com ID: " . $client->id);
+            error_log("Cliente após criar:");
+            error_log(print_r($client->toArray(), true));
             
             // Processa foto se fornecida (após criar o cliente para ter o ID)
             if ($this->request->has('foto_base64') && !empty($this->request->input('foto_base64'))) {
@@ -144,9 +154,13 @@ class ClientController extends Controller
                 "Cliente criado: {$client->nome_razao_social}"
             );
 
+            error_log("=== ClientController::store - SUCESSO ===");
             session()->flash('success', 'Cliente cadastrado com sucesso!');
             $this->redirect('/clients');
         } catch (\Exception $e) {
+            error_log("=== ClientController::store - ERRO ===");
+            error_log("Erro: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             session()->flash('error', 'Erro ao cadastrar cliente: ' . $e->getMessage());
             $this->redirect('/clients/create');
         }

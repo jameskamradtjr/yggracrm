@@ -30,7 +30,7 @@ $proposalId = $proposal->id;
                         <i class="ti ti-link me-2"></i>Link Cliente
                     </button>
                     <a href="<?php echo url('/proposals/' . $proposal->id . '/pdf'); ?>" class="btn btn-warning" target="_blank" title="Gerar PDF">
-                        <i class="ti ti-file-pdf me-2"></i>PDF
+                        <i class="ti ti-file-type-pdf me-2"></i>PDF
                     </a>
                     <button type="button" class="btn btn-secondary" onclick="salvarProposta()">
                         <i class="ti ti-device-floppy me-2"></i>Salvar alterações

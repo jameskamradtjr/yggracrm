@@ -18,7 +18,7 @@ class Client extends Model
         'tipo', 'nome_razao_social', 'nome_fantasia', 'cpf_cnpj',
         'email', 'telefone', 'celular', 'instagram', 'endereco',
         'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep',
-        'observacoes', 'score', 'user_id'
+        'observacoes', 'score', 'user_id', 'foto'
     ];
     
     protected array $casts = [

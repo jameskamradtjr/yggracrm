@@ -118,7 +118,7 @@ $title = $title ?? 'Propostas';
                                             <i class="ti ti-eye"></i>
                                         </a>
                                         <a href="<?php echo url('/proposals/' . $proposal->id . '/pdf'); ?>" class="btn btn-sm btn-warning" title="Gerar PDF" target="_blank">
-                                            <i class="ti ti-file-pdf"></i>
+                                            <i class="ti ti-file-type-pdf"></i>
                                         </a>
                                         <form action="<?php echo url('/proposals/' . $proposal->id . '/duplicate'); ?>" 
                                               method="POST" 

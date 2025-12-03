@@ -410,22 +410,19 @@ $(document).ready(function() {
     // Máscara de telefone fixo
     $('.phone-mask').inputmask('(99) 9999-9999', {
         clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
+        showMaskOnHover: false
     });
     
     // Máscara de celular
     $('.mobile-mask').inputmask('(99) 99999-9999', {
         clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
+        showMaskOnHover: false
     });
     
     // Máscara de CEP
     $('.cep-mask').inputmask('99999-999', {
         clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
+        showMaskOnHover: false
     });
     
     // Máscara dinâmica para CPF/CNPJ
@@ -440,16 +437,14 @@ $(document).ready(function() {
             // CPF: 000.000.000-00
             input.inputmask('999.999.999-99', {
                 clearMaskOnLostFocus: false,
-                showMaskOnHover: false,
-                removeMaskOnSubmit: true
+                showMaskOnHover: false
             });
             input.attr('placeholder', '000.000.000-00');
         } else {
             // CNPJ: 00.000.000/0000-00
             input.inputmask('99.999.999/9999-99', {
                 clearMaskOnLostFocus: false,
-                showMaskOnHover: false,
-                removeMaskOnSubmit: true
+                showMaskOnHover: false
             });
             input.attr('placeholder', '00.000.000/0000-00');
         }
@@ -461,25 +456,8 @@ $(document).ready(function() {
     // Inicializa com a máscara correta baseada no tipo atual
     updateCpfCnpjMask();
     
-    // Remove máscaras antes de enviar o formulário
-    $('#clientForm').on('submit', function(e) {
-        // Remove máscaras dos campos para enviar apenas números
-        $('.phone-mask, .mobile-mask, .cep-mask').each(function() {
-            const unmaskedValue = $(this).inputmask('unmaskedvalue');
-            if (unmaskedValue) {
-                $(this).val(unmaskedValue);
-            }
-        });
-        
-        // Remove máscara do CPF/CNPJ
-        const cpfCnpj = $('#cpf_cnpj');
-        const unmaskedCpfCnpj = cpfCnpj.inputmask('unmaskedvalue');
-        if (unmaskedCpfCnpj) {
-            cpfCnpj.val(unmaskedCpfCnpj);
-        }
-        
-        console.log('Formulário enviando - dados sem máscaras');
-    });
+    // Formulário pronto com máscaras ativadas
+    console.log('✅ Máscaras de input ativadas');
 });
 </script>
 <?php
