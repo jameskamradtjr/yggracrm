@@ -671,10 +671,10 @@ class SettingsController extends Controller
 
         // Registra log (sem mostrar as chaves completas)
         $logData = [
-            'gemini_api_key' => $geminiApiKey ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada',
+            'gemini_api_key' => ($geminiApiKey && is_string($geminiApiKey)) ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada',
             'apizap_instance_key' => $apizapInstanceKey ?: 'não configurada',
-            'apizap_token' => !empty($apizapConfig['token']) ? substr($apizapConfig['token'], 0, 8) . '...' : 'não configurada',
-            'resend_api_key' => !empty($resendConfig['api_key']) ? substr($resendConfig['api_key'], 0, 8) . '...' : 'não configurada',
+            'apizap_token' => (!empty($apizapConfig['token']) && is_string($apizapConfig['token'])) ? substr($apizapConfig['token'], 0, 8) . '...' : 'não configurada',
+            'resend_api_key' => (!empty($resendConfig['api_key']) && is_string($resendConfig['api_key'])) ? substr($resendConfig['api_key'], 0, 8) . '...' : 'não configurada',
             'resend_from_email' => $resendFromEmail
         ];
         
