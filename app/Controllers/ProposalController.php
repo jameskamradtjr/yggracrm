@@ -448,7 +448,7 @@ class ProposalController extends Controller
             SistemaLog::registrar(
                 'proposals',
                 'DELETE',
-                $params['id'],
+                (int)$params['id'],
                 "Proposta {$numeroProposta} deletada",
                 $proposal->toArray(),
                 null
