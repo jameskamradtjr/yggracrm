@@ -6,30 +6,21 @@ ob_start();
 
 // Obtém logo atual
 $logoDark = \App\Models\SystemSetting::get('logo_dark');
-// Garante que seja string (pode vir como array se tipo for 'json')
-if (is_array($logoDark)) {
-    $logoDark = null;
-}
 if (empty($logoDark) || !is_string($logoDark)) {
     $logoDark = asset('tema/assets/images/logos/dark-logo.svg');
-} elseif (strpos($logoDark, '/uploads/') === 0) {
+} elseif (is_string($logoDark) && strpos($logoDark, '/uploads/') === 0) {
     $logoDark = asset($logoDark);
 }
 
 $logoLight = \App\Models\SystemSetting::get('logo_light');
-// Garante que seja string (pode vir como array se tipo for 'json')
-if (is_array($logoLight)) {
-    $logoLight = null;
-}
 if (empty($logoLight) || !is_string($logoLight)) {
     $logoLight = asset('tema/assets/images/logos/light-logo.svg');
-} elseif (strpos($logoLight, '/uploads/') === 0) {
+} elseif (is_string($logoLight) && strpos($logoLight, '/uploads/') === 0) {
     $logoLight = asset($logoLight);
 }
 
 // Obtém configurações SMTP
 $smtpConfig = \App\Models\SystemSetting::get('smtp_config', []);
-// Garante que seja array (pode vir como string se tipo não for 'json')
 if (!is_array($smtpConfig)) {
     $smtpConfig = [];
 }
