@@ -329,6 +329,10 @@
     const userEmail = '<?php echo $user->email ?? ''; ?>';
     const proposalTitle = '<?php echo addslashes($proposal->titulo); ?>';
     
+    // URLs dinâmicas - usa APP_URL do .env
+    const urlAccept = '<?php echo url("/proposals/{$proposal->id}/public/{$proposal->token_publico}/accept"); ?>';
+    const urlReject = '<?php echo url("/proposals/{$proposal->id}/public/{$proposal->token_publico}/reject"); ?>';
+    
     function enviarMensagem() {
         // Tenta abrir WhatsApp se houver número configurado
         if (userWhatsapp) {
@@ -352,7 +356,7 @@
         }
         
         try {
-            const response = await fetch(`/yggracrm/proposals/${proposalId}/public/${proposalToken}/accept`, {
+            const response = await fetch(urlAccept, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -385,7 +389,7 @@
         }
         
         try {
-            const response = await fetch(`/yggracrm/proposals/${proposalId}/public/${proposalToken}/reject`, {
+            const response = await fetch(urlReject, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

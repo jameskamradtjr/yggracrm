@@ -280,6 +280,32 @@ $title = $title ?? 'Editar Projeto';
 
 <?php
 $content = ob_get_clean();
+
+// Scripts para Tom Select no cliente
+ob_start();
+?>
+<link rel="stylesheet" href="<?php echo asset('tema/assets/libs/select2/dist/css/select2.min.css'); ?>">
+<script src="<?php echo asset('tema/assets/libs/select2/dist/js/select2.full.min.js'); ?>"></script>
+<script>
+$(document).ready(function() {
+    // Tom Select / Select2 no campo de cliente
+    $('#client_id').select2({
+        placeholder: 'Selecione um cliente (opcional)',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Tom Select no campo de responsável
+    $('#responsible_user_id').select2({
+        placeholder: 'Selecione um responsável (opcional)',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+<?php
+$scripts = ob_get_clean();
+
 include base_path('views/layouts/app.php');
 ?>
 

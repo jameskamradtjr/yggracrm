@@ -27,6 +27,28 @@ $title = $title ?? 'Agenda';
     </div>
 </div>
 
+<style>
+/* Fix: Garante que o modal tenha altura máxima e scroll funcione */
+#eventModal .modal-dialog {
+    max-height: 90vh;
+}
+
+#eventModal .modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#eventModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(90vh - 140px); /* Subtrai header + footer */
+}
+
+#eventModal .modal-footer {
+    flex-shrink: 0; /* Garante que o footer sempre fique visível */
+}
+</style>
+
 <!-- Modal para Adicionar/Editar Evento -->
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
