@@ -307,13 +307,15 @@
         })();
         
         // Função para atualizar timer no navbar (disponível globalmente)
+        let timerIntervalId = null;
+        let timerCheckIntervalId = null;
+        
         window.atualizarNavbarTimer = function() {
             const container = document.getElementById('navbar-timer-container');
             const timeDisplay = document.getElementById('navbar-timer-time');
             const pauseBtn = document.getElementById('navbar-timer-pause-btn');
             
             if (!container || !timeDisplay) {
-                console.log('Timer: Elementos não encontrados', { container: !!container, timeDisplay: !!timeDisplay });
                 return;
             }
             
@@ -330,7 +332,6 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Timer: Dados recebidos', data);
                 if (data.success && data.total_timers > 0) {
                     container.classList.remove('d-none');
                     container.style.display = '';
@@ -344,46 +345,48 @@
                         });
                         pauseBtn.setAttribute('title', tooltipText.trim() + '\n\nClique para pausar todos os timers');
                     }
-                    console.log('Timer: Exibido com sucesso');
+                    
+                    // Inicia atualização contínua se ainda não estiver rodando
+                    if (!timerIntervalId) {
+                        timerIntervalId = setInterval(() => {
+                            window.atualizarNavbarTimer();
+                        }, 1000);
+                    }
                 } else {
                     container.classList.add('d-none');
                     container.style.display = 'none';
                     if (pauseBtn) {
                         pauseBtn.style.display = 'none';
                     }
-                    console.log('Timer: Ocultado - nenhum timer ativo');
+                    
+                    // Para atualização contínua se não houver timers
+                    if (timerIntervalId) {
+                        clearInterval(timerIntervalId);
+                        timerIntervalId = null;
+                    }
                 }
             })
             .catch(error => {
-                console.error('Erro ao verificar timers ativos:', error);
+                // Silencioso - não loga erro
             });
         };
         
         // Inicializa timer após definir a função
         (function() {
-            // Verifica timers ativos e atualiza navbar imediatamente
+            // Verifica timers ativos ao carregar a página
             setTimeout(() => {
                 if (typeof window.atualizarNavbarTimer === 'function') {
                     window.atualizarNavbarTimer();
                 }
             }, 500);
             
-            // Atualiza a cada 5 segundos
-            setInterval(() => {
-                if (typeof window.atualizarNavbarTimer === 'function') {
+            // Verifica periodicamente a cada 30 segundos se há timers novos
+            // (apenas se não houver timer ativo)
+            timerCheckIntervalId = setInterval(() => {
+                if (!timerIntervalId && typeof window.atualizarNavbarTimer === 'function') {
                     window.atualizarNavbarTimer();
                 }
-            }, 5000);
-            
-            // Se houver timers ativos, atualiza a cada segundo
-            setInterval(() => {
-                const container = document.getElementById('navbar-timer-container');
-                if (container && !container.classList.contains('d-none')) {
-                    if (typeof window.atualizarNavbarTimer === 'function') {
-                        window.atualizarNavbarTimer();
-                    }
-                }
-            }, 1000);
+            }, 30000);
         })();
         
         // Função para pausar todos os timers
@@ -421,4 +424,5 @@
     </script>
 </body>
 </html>
+
 
