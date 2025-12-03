@@ -568,22 +568,30 @@ $content = ob_get_clean();
 // Scripts para Tom Select
 ob_start();
 ?>
-<link rel="stylesheet" href="<?php echo asset('tema/assets/libs/select2/dist/css/select2.min.css'); ?>">
-<script src="<?php echo asset('tema/assets/libs/select2/dist/js/select2.full.min.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo asset('tema/assets/libs/tom-select/dist/css/tom-select.bootstrap5.css'); ?>">
+<script src="<?php echo asset('tema/assets/libs/tom-select/dist/js/tom-select.complete.min.js'); ?>"></script>
 <script>
-$(document).ready(function() {
-    // Tom Select / Select2 no campo de cliente
-    $('#client_id').select2({
+document.addEventListener('DOMContentLoaded', function() {
+    // Tom Select no campo de cliente
+    new TomSelect('#client_id', {
         placeholder: 'Selecione um cliente...',
-        allowClear: true,
-        width: '100%'
+        allowEmptyOption: true,
+        create: false,
+        sortField: {
+            field: 'text',
+            direction: 'asc'
+        }
     });
     
     // Tom Select no campo de projeto
-    $('#project_id').select2({
+    new TomSelect('#project_id', {
         placeholder: 'Selecione um projeto...',
-        allowClear: true,
-        width: '100%'
+        allowEmptyOption: true,
+        create: false,
+        sortField: {
+            field: 'text',
+            direction: 'asc'
+        }
     });
 });
 </script>
