@@ -6,9 +6,13 @@
                 <?php 
                 // Obtém logo do sistema ou usa padrão
                 $logoDark = \App\Models\SystemSetting::get('logo_dark');
+                // Garante que seja string
+                if (!is_string($logoDark)) {
+                    $logoDark = '';
+                }
                 // Valida se é uma URL válida (não pode ser hash/base64)
                 if (empty($logoDark) || 
-                    (strlen($logoDark) > 100) || // Hash muito longo
+                    strlen($logoDark) > 100 || // Hash muito longo
                     (strpos($logoDark, '.svg') === false && strpos($logoDark, '.png') === false && strpos($logoDark, '.jpg') === false && strpos($logoDark, '.jpeg') === false && strpos($logoDark, '/uploads/') !== 0)) {
                     $logoDark = asset('tema/assets/images/logos/dark-logo.svg');
                 } elseif (strpos($logoDark, '/uploads/') === 0) {
@@ -16,9 +20,13 @@
                 }
                 
                 $logoLight = \App\Models\SystemSetting::get('logo_light');
+                // Garante que seja string
+                if (!is_string($logoLight)) {
+                    $logoLight = '';
+                }
                 // Valida se é uma URL válida (não pode ser hash/base64)
                 if (empty($logoLight) || 
-                    (strlen($logoLight) > 100) || // Hash muito longo
+                    strlen($logoLight) > 100 || // Hash muito longo
                     (strpos($logoLight, '.svg') === false && strpos($logoLight, '.png') === false && strpos($logoLight, '.jpg') === false && strpos($logoLight, '.jpeg') === false && strpos($logoLight, '/uploads/') !== 0)) {
                     $logoLight = asset('tema/assets/images/logos/light-logo.svg');
                 } elseif (strpos($logoLight, '/uploads/') === 0) {

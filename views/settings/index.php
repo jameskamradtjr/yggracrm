@@ -401,8 +401,22 @@ if (!is_array($smtpConfig)) {
                             <?php
                             // Obtém configurações existentes
                             $geminiApiKey = \App\Models\SystemSetting::get('gemini_api_key', '');
+                            // Garante que seja string
+                            if (!is_string($geminiApiKey)) {
+                                $geminiApiKey = '';
+                            }
+                            
                             $apizapConfig = \App\Models\SystemSetting::get('apizap_config', []);
+                            // Garante que seja array
+                            if (!is_array($apizapConfig)) {
+                                $apizapConfig = [];
+                            }
+                            
                             $resendConfig = \App\Models\SystemSetting::get('resend_config', []);
+                            // Garante que seja array
+                            if (!is_array($resendConfig)) {
+                                $resendConfig = [];
+                            }
                             ?>
                             
                             <!-- Google Gemini -->
@@ -427,7 +441,7 @@ if (!is_array($smtpConfig)) {
                                                 <i class="ti ti-eye" id="toggleGeminiIcon"></i>
                                             </button>
                                         </div>
-                                        <?php if ($geminiApiKey): ?>
+                                        <?php if ($geminiApiKey && is_string($geminiApiKey)): ?>
                                             <div class="alert alert-info mt-2 mb-0">
                                                 <i class="ti ti-info-circle me-2"></i>
                                                 <strong>Chave configurada:</strong> 
@@ -483,7 +497,7 @@ if (!is_array($smtpConfig)) {
                                                     <i class="ti ti-eye" id="toggleApizapIcon"></i>
                                                 </button>
                                             </div>
-                                            <?php if (!empty($apizapConfig['token'])): ?>
+                                            <?php if (!empty($apizapConfig['token']) && is_string($apizapConfig['token'])): ?>
                                                 <div class="alert alert-info mt-2 mb-0">
                                                     <i class="ti ti-info-circle me-2"></i>
                                                     <strong>Token configurado:</strong> 
@@ -531,7 +545,7 @@ if (!is_array($smtpConfig)) {
                                                     <i class="ti ti-eye" id="toggleResendIcon"></i>
                                                 </button>
                                             </div>
-                                            <?php if (!empty($resendConfig['api_key'])): ?>
+                                            <?php if (!empty($resendConfig['api_key']) && is_string($resendConfig['api_key'])): ?>
                                                 <div class="alert alert-info mt-2 mb-0">
                                                     <i class="ti ti-info-circle me-2"></i>
                                                     <strong>Chave configurada:</strong> 
