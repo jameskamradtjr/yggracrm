@@ -81,21 +81,21 @@ class ClientController extends Controller
                 'user_id' => $userId,
                 'tipo' => $data['tipo'],
                 'nome_razao_social' => $data['nome_razao_social'],
-                'nome_fantasia' => $data['nome_fantasia'] ?? null,
-                'cpf_cnpj' => $data['cpf_cnpj'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefone' => $data['telefone'] ?? null,
-                'celular' => $data['celular'] ?? null,
-                'instagram' => $data['instagram'] ?? null,
-                'endereco' => $data['endereco'] ?? null,
-                'numero' => $data['numero'] ?? null,
-                'complemento' => $data['complemento'] ?? null,
-                'bairro' => $data['bairro'] ?? null,
-                'cidade' => $data['cidade'] ?? null,
-                'estado' => $data['estado'] ?? null,
-                'cep' => $data['cep'] ?? null,
-                'score' => $data['score'] ?? 50,
-                'observacoes' => $data['observacoes'] ?? null
+                'nome_fantasia' => !empty($data['nome_fantasia']) ? $data['nome_fantasia'] : null,
+                'cpf_cnpj' => !empty($data['cpf_cnpj']) ? $data['cpf_cnpj'] : null,
+                'email' => !empty($data['email']) ? $data['email'] : null,
+                'telefone' => !empty($data['telefone']) ? $data['telefone'] : null,
+                'celular' => !empty($data['celular']) ? $data['celular'] : null,
+                'instagram' => !empty($data['instagram']) ? $data['instagram'] : null,
+                'endereco' => !empty($data['endereco']) ? $data['endereco'] : null,
+                'numero' => !empty($data['numero']) ? $data['numero'] : null,
+                'complemento' => !empty($data['complemento']) ? $data['complemento'] : null,
+                'bairro' => !empty($data['bairro']) ? $data['bairro'] : null,
+                'cidade' => !empty($data['cidade']) ? $data['cidade'] : null,
+                'estado' => !empty($data['estado']) ? $data['estado'] : null,
+                'cep' => !empty($data['cep']) ? $data['cep'] : null,
+                'score' => isset($data['score']) && $data['score'] !== '' ? (int)$data['score'] : 50,
+                'observacoes' => !empty($data['observacoes']) ? $data['observacoes'] : null
             ]);
             
             // Processa foto se fornecida (após criar o cliente para ter o ID)
@@ -288,26 +288,38 @@ class ClientController extends Controller
                 'observacoes' => 'nullable'
             ]);
 
-            // Processa foto se fornecida
+            // Prepara dados para atualização - converte strings vazias em NULL
             $updateData = [
                 'tipo' => $data['tipo'],
                 'nome_razao_social' => $data['nome_razao_social'],
-                'nome_fantasia' => $data['nome_fantasia'] ?? null,
-                'cpf_cnpj' => $data['cpf_cnpj'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefone' => $data['telefone'] ?? null,
-                'celular' => $data['celular'] ?? null,
-                'instagram' => $data['instagram'] ?? null,
-                'endereco' => $data['endereco'] ?? null,
-                'numero' => $data['numero'] ?? null,
-                'complemento' => $data['complemento'] ?? null,
-                'bairro' => $data['bairro'] ?? null,
-                'cidade' => $data['cidade'] ?? null,
-                'estado' => $data['estado'] ?? null,
-                'cep' => $data['cep'] ?? null,
-                'score' => $data['score'] ?? $client->score,
-                'observacoes' => $data['observacoes'] ?? null
+                'nome_fantasia' => !empty($data['nome_fantasia']) ? $data['nome_fantasia'] : null,
+                'cpf_cnpj' => !empty($data['cpf_cnpj']) ? $data['cpf_cnpj'] : null,
+                'email' => !empty($data['email']) ? $data['email'] : null,
+                'telefone' => !empty($data['telefone']) ? $data['telefone'] : null,
+                'celular' => !empty($data['celular']) ? $data['celular'] : null,
+                'instagram' => !empty($data['instagram']) ? $data['instagram'] : null,
+                'endereco' => !empty($data['endereco']) ? $data['endereco'] : null,
+                'numero' => !empty($data['numero']) ? $data['numero'] : null,
+                'complemento' => !empty($data['complemento']) ? $data['complemento'] : null,
+                'bairro' => !empty($data['bairro']) ? $data['bairro'] : null,
+                'cidade' => !empty($data['cidade']) ? $data['cidade'] : null,
+                'estado' => !empty($data['estado']) ? $data['estado'] : null,
+                'cep' => !empty($data['cep']) ? $data['cep'] : null,
+                'score' => isset($data['score']) && $data['score'] !== '' ? (int)$data['score'] : $client->score,
+                'observacoes' => !empty($data['observacoes']) ? $data['observacoes'] : null
             ];
+            
+            // Log para debug
+            error_log("ClientController::update - Cliente ID: " . $client->id);
+            error_log("ClientController::update - Dados recebidos do formulário:");
+            error_log("  - telefone: " . (empty($data['telefone']) ? 'VAZIO' : $data['telefone']));
+            error_log("  - celular: " . (empty($data['celular']) ? 'VAZIO' : $data['celular']));
+            error_log("  - endereco: " . (empty($data['endereco']) ? 'VAZIO' : $data['endereco']));
+            error_log("  - numero: " . (empty($data['numero']) ? 'VAZIO' : $data['numero']));
+            error_log("  - complemento: " . (empty($data['complemento']) ? 'VAZIO' : $data['complemento']));
+            error_log("  - bairro: " . (empty($data['bairro']) ? 'VAZIO' : $data['bairro']));
+            error_log("ClientController::update - Dados a serem salvos:");
+            error_log(print_r($updateData, true));
             
             // Processa foto se fornecida
             if ($this->request->has('foto_base64') && !empty($this->request->input('foto_base64'))) {
