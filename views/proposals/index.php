@@ -111,7 +111,7 @@ $title = $title ?? 'Propostas';
                                         <button type="button" 
                                                 class="btn btn-sm btn-info" 
                                                 title="Copiar Link Público para Cliente"
-                                                onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public/' . ($proposal->token_publico ?: 'sem-token')); ?>')">
+                                                onclick="copiarLinkPublico(<?php echo $proposal->id; ?>, '<?php echo $proposal->token_publico; ?>')">
                                             <i class="ti ti-link"></i>
                                         </button>
                                         <a href="<?php echo url('/proposals/' . $proposal->id . '/preview'); ?>" class="btn btn-sm btn-secondary" title="Preview Interno" target="_blank">
@@ -149,17 +149,24 @@ $title = $title ?? 'Propostas';
 </div>
 
 <script>
-function copiarLinkPublico(url) {
-    // Cria um elemento temporário
-    const tempInput = document.createElement('input');
-    tempInput.value = url;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
+function copiarLinkPublico(proposalId, token) {
+    // Gera link público completo com APP_URL
+    const appUrl = '<?php echo rtrim(config('app.url', 'http://localhost'), '/'); ?>';
+    const publicUrl = appUrl + '/proposals/' + proposalId + '/public/' + token;
     
-    // Mostra feedback visual
-    alert('Link copiado!\n\n' + url + '\n\nCompartilhe este link com o cliente para que ele visualize a proposta.');
+    // Copia para clipboard
+    navigator.clipboard.writeText(publicUrl).then(() => {
+        alert('✅ Link público copiado com sucesso!\n\n' + publicUrl + '\n\n📧 Compartilhe este link com o cliente.');
+    }).catch(err => {
+        // Fallback para navegadores antigos
+        const tempInput = document.createElement('input');
+        tempInput.value = publicUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        alert('✅ Link copiado!\n\n' + publicUrl);
+    });
 }
 </script>
 

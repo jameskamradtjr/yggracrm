@@ -15,7 +15,7 @@ class Contract extends Model
         'user_id', 'template_id', 'client_id', 'numero_contrato', 'titulo',
         'conteudo_gerado', 'status', 'data_inicio', 'data_termino', 
         'valor_total', 'observacoes', 'link_assinatura', 'token_assinatura',
-        'data_envio', 'data_assinatura_completa'
+        'data_envio', 'data_assinatura_completa', 'token_publico', 'data_visualizacao_cliente'
     ];
     
     protected array $casts = [
@@ -46,6 +46,25 @@ class Contract extends Model
             return null;
         }
         return Client::find($this->client_id);
+    }
+    
+    /**
+     * Relacionamento com proposta (se o contrato foi gerado de uma proposta)
+     */
+    public function proposal()
+    {
+        // Busca proposta relacionada (assumindo que há uma relação)
+        $db = \Core\Database::getInstance();
+        $result = $db->queryOne(
+            "SELECT * FROM proposals WHERE id = (SELECT proposal_id FROM contracts WHERE id = ? LIMIT 1)",
+            [$this->id]
+        );
+        
+        if ($result) {
+            return Proposal::find($result['id']);
+        }
+        
+        return null;
     }
     
     /**
@@ -95,6 +114,16 @@ class Contract extends Model
         }
         
         return true;
+    }
+    
+    /**
+     * Gera token público para visualização
+     */
+    public function gerarTokenPublico(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->token_publico = $token;
+        return $token;
     }
     
     /**

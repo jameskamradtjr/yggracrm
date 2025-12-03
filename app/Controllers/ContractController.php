@@ -138,6 +138,12 @@ class ContractController extends Controller
                 'valor_total' => !empty($data['valor_total']) ? (float)$data['valor_total'] : null,
                 'observacoes' => $data['observacoes'] ?? null
             ]);
+            
+            // Gera token público para compartilhamento
+            if (!$contract->token_publico) {
+                $contract->gerarTokenPublico();
+                $contract->save();
+            }
 
             // Dispara evento de automação
             AutomationEventDispatcher::onContract('created', $contract->id, $userId);

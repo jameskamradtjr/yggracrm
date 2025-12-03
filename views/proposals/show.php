@@ -541,17 +541,24 @@ function calcularTotais() {
 }
 
 // Função para copiar link público
-function copiarLinkPublico(url) {
-    // Cria um elemento temporário
-    const tempInput = document.createElement('input');
-    tempInput.value = url;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
+function copyPublicLink(proposalId, token) {
+    // Gera link público completo com APP_URL
+    const appUrl = '<?php echo rtrim(config('app.url', 'http://localhost'), '/'); ?>';
+    const publicUrl = appUrl + '/proposals/' + proposalId + '/public/' + token;
     
-    // Mostra feedback visual
-    alert('✅ Link copiado com sucesso!\n\n' + url + '\n\n📧 Compartilhe este link com o cliente para que ele visualize a proposta.');
+    // Copia para clipboard
+    navigator.clipboard.writeText(publicUrl).then(() => {
+        alert('✅ Link público copiado com sucesso!\n\n' + publicUrl + '\n\n📧 Compartilhe este link com o cliente para que ele visualize a proposta.');
+    }).catch(err => {
+        // Fallback para navegadores antigos
+        const tempInput = document.createElement('input');
+        tempInput.value = publicUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        alert('✅ Link copiado!\n\n' + publicUrl);
+    });
 }
 </script>
 
