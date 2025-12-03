@@ -210,83 +210,6 @@ $title = $title ?? 'Editar Cliente';
 </div>
 
 <script>
-// Máscaras de Input
-$(document).ready(function() {
-    // Máscara de telefone fixo
-    $('.phone-mask').inputmask('(99) 9999-9999', {
-        clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
-    });
-    
-    // Máscara de celular
-    $('.mobile-mask').inputmask('(99) 99999-9999', {
-        clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
-    });
-    
-    // Máscara de CEP
-    $('.cep-mask').inputmask('99999-999', {
-        clearMaskOnLostFocus: false,
-        showMaskOnHover: false,
-        removeMaskOnSubmit: true
-    });
-    
-    // Máscara dinâmica para CPF/CNPJ
-    function updateCpfCnpjMask() {
-        const tipo = $('input[name="tipo"]:checked').val();
-        const input = $('#cpf_cnpj');
-        
-        // Remove máscara anterior
-        input.inputmask('remove');
-        
-        if (tipo === 'fisica') {
-            // CPF: 000.000.000-00
-            input.inputmask('999.999.999-99', {
-                clearMaskOnLostFocus: false,
-                showMaskOnHover: false,
-                removeMaskOnSubmit: true
-            });
-            input.attr('placeholder', '000.000.000-00');
-        } else {
-            // CNPJ: 00.000.000/0000-00
-            input.inputmask('99.999.999/9999-99', {
-                clearMaskOnLostFocus: false,
-                showMaskOnHover: false,
-                removeMaskOnSubmit: true
-            });
-            input.attr('placeholder', '00.000.000/0000-00');
-        }
-    }
-    
-    // Atualiza máscara ao mudar tipo
-    $('input[name="tipo"]').on('change', updateCpfCnpjMask);
-    
-    // Inicializa com a máscara correta baseada no tipo atual
-    updateCpfCnpjMask();
-    
-    // Remove máscaras antes de enviar o formulário
-    $('#clientForm').on('submit', function(e) {
-        // Remove máscaras dos campos para enviar apenas números
-        $('.phone-mask, .mobile-mask, .cep-mask').each(function() {
-            const unmaskedValue = $(this).inputmask('unmaskedvalue');
-            if (unmaskedValue) {
-                $(this).val(unmaskedValue);
-            }
-        });
-        
-        // Remove máscara do CPF/CNPJ
-        const cpfCnpj = $('#cpf_cnpj');
-        const unmaskedCpfCnpj = cpfCnpj.inputmask('unmaskedvalue');
-        if (unmaskedCpfCnpj) {
-            cpfCnpj.val(unmaskedCpfCnpj);
-        }
-        
-        console.log('Formulário enviando - dados sem máscaras');
-    });
-});
-
 // Componente de Tags
 (function() {
     const tagsList = document.getElementById('tags-list');
@@ -481,6 +404,84 @@ $content = ob_get_clean();
 ob_start();
 ?>
 <script src="<?php echo asset('tema/assets/libs/inputmask/dist/jquery.inputmask.min.js'); ?>"></script>
+<script>
+// Máscaras de Input
+$(document).ready(function() {
+    // Máscara de telefone fixo
+    $('.phone-mask').inputmask('(99) 9999-9999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false,
+        removeMaskOnSubmit: true
+    });
+    
+    // Máscara de celular
+    $('.mobile-mask').inputmask('(99) 99999-9999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false,
+        removeMaskOnSubmit: true
+    });
+    
+    // Máscara de CEP
+    $('.cep-mask').inputmask('99999-999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false,
+        removeMaskOnSubmit: true
+    });
+    
+    // Máscara dinâmica para CPF/CNPJ
+    function updateCpfCnpjMask() {
+        const tipo = $('input[name="tipo"]:checked').val();
+        const input = $('#cpf_cnpj');
+        
+        // Remove máscara anterior
+        input.inputmask('remove');
+        
+        if (tipo === 'fisica') {
+            // CPF: 000.000.000-00
+            input.inputmask('999.999.999-99', {
+                clearMaskOnLostFocus: false,
+                showMaskOnHover: false,
+                removeMaskOnSubmit: true
+            });
+            input.attr('placeholder', '000.000.000-00');
+        } else {
+            // CNPJ: 00.000.000/0000-00
+            input.inputmask('99.999.999/9999-99', {
+                clearMaskOnLostFocus: false,
+                showMaskOnHover: false,
+                removeMaskOnSubmit: true
+            });
+            input.attr('placeholder', '00.000.000/0000-00');
+        }
+    }
+    
+    // Atualiza máscara ao mudar tipo
+    $('input[name="tipo"]').on('change', updateCpfCnpjMask);
+    
+    // Inicializa com a máscara correta baseada no tipo atual
+    updateCpfCnpjMask();
+    
+    // Remove máscaras antes de enviar o formulário
+    $('#clientForm').on('submit', function(e) {
+        // Remove máscaras dos campos para enviar apenas números
+        $('.phone-mask, .mobile-mask, .cep-mask').each(function() {
+            const unmaskedValue = $(this).inputmask('unmaskedvalue');
+            if (unmaskedValue) {
+                $(this).val(unmaskedValue);
+            }
+        });
+        
+        // Remove máscara do CPF/CNPJ
+        const cpfCnpj = $('#cpf_cnpj');
+        const unmaskedCpfCnpj = cpfCnpj.inputmask('unmaskedvalue');
+        if (unmaskedCpfCnpj) {
+            cpfCnpj.val(unmaskedCpfCnpj);
+        }
+        
+        console.log('Formulário enviando - dados sem máscaras');
+    });
+});
+</script>
 <?php
 $scripts = ob_get_clean();
 
