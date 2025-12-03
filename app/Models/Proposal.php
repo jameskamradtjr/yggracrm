@@ -21,7 +21,7 @@ class Proposal extends Model
         'duracao_dias', 'data_estimada_conclusao', 'disponibilidade_inicio_imediato',
         'forma_pagamento', 'formas_pagamento_aceitas', 'valor',
         'status', 'data_envio', 'data_validade', 'data_visualizacao_cliente',
-        'token_publico', 'observacoes'
+        'token_publico', 'visualizacoes', 'observacoes'
     ];
     
     protected array $casts = [

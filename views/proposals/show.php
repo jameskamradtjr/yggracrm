@@ -70,6 +70,79 @@ $proposalId = $proposal->id;
     </li>
 </ul>
 
+<!-- Estatísticas de Visualização -->
+<?php 
+$viewStats = \App\Models\ProposalView::getStats($proposal->id);
+?>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary-subtle">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="ti ti-eye fs-8 text-primary"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0"><?php echo number_format($viewStats['total']); ?></h3>
+                        <p class="mb-0 text-muted">Visualizações</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success-subtle">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="ti ti-users fs-8 text-success"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0"><?php echo number_format($viewStats['unique']); ?></h3>
+                        <p class="mb-0 text-muted">Visitantes Únicos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info-subtle">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="ti ti-calendar fs-8 text-info"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0"><?php echo number_format($viewStats['today']); ?></h3>
+                        <p class="mb-0 text-muted">Hoje</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning-subtle">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="ti ti-clock fs-8 text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">
+                            <?php if ($viewStats['last_view']): ?>
+                                <?php echo date('d/m/Y H:i', strtotime($viewStats['last_view'])); ?>
+                            <?php else: ?>
+                                Nunca
+                            <?php endif; ?>
+                        </h6>
+                        <p class="mb-0 text-muted">Última Visualização</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="tab-content">
     <!-- Aba Dados -->
     <div class="tab-pane fade show active" id="dados" role="tabpanel">

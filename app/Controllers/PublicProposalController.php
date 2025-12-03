@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use Core\Controller;
 use App\Models\Proposal;
+use App\Models\ProposalView;
 
 class PublicProposalController extends Controller
 {
@@ -30,12 +31,15 @@ class PublicProposalController extends Controller
             abort(404, 'Proposta não encontrada ou link inválido');
         }
         
-        // Registra visualização (apenas primeira vez)
+        // Registra primeira visualização do cliente
         if (!$proposal->data_visualizacao_cliente) {
             $proposal->update([
                 'data_visualizacao_cliente' => date('Y-m-d H:i:s')
             ]);
         }
+        
+        // Registra visualização detalhada (IP, user agent, etc.)
+        ProposalView::registrarVisualizacao((int)$proposalId);
         
         // Carrega dados relacionados
         $services = $proposal->services();
