@@ -82,12 +82,12 @@ $title = $title ?? 'Editar Cliente';
                 
                 <div class="col-md-6 mb-3">
                     <label for="telefone" class="form-label">Telefone</label>
-                    <input type="text" class="form-control" id="telefone" name="telefone" value="<?php echo e($client->telefone ?? ''); ?>" placeholder="(00) 0000-0000">
+                    <input type="text" class="form-control phone-mask" id="telefone" name="telefone" value="<?php echo e($client->telefone ?? ''); ?>" placeholder="(00) 0000-0000">
                 </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="celular" class="form-label">Celular</label>
-                    <input type="text" class="form-control" id="celular" name="celular" value="<?php echo e($client->celular ?? ''); ?>" placeholder="(00) 00000-0000">
+                    <input type="text" class="form-control mobile-mask" id="celular" name="celular" value="<?php echo e($client->celular ?? ''); ?>" placeholder="(00) 00000-0000">
                 </div>
                 
                 <div class="col-md-6 mb-3">
@@ -166,7 +166,7 @@ $title = $title ?? 'Editar Cliente';
                 
                 <div class="col-md-3 mb-3">
                     <label for="cep" class="form-label">CEP</label>
-                    <input type="text" class="form-control" id="cep" name="cep" value="<?php echo e($client->cep ?? ''); ?>" placeholder="00000-000">
+                    <input type="text" class="form-control cep-mask" id="cep" name="cep" value="<?php echo e($client->cep ?? ''); ?>" placeholder="00000-000">
                 </div>
             </div>
 
@@ -209,7 +209,60 @@ $title = $title ?? 'Editar Cliente';
     </div>
 </div>
 
+<script src="<?php echo asset('tema/assets/libs/inputmask/dist/jquery.inputmask.min.js'); ?>"></script>
 <script>
+// Máscaras de Input
+$(document).ready(function() {
+    // Máscara de telefone fixo
+    $('.phone-mask').inputmask('(99) 9999-9999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false
+    });
+    
+    // Máscara de celular
+    $('.mobile-mask').inputmask('(99) 99999-9999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false
+    });
+    
+    // Máscara de CEP
+    $('.cep-mask').inputmask('99999-999', {
+        clearMaskOnLostFocus: false,
+        showMaskOnHover: false
+    });
+    
+    // Máscara dinâmica para CPF/CNPJ
+    function updateCpfCnpjMask() {
+        const tipo = $('input[name="tipo"]:checked').val();
+        const input = $('#cpf_cnpj');
+        
+        // Remove máscara anterior
+        input.inputmask('remove');
+        
+        if (tipo === 'fisica') {
+            // CPF: 000.000.000-00
+            input.inputmask('999.999.999-99', {
+                clearMaskOnLostFocus: false,
+                showMaskOnHover: false
+            });
+            input.attr('placeholder', '000.000.000-00');
+        } else {
+            // CNPJ: 00.000.000/0000-00
+            input.inputmask('99.999.999/9999-99', {
+                clearMaskOnLostFocus: false,
+                showMaskOnHover: false
+            });
+            input.attr('placeholder', '00.000.000/0000-00');
+        }
+    }
+    
+    // Atualiza máscara ao mudar tipo
+    $('input[name="tipo"]').on('change', updateCpfCnpjMask);
+    
+    // Inicializa com a máscara correta baseada no tipo atual
+    updateCpfCnpjMask();
+});
+
 // Componente de Tags
 (function() {
     const tagsList = document.getElementById('tags-list');
