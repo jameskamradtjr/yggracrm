@@ -286,40 +286,126 @@
             </div>
             
             <div style="margin-top: 30px;">
-                <h3 style="color: white; margin-bottom: 15px;">Vamos trabalhar juntos?</h3>
-                <p style="color: #ccc; margin-bottom: 30px;">Será um prazer realizar o seu projeto!</p>
-                
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <?php if ($proposal->status === 'aprovada'): ?>
+                    <div style="background: rgba(40, 167, 69, 0.2); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="color: #28a745; margin-bottom: 10px;">✅ Proposta Aceita!</h3>
+                        <p style="color: #ccc;">Você aceitou esta proposta. Em breve entraremos em contato!</p>
+                    </div>
                     <button type="button" class="btn btn-secondary no-print" onclick="enviarMensagem()" style="padding: 12px 30px; font-size: 16px;">
-                        Enviar mensagem
+                        <i class="ti ti-message"></i> Enviar mensagem
                     </button>
-                    <button type="button" class="btn btn-success no-print" onclick="aceitarProposta()" style="padding: 12px 30px; font-size: 16px; background: #28a745; border-color: #28a745;">
-                        Aceitar proposta
+                <?php elseif ($proposal->status === 'rejeitada'): ?>
+                    <div style="background: rgba(220, 53, 69, 0.2); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="color: #dc3545; margin-bottom: 10px;">❌ Proposta Recusada</h3>
+                        <p style="color: #ccc;">Você recusou esta proposta. Agradecemos o retorno!</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary no-print" onclick="enviarMensagem()" style="padding: 12px 30px; font-size: 16px;">
+                        <i class="ti ti-message"></i> Entrar em contato
                     </button>
-                    <button type="button" class="btn btn-danger no-print" onclick="recusarProposta()" style="padding: 12px 30px; font-size: 16px; background: #dc3545; border-color: #dc3545;">
-                        Recusar proposta
-                    </button>
-                </div>
+                <?php else: ?>
+                    <h3 style="color: white; margin-bottom: 15px;">Vamos trabalhar juntos?</h3>
+                    <p style="color: #ccc; margin-bottom: 30px;">Será um prazer realizar o seu projeto!</p>
+                    
+                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary no-print" onclick="enviarMensagem()" style="padding: 12px 30px; font-size: 16px;">
+                            <i class="ti ti-message"></i> Enviar mensagem
+                        </button>
+                        <button type="button" class="btn btn-success no-print" onclick="aceitarProposta()" style="padding: 12px 30px; font-size: 16px; background: #28a745; border-color: #28a745;">
+                            <i class="ti ti-check"></i> Aceitar proposta
+                        </button>
+                        <button type="button" class="btn btn-danger no-print" onclick="recusarProposta()" style="padding: 12px 30px; font-size: 16px; background: #dc3545; border-color: #dc3545;">
+                            <i class="ti ti-x"></i> Recusar proposta
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
     
     <script>
-    function enviarMensagem() {
-        alert('Funcionalidade de enviar mensagem será implementada em breve.');
-    }
+    const proposalId = <?php echo $proposal->id; ?>;
+    const proposalToken = '<?php echo $proposal->token_publico; ?>';
+    const userWhatsapp = '<?php echo $user->telefone ?? $user->celular ?? ''; ?>';
+    const userEmail = '<?php echo $user->email ?? ''; ?>';
+    const proposalTitle = '<?php echo addslashes($proposal->titulo); ?>';
     
-    function aceitarProposta() {
-        if (confirm('Tem certeza que deseja aceitar esta proposta?')) {
-            // TODO: Implementar endpoint para aceitar proposta
-            alert('Funcionalidade de aceitar proposta será implementada em breve.');
+    function enviarMensagem() {
+        // Tenta abrir WhatsApp se houver número configurado
+        if (userWhatsapp) {
+            const numero = userWhatsapp.replace(/\D/g, ''); // Remove caracteres não numéricos
+            const mensagem = encodeURIComponent(`Olá! Estou interessado na proposta "${proposalTitle}". Gostaria de esclarecer algumas dúvidas.`);
+            const urlWhatsapp = `https://wa.me/55${numero}?text=${mensagem}`;
+            window.open(urlWhatsapp, '_blank');
+        } else if (userEmail) {
+            // Fallback para email
+            const assunto = encodeURIComponent(`Dúvida sobre proposta ${proposalTitle}`);
+            const corpo = encodeURIComponent(`Olá! Visualizei a proposta "${proposalTitle}" e gostaria de esclarecer algumas dúvidas.\n\nAguardo retorno.`);
+            window.location.href = `mailto:${userEmail}?subject=${assunto}&body=${corpo}`;
+        } else {
+            alert('Não há informações de contato disponíveis. Por favor, entre em contato pelos canais tradicionais.');
         }
     }
     
-    function recusarProposta() {
-        if (confirm('Tem certeza que deseja recusar esta proposta?')) {
-            // TODO: Implementar endpoint para recusar proposta
-            alert('Funcionalidade de recusar proposta será implementada em breve.');
+    async function aceitarProposta() {
+        if (!confirm('🎉 Confirma que deseja ACEITAR esta proposta?\n\nAo confirmar, o responsável será notificado e entraremos em contato em breve!')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/yggracrm/proposals/${proposalId}/public/${proposalToken}/accept`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ ' + (data.message || 'Erro ao aceitar proposta'));
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao processar sua resposta. Tente novamente.');
+        }
+    }
+    
+    async function recusarProposta() {
+        const motivo = prompt('Poderia nos informar o motivo da recusa? (Opcional)\n\nIsso nos ajuda a melhorar nossas propostas futuras.');
+        
+        if (motivo === null) {
+            return; // Usuário cancelou
+        }
+        
+        if (!confirm('Confirma que deseja RECUSAR esta proposta?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/yggracrm/proposals/${proposalId}/public/${proposalToken}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    motivo: motivo || null
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ ' + (data.message || 'Erro ao recusar proposta'));
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao processar sua resposta. Tente novamente.');
         }
     }
     </script>

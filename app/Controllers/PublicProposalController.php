@@ -59,5 +59,95 @@ class PublicProposalController extends Controller
             'isPublicView' => true
         ]);
     }
+    
+    /**
+     * Cliente aceita a proposta
+     */
+    public function accept(array $params): void
+    {
+        $proposalId = $params['id'] ?? null;
+        $token = $params['token'] ?? null;
+        
+        if (!$proposalId || !$token) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $proposal = Proposal::where('id', $proposalId)
+            ->where('token_publico', $token)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada ou link inválido'], 404);
+            return;
+        }
+        
+        // Atualiza status para aprovada
+        $proposal->update([
+            'status' => 'aprovada'
+        ]);
+        
+        // Registra log
+        \App\Models\SistemaLog::registrar(
+            'proposals',
+            'ACCEPT_PUBLIC',
+            $proposal->id,
+            "Proposta {$proposal->numero_proposta} aceita pelo cliente via link público",
+            null,
+            null
+        );
+        
+        json_response([
+            'success' => true,
+            'message' => 'Proposta aceita com sucesso! Em breve entraremos em contato.'
+        ]);
+    }
+    
+    /**
+     * Cliente recusa a proposta
+     */
+    public function reject(array $params): void
+    {
+        $proposalId = $params['id'] ?? null;
+        $token = $params['token'] ?? null;
+        
+        if (!$proposalId || !$token) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $proposal = Proposal::where('id', $proposalId)
+            ->where('token_publico', $token)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada ou link inválido'], 404);
+            return;
+        }
+        
+        // Recebe motivo (opcional)
+        $data = json_decode(file_get_contents('php://input'), true);
+        $motivo = $data['motivo'] ?? null;
+        
+        // Atualiza status para rejeitada
+        $proposal->update([
+            'status' => 'rejeitada'
+        ]);
+        
+        // Registra log com motivo se fornecido
+        \App\Models\SistemaLog::registrar(
+            'proposals',
+            'REJECT_PUBLIC',
+            $proposal->id,
+            "Proposta {$proposal->numero_proposta} recusada pelo cliente via link público" . ($motivo ? ". Motivo: {$motivo}" : ""),
+            null,
+            null
+        );
+        
+        json_response([
+            'success' => true,
+            'message' => 'Sua resposta foi registrada. Agradecemos o retorno!'
+        ]);
+    }
 }
 

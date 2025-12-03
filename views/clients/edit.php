@@ -456,8 +456,19 @@ $(document).ready(function() {
     // Inicializa com a máscara correta baseada no tipo atual
     updateCpfCnpjMask();
     
-    // Formulário pronto com máscaras ativadas
-    console.log('✅ Máscaras de input ativadas');
+    // Remove máscaras antes de enviar o formulário
+    $('#clientForm').on('submit', function(e) {
+        // Remove máscaras dos campos para enviar apenas números
+        $('.phone-mask, .mobile-mask, .cep-mask').each(function() {
+            const unmaskedValue = $(this).inputmask('unmaskedvalue');
+            $(this).val(unmaskedValue || '');
+        });
+        
+        // Remove máscara do CPF/CNPJ
+        const cpfCnpj = $('#cpf_cnpj');
+        const unmaskedCpfCnpj = cpfCnpj.inputmask('unmaskedvalue');
+        cpfCnpj.val(unmaskedCpfCnpj || '');
+    });
 });
 </script>
 <?php
