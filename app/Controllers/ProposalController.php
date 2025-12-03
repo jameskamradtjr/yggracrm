@@ -143,8 +143,14 @@ class ProposalController extends Controller
             // Gera número da proposta após criar
             if (!$proposal->numero_proposta) {
                 $proposal->gerarNumeroProposta();
-                $proposal->save();
             }
+            
+            // Gera token público para compartilhamento
+            if (!$proposal->token_publico) {
+                $proposal->gerarTokenPublico();
+            }
+            
+            $proposal->save();
             
             // Dispara evento de automação
             AutomationEventDispatcher::onProposal('created', $proposal->id, auth()->getDataUserId());

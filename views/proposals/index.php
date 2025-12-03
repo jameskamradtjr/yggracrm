@@ -111,7 +111,7 @@ $title = $title ?? 'Propostas';
                                         <button type="button" 
                                                 class="btn btn-sm btn-info" 
                                                 title="Copiar Link Público para Cliente"
-                                                onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public-view/' . $proposal->public_token); ?>')">
+                                                onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public/' . ($proposal->token_publico ?: 'sem-token')); ?>')">
                                             <i class="ti ti-link"></i>
                                         </button>
                                         <a href="<?php echo url('/proposals/' . $proposal->id . '/preview'); ?>" class="btn btn-sm btn-secondary" title="Preview Interno" target="_blank">

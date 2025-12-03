@@ -25,7 +25,7 @@ $proposalId = $proposal->id;
                 <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
                     <button type="button" 
                             class="btn btn-info" 
-                            onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public-view/' . $proposal->public_token); ?>')"
+                            onclick="copyPublicLink(<?php echo $proposal->id; ?>, '<?php echo $proposal->token_publico; ?>')"
                             title="Copiar Link Público para Cliente">
                         <i class="ti ti-link me-2"></i>Link Cliente
                     </button>

@@ -36,6 +36,10 @@ $router->get('/', function() {
     }
 });
 
+// Rotas públicas - Propostas e Contratos (sem autenticação)
+$router->get('/proposals/{id}/public/{token}', [\App\Controllers\PublicProposalController::class, 'show']);
+$router->get('/contracts/{id}/public/{token}', [\App\Controllers\PublicContractController::class, 'show']);
+
 // Rotas públicas do Quiz customizado (devem vir antes da rota genérica)
 $router->get('/quiz/{slug}', [QuizController::class, 'publicQuiz']);
 $router->post('/quiz/{slug}/submit', [QuizController::class, 'submitQuiz']);
