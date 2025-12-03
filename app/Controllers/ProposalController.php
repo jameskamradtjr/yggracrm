@@ -249,10 +249,12 @@ class ProposalController extends Controller
         $csrfToken = $this->request->input('_csrf_token') 
             ?? $this->request->header('X-CSRF-Token') 
             ?? $this->request->header('X-Csrf-Token')
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
             ?? null;
         
         if (!$csrfToken || !verify_csrf($csrfToken)) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido.'], 403);
+            error_log("CSRF Token inválido - Token recebido: " . ($csrfToken ?: 'vazio'));
+            json_response(['success' => false, 'message' => 'Token de segurança inválido. Recarregue a página e tente novamente.'], 403);
             return;
         }
 
@@ -408,10 +410,12 @@ class ProposalController extends Controller
         $csrfToken = $this->request->input('_csrf_token') 
             ?? $this->request->header('X-CSRF-Token') 
             ?? $this->request->header('X-Csrf-Token')
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
             ?? null;
         
         if (!$csrfToken || !verify_csrf($csrfToken)) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido.'], 403);
+            error_log("CSRF Token inválido - Token recebido: " . ($csrfToken ?: 'vazio'));
+            json_response(['success' => false, 'message' => 'Token de segurança inválido. Recarregue a página e tente novamente.'], 403);
             return;
         }
 
@@ -467,10 +471,12 @@ class ProposalController extends Controller
         $csrfToken = $this->request->input('_csrf_token') 
             ?? $this->request->header('X-CSRF-Token') 
             ?? $this->request->header('X-Csrf-Token')
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
             ?? null;
         
         if (!$csrfToken || !verify_csrf($csrfToken)) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido.'], 403);
+            error_log("CSRF Token inválido - Token recebido: " . ($csrfToken ?: 'vazio'));
+            json_response(['success' => false, 'message' => 'Token de segurança inválido. Recarregue a página e tente novamente.'], 403);
             return;
         }
 
@@ -557,10 +563,12 @@ class ProposalController extends Controller
         $csrfToken = $this->request->input('_csrf_token') 
             ?? $this->request->header('X-CSRF-Token') 
             ?? $this->request->header('X-Csrf-Token')
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
             ?? null;
         
         if (!$csrfToken || !verify_csrf($csrfToken)) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido.'], 403);
+            error_log("CSRF Token inválido - Token recebido: " . ($csrfToken ?: 'vazio'));
+            json_response(['success' => false, 'message' => 'Token de segurança inválido. Recarregue a página e tente novamente.'], 403);
             return;
         }
 
@@ -670,10 +678,12 @@ class ProposalController extends Controller
         $csrfToken = $this->request->input('_csrf_token') 
             ?? $this->request->header('X-CSRF-Token') 
             ?? $this->request->header('X-Csrf-Token')
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
             ?? null;
         
         if (!$csrfToken || !verify_csrf($csrfToken)) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido.'], 403);
+            error_log("CSRF Token inválido - Token recebido: " . ($csrfToken ?: 'vazio'));
+            json_response(['success' => false, 'message' => 'Token de segurança inválido. Recarregue a página e tente novamente.'], 403);
             return;
         }
 

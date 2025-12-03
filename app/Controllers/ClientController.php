@@ -464,7 +464,7 @@ class ClientController extends Controller
 
         // Busca contatos relacionados
         $contacts = $db->query(
-            "SELECT id, nome, cargo, tipo, assunto, descricao, data_contato, hora_contato, resultado, created_at, 'contact' as tipo
+            "SELECT id, tipo, assunto, descricao, data_contato, hora_contato, resultado, created_at
              FROM contacts 
              WHERE client_id = ? AND user_id = ?
              ORDER BY COALESCE(data_contato, created_at) DESC, COALESCE(hora_contato, '00:00') DESC",
@@ -478,10 +478,9 @@ class ClientController extends Controller
             $history[] = [
                 'tipo' => 'contact',
                 'id' => $contact['id'],
-                'titulo' => "Contato: {$contact['nome']}" . ($contact['cargo'] ? " ({$contact['cargo']})" : ''),
-                'descricao' => ucfirst($contact['tipo']) . 
-                              ($contact['assunto'] ? " - {$contact['assunto']}" : '') .
-                              ($contact['resultado'] ? " - Resultado: " . ucfirst($contact['resultado']) : ''),
+                'titulo' => "Contato via " . ucfirst($contact['tipo']) . ($contact['assunto'] ? ": {$contact['assunto']}" : ''),
+                'descricao' => substr($contact['descricao'], 0, 100) . (strlen($contact['descricao']) > 100 ? '...' : '') .
+                              ($contact['resultado'] ? " - Resultado: " . ucfirst(str_replace('_', ' ', $contact['resultado'])) : ''),
                 'data' => $dataContato . ' ' . $horaContato,
                 'dados' => $contact
             ];

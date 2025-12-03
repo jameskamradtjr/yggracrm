@@ -65,7 +65,7 @@ ob_start();
                                       rows="15" 
                                       required><?php echo e(old('body')); ?></textarea>
                             <small class="text-muted">
-                                Use HTML para formatar o email. Variáveis: {{variavel}}
+                                Use o editor visual para formatar o email. Variáveis: {{variavel}}
                             </small>
                         </div>
                         
@@ -94,6 +94,59 @@ ob_start();
 <?php
 // Captura o conteúdo
 $content = ob_get_clean();
+
+// Scripts adicionais
+$scripts = <<<'SCRIPTS'
+<!-- TinyMCE -->
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+
+<script>
+tinymce.init({
+    selector: '#body',
+    height: 500,
+    menubar: true,
+    plugins: [
+        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+        'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+    ],
+    toolbar: 'undo redo | blocks | ' +
+        'bold italic forecolor backcolor | alignleft aligncenter ' +
+        'alignright alignjustify | bullist numlist outdent indent | ' +
+        'removeformat | link image | code | help',
+    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+    language: 'pt_BR',
+    language_url: 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/langs/pt_BR.js',
+    promotion: false,
+    branding: false,
+    setup: function(editor) {
+        // Adiciona botão para inserir variáveis
+        editor.ui.registry.addButton('variablebutton', {
+            text: 'Variável',
+            tooltip: 'Inserir variável',
+            onAction: function() {
+                const variable = prompt('Digite o nome da variável (ex: nome, email):');
+                if (variable) {
+                    editor.insertContent('{{' + variable + '}}');
+                }
+            }
+        });
+        
+        // Adiciona o botão à toolbar
+        editor.on('init', function() {
+            const toolbar = editor.getContainer().querySelector('.tox-toolbar__primary');
+            if (toolbar) {
+                // Botão já adicionado via setup
+            }
+        });
+    },
+    toolbar: 'undo redo | blocks | ' +
+        'bold italic forecolor backcolor | alignleft aligncenter ' +
+        'alignright alignjustify | bullist numlist outdent indent | ' +
+        'removeformat | link image | variablebutton | code | help'
+});
+</script>
+SCRIPTS;
 
 // Inclui o layout
 include base_path('views/layouts/app.php');

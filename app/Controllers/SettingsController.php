@@ -634,6 +634,10 @@ class SettingsController extends Controller
         // Google Gemini
         $geminiApiKey = trim($this->request->input('gemini_api_key', ''));
         $oldGeminiApiKey = SystemSetting::get('gemini_api_key');
+        // Garante que seja string
+        if (!is_string($oldGeminiApiKey)) {
+            $oldGeminiApiKey = '';
+        }
         
         if (empty($geminiApiKey) && !empty($oldGeminiApiKey)) {
             $geminiApiKey = $oldGeminiApiKey;
@@ -646,6 +650,10 @@ class SettingsController extends Controller
         $apizapToken = trim($this->request->input('apizap_token', ''));
         
         $oldApizapConfig = SystemSetting::get('apizap_config', []);
+        // Garante que seja array
+        if (!is_array($oldApizapConfig)) {
+            $oldApizapConfig = [];
+        }
         $apizapConfig = [
             'instance_key' => $apizapInstanceKey,
             'token' => !empty($apizapToken) ? $apizapToken : ($oldApizapConfig['token'] ?? '')
@@ -660,6 +668,10 @@ class SettingsController extends Controller
         $resendFromEmail = trim($this->request->input('resend_from_email', 'noreply@email.byte0.com.br'));
         
         $oldResendConfig = SystemSetting::get('resend_config', []);
+        // Garante que seja array
+        if (!is_array($oldResendConfig)) {
+            $oldResendConfig = [];
+        }
         $resendConfig = [
             'api_key' => !empty($resendApiKey) ? $resendApiKey : ($oldResendConfig['api_key'] ?? ''),
             'from_email' => $resendFromEmail

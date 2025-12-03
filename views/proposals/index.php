@@ -105,11 +105,17 @@ $title = $title ?? 'Propostas';
                                 <td><?php echo date('d/m/Y', strtotime($proposal->created_at)); ?></td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <a href="<?php echo url('/proposals/' . $proposal->id); ?>" class="btn btn-sm btn-primary" title="Ver">
-                                            <i class="ti ti-eye"></i>
+                                        <a href="<?php echo url('/proposals/' . $proposal->id); ?>" class="btn btn-sm btn-primary" title="Editar">
+                                            <i class="ti ti-edit"></i>
                                         </a>
-                                        <a href="<?php echo url('/proposals/' . $proposal->id . '/preview'); ?>" class="btn btn-sm btn-info" title="Preview" target="_blank">
-                                            <i class="ti ti-external-link"></i>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-info" 
+                                                title="Copiar Link Público para Cliente"
+                                                onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public-view/' . $proposal->public_token); ?>')">
+                                            <i class="ti ti-link"></i>
+                                        </button>
+                                        <a href="<?php echo url('/proposals/' . $proposal->id . '/preview'); ?>" class="btn btn-sm btn-secondary" title="Preview Interno" target="_blank">
+                                            <i class="ti ti-eye"></i>
                                         </a>
                                         <a href="<?php echo url('/proposals/' . $proposal->id . '/pdf'); ?>" class="btn btn-sm btn-warning" title="Gerar PDF" target="_blank">
                                             <i class="ti ti-file-pdf"></i>
@@ -141,6 +147,21 @@ $title = $title ?? 'Propostas';
         </div>
     </div>
 </div>
+
+<script>
+function copiarLinkPublico(url) {
+    // Cria um elemento temporário
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    
+    // Mostra feedback visual
+    alert('Link copiado!\n\n' + url + '\n\nCompartilhe este link com o cliente para que ele visualize a proposta.');
+}
+</script>
 
 <?php
 $content = ob_get_clean();

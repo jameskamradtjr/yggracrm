@@ -23,6 +23,12 @@ $proposalId = $proposal->id;
             </div>
             <div class="col-12 col-md-3">
                 <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                    <button type="button" 
+                            class="btn btn-info" 
+                            onclick="copiarLinkPublico('<?php echo url('/proposals/' . $proposal->id . '/public-view/' . $proposal->public_token); ?>')"
+                            title="Copiar Link Público para Cliente">
+                        <i class="ti ti-link me-2"></i>Link Cliente
+                    </button>
                     <a href="<?php echo url('/proposals/' . $proposal->id . '/pdf'); ?>" class="btn btn-warning" target="_blank" title="Gerar PDF">
                         <i class="ti ti-file-pdf me-2"></i>PDF
                     </a>
@@ -532,6 +538,20 @@ function deletarCondicao(conditionId) {
 function calcularTotais() {
     // Recalcula totais quando desconto muda
     // Será feito no backend ao salvar
+}
+
+// Função para copiar link público
+function copiarLinkPublico(url) {
+    // Cria um elemento temporário
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    
+    // Mostra feedback visual
+    alert('✅ Link copiado com sucesso!\n\n' + url + '\n\n📧 Compartilhe este link com o cliente para que ele visualize a proposta.');
 }
 </script>
 
