@@ -28,7 +28,7 @@ $title = $title ?? 'Novo Template';
     <div class="col-md-9">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?php echo url('/contracts/templates'); ?>">
+                <form method="POST" action="<?php echo url('/contracts/templates'); ?>" id="templateForm">
                     <?php echo csrf_field(); ?>
                     
                     <div class="mb-3">
@@ -38,7 +38,7 @@ $title = $title ?? 'Novo Template';
                     
                     <div class="mb-3">
                         <label for="conteudo" class="form-label">Conteúdo do Template <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="conteudo" name="conteudo" rows="20" required></textarea>
+                        <textarea class="form-control" id="conteudo" name="conteudo" rows="20"></textarea>
                         <small class="text-muted">Use variáveis como {{nome_cliente}}, {{documento_cliente}}, etc.</small>
                     </div>
                     
@@ -116,6 +116,29 @@ function inserirVariavel(variavel) {
         textarea.focus();
     }
 }
+
+// Validação do formulário antes de submeter
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    // Sincroniza o conteúdo do TinyMCE com o textarea
+    const editor = tinymce.get('conteudo');
+    if (editor) {
+        editor.save();
+    }
+    
+    // Valida se o conteúdo não está vazio
+    const conteudo = document.getElementById('conteudo').value.trim();
+    if (!conteudo || conteudo === '') {
+        e.preventDefault();
+        alert('❌ Por favor, preencha o conteúdo do template.');
+        
+        // Foca no editor TinyMCE
+        if (editor) {
+            editor.focus();
+        }
+        
+        return false;
+    }
+});
 </script>
 
 <?php
