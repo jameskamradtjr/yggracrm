@@ -325,9 +325,13 @@ class AutomationController extends Controller
                 ->orderBy('name', 'ASC')
                 ->get();
             
+            $tagsArray = array_map(function($tag) {
+                return ['id' => $tag->id, 'name' => $tag->name];
+            }, $tags);
+            
             json_response([
                 'success' => true,
-                'tags' => $tags->map(fn($tag) => ['id' => $tag->id, 'name' => $tag->name])->toArray()
+                'tags' => $tagsArray
             ]);
         } catch (\Exception $e) {
             error_log("Erro ao obter tags: " . $e->getMessage());
@@ -350,9 +354,13 @@ class AutomationController extends Controller
                 ->orderBy('name', 'ASC')
                 ->get();
             
+            $usersArray = array_map(function($user) {
+                return ['id' => $user->id, 'name' => $user->name, 'email' => $user->email];
+            }, $users);
+            
             json_response([
                 'success' => true,
-                'users' => $users->map(fn($user) => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email])->toArray()
+                'users' => $usersArray
             ]);
         } catch (\Exception $e) {
             error_log("Erro ao obter usuários: " . $e->getMessage());
@@ -376,9 +384,13 @@ class AutomationController extends Controller
                 ->orderBy('nome', 'ASC')
                 ->get();
             
+            $originsArray = array_map(function($origin) {
+                return ['id' => $origin->id, 'nome' => $origin->nome];
+            }, $origins);
+            
             json_response([
                 'success' => true,
-                'origins' => $origins->map(fn($origin) => ['id' => $origin->id, 'nome' => $origin->nome])->toArray()
+                'origins' => $originsArray
             ]);
         } catch (\Exception $e) {
             error_log("Erro ao obter origens: " . $e->getMessage());
@@ -391,27 +403,48 @@ class AutomationController extends Controller
      */
     public function getEmailTemplates(): void
     {
-        if (!auth()->check()) {
-            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
-            return;
-        }
-        
+        // Garante que sempre retorna JSON, mesmo em caso de erro
         try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+            
             // Templates de email são globais (não multi-tenant)
             $templates = \App\Models\EmailTemplate::where('is_active', 1)
                 ->orderBy('name', 'ASC')
                 ->get();
             
+            // Verifica se $templates é array e não está vazio
+            if (!is_array($templates)) {
+                $templates = [];
+            }
+            
+            $templatesArray = array_map(function($template) {
+                return [
+                    'slug' => $template->slug ?? '',
+                    'name' => $template->name ?? ''
+                ];
+            }, $templates);
+            
             json_response([
                 'success' => true,
-                'email_templates' => $templates->map(fn($template) => [
-                    'slug' => $template->slug,
-                    'name' => $template->name
-                ])->toArray()
+                'email_templates' => $templatesArray
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Captura qualquer erro (Exception, Error, etc)
             error_log("Erro ao obter templates de email: " . $e->getMessage());
-            json_response(['success' => false, 'message' => 'Erro ao carregar templates de email'], 500);
+            error_log("Stack trace: " . $e->getTraceAsString());
+            
+            // Garante que retorna JSON mesmo em caso de erro
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Erro ao carregar templates de email: ' . $e->getMessage(),
+                'email_templates' => []
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
         }
     }
     
@@ -420,27 +453,48 @@ class AutomationController extends Controller
      */
     public function getWhatsAppTemplates(): void
     {
-        if (!auth()->check()) {
-            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
-            return;
-        }
-        
+        // Garante que sempre retorna JSON, mesmo em caso de erro
         try {
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+            
             // Templates de WhatsApp são globais (não multi-tenant)
             $templates = \App\Models\WhatsAppTemplate::where('is_active', 1)
                 ->orderBy('name', 'ASC')
                 ->get();
             
+            // Verifica se $templates é array e não está vazio
+            if (!is_array($templates)) {
+                $templates = [];
+            }
+            
+            $templatesArray = array_map(function($template) {
+                return [
+                    'slug' => $template->slug ?? '',
+                    'name' => $template->name ?? ''
+                ];
+            }, $templates);
+            
             json_response([
                 'success' => true,
-                'whatsapp_templates' => $templates->map(fn($template) => [
-                    'slug' => $template->slug,
-                    'name' => $template->name
-                ])->toArray()
+                'whatsapp_templates' => $templatesArray
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Captura qualquer erro (Exception, Error, etc)
             error_log("Erro ao obter templates de WhatsApp: " . $e->getMessage());
-            json_response(['success' => false, 'message' => 'Erro ao carregar templates de WhatsApp'], 500);
+            error_log("Stack trace: " . $e->getTraceAsString());
+            
+            // Garante que retorna JSON mesmo em caso de erro
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Erro ao carregar templates de WhatsApp: ' . $e->getMessage(),
+                'whatsapp_templates' => []
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
         }
     }
     
