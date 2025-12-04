@@ -8,14 +8,22 @@ ob_start();
 $logoDark = \App\Models\SystemSetting::get('logo_dark');
 if (empty($logoDark) || !is_string($logoDark)) {
     $logoDark = asset('tema/assets/images/logos/dark-logo.svg');
-} elseif (is_string($logoDark) && strpos($logoDark, '/uploads/') === 0) {
+} elseif (is_string($logoDark) && (str_starts_with($logoDark, 'http://') || str_starts_with($logoDark, 'https://'))) {
+    // URL absoluta (S3 ou externa) - usa diretamente
+    $logoDark = $logoDark;
+} elseif (is_string($logoDark) && str_starts_with($logoDark, '/uploads/')) {
+    // Caminho local - converte para asset
     $logoDark = asset($logoDark);
 }
 
 $logoLight = \App\Models\SystemSetting::get('logo_light');
 if (empty($logoLight) || !is_string($logoLight)) {
     $logoLight = asset('tema/assets/images/logos/light-logo.svg');
-} elseif (is_string($logoLight) && strpos($logoLight, '/uploads/') === 0) {
+} elseif (is_string($logoLight) && (str_starts_with($logoLight, 'http://') || str_starts_with($logoLight, 'https://'))) {
+    // URL absoluta (S3 ou externa) - usa diretamente
+    $logoLight = $logoLight;
+} elseif (is_string($logoLight) && str_starts_with($logoLight, '/uploads/')) {
+    // Caminho local - converte para asset
     $logoLight = asset($logoLight);
 }
 

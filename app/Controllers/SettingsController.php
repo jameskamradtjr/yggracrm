@@ -186,11 +186,14 @@ class SettingsController extends Controller
                         }
                     }
                     
-                    // Salva URL do S3 no banco
+                    // Salva URL do S3 no banco (configuração do usuário)
                     SystemSetting::set('logo_dark', $logoUrl, 'image', 'layout', 'Logo escura do sistema');
                     SystemSetting::set('logo_light', $logoUrl, 'image', 'layout', 'Logo clara do sistema');
                     
                     error_log("Settings: ✓ URL da logo salva no banco de dados");
+                    error_log("Settings: Verificando se smtp_config ainda existe...");
+                    $smtpConfigCheck = SystemSetting::get('smtp_config');
+                    error_log("Settings: smtp_config após salvar logo: " . ($smtpConfigCheck ? (is_array($smtpConfigCheck) ? "ARRAY com " . count($smtpConfigCheck) . " elementos" : "TIPO: " . gettype($smtpConfigCheck)) : "VAZIO"));
                     
                     // Registra log
                     SistemaLog::registrar(
@@ -234,23 +237,40 @@ class SettingsController extends Controller
      */
     public function saveEmail(): void
     {
+        error_log("========== Settings saveEmail INICIADO ==========");
+        error_log("POST data: " . json_encode($_POST));
+        
         $this->checkAdminMaster();
+        
+        error_log("Settings: checkAdminMaster() passou");
 
         // Valida CSRF
         if (!verify_csrf($this->request->input('_csrf_token'))) {
+            error_log("Settings: CSRF token inválido");
             session()->flash('error', 'Token de segurança inválido.');
             $this->redirect('/settings?tab=email');
         }
+        
+        error_log("Settings: CSRF validado com sucesso");
 
-        $data = $this->validate([
-            'smtp_host' => 'required',
-            'smtp_port' => 'required|integer',
-            'smtp_username' => 'required',
-            'smtp_password' => 'required',
-            'smtp_encryption' => 'required|in:tls,ssl',
-            'smtp_from_email' => 'required|email',
-            'smtp_from_name' => 'required'
-        ]);
+        try {
+            $data = $this->validate([
+                'smtp_host' => 'required',
+                'smtp_port' => 'required|integer',
+                'smtp_username' => 'required',
+                'smtp_password' => 'required',
+                'smtp_encryption' => 'required|in:tls,ssl',
+                'smtp_from_email' => 'required|email',
+                'smtp_from_name' => 'required'
+            ]);
+            error_log("Settings: Validação passou, dados validados: " . json_encode(array_keys($data)));
+        } catch (\Exception $e) {
+            error_log("Settings: ERRO na validação: " . $e->getMessage());
+            error_log("Settings: Stack trace: " . $e->getTraceAsString());
+            session()->flash('error', 'Erro na validação: ' . $e->getMessage());
+            $this->redirect('/settings?tab=email');
+            return;
+        }
 
         // Salva configurações SMTP
         $smtpConfig = [
@@ -266,7 +286,17 @@ class SettingsController extends Controller
         // Obtém configuração anterior para log
         $oldConfig = SystemSetting::get('smtp_config', []);
         
-        SystemSetting::set('smtp_config', $smtpConfig, 'json', 'email', 'Configurações SMTP');
+        error_log("Settings: Chamando SystemSetting::set() para smtp_config...");
+        error_log("Settings: Dados a salvar: " . json_encode($smtpConfig));
+        
+        // Salva configuração do usuário
+        $result = SystemSetting::set('smtp_config', $smtpConfig, 'json', 'email', 'Configurações SMTP');
+        
+        error_log("Settings: SystemSetting::set() retornou: " . ($result ? "TRUE (sucesso)" : "FALSE (falhou)"));
+        error_log("Settings: ✓ Configurações SMTP salvas no banco");
+        error_log("Settings: Verificando se logo_dark ainda existe...");
+        $logoDarkCheck = SystemSetting::get('logo_dark');
+        error_log("Settings: logo_dark após salvar email: " . ($logoDarkCheck ? (is_string($logoDarkCheck) ? "STRING: {$logoDarkCheck}" : "TIPO: " . gettype($logoDarkCheck)) : "VAZIO"));
         
         // Registra log (sem mostrar senha)
         $smtpConfigLog = $smtpConfig;
@@ -623,13 +653,21 @@ class SettingsController extends Controller
      */
     public function saveIntegrations(): void
     {
+        error_log("========== Settings saveIntegrations INICIADO ==========");
+        error_log("POST data: " . json_encode($_POST));
+        
         $this->checkAdminMaster();
+        
+        error_log("Settings: checkAdminMaster() passou");
 
         // Valida CSRF
         if (!verify_csrf($this->request->input('_csrf_token'))) {
+            error_log("Settings: CSRF token inválido");
             session()->flash('error', 'Token de segurança inválido.');
             $this->redirect('/settings?tab=integrations');
         }
+        
+        error_log("Settings: CSRF validado com sucesso");
 
         // Google Gemini
         $geminiApiKey = trim($this->request->input('gemini_api_key', ''));
@@ -642,7 +680,9 @@ class SettingsController extends Controller
         if (empty($geminiApiKey) && !empty($oldGeminiApiKey)) {
             $geminiApiKey = $oldGeminiApiKey;
         } else if (!empty($geminiApiKey)) {
-            SystemSetting::set('gemini_api_key', $geminiApiKey, 'text', 'integrations', 'API Key do Google Gemini');
+            error_log("Settings: Chamando SystemSetting::set() para gemini_api_key...");
+            $result = SystemSetting::set('gemini_api_key', $geminiApiKey, 'text', 'integrations', 'API Key do Google Gemini');
+            error_log("Settings: SystemSetting::set() para gemini_api_key retornou: " . ($result ? "TRUE" : "FALSE"));
         }
 
         // APIzap
@@ -660,7 +700,12 @@ class SettingsController extends Controller
         ];
         
         if (!empty($apizapInstanceKey)) {
-            SystemSetting::set('apizap_config', $apizapConfig, 'json', 'integrations', 'Configurações da APIzap');
+            error_log("Settings: Chamando SystemSetting::set() para apizap_config...");
+            error_log("Settings: Dados apizap_config: " . json_encode($apizapConfig));
+            $result = SystemSetting::set('apizap_config', $apizapConfig, 'json', 'integrations', 'Configurações da APIzap');
+            error_log("Settings: SystemSetting::set() para apizap_config retornou: " . ($result ? "TRUE" : "FALSE"));
+        } else {
+            error_log("Settings: apizapInstanceKey vazio, não salvando apizap_config");
         }
 
         // Resend
@@ -678,7 +723,12 @@ class SettingsController extends Controller
         ];
         
         if (!empty($resendApiKey) || !empty($oldResendConfig['api_key'])) {
-            SystemSetting::set('resend_config', $resendConfig, 'json', 'integrations', 'Configurações do Resend');
+            error_log("Settings: Chamando SystemSetting::set() para resend_config...");
+            error_log("Settings: Dados resend_config: " . json_encode($resendConfig));
+            $result = SystemSetting::set('resend_config', $resendConfig, 'json', 'integrations', 'Configurações do Resend');
+            error_log("Settings: SystemSetting::set() para resend_config retornou: " . ($result ? "TRUE" : "FALSE"));
+        } else {
+            error_log("Settings: resendApiKey vazio e sem oldResendConfig, não salvando resend_config");
         }
 
         // Registra log (sem mostrar as chaves completas)

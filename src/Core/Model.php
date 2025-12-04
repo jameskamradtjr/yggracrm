@@ -110,6 +110,28 @@ abstract class Model
     }
 
     /**
+     * Adiciona condição WHERE IS NULL
+     */
+    public static function whereNull(string $column): QueryBuilder
+    {
+        $instance = new static();
+        $builder = new QueryBuilder($instance);
+        
+        return $builder->whereNull($column);
+    }
+
+    /**
+     * Adiciona condição WHERE IS NOT NULL
+     */
+    public static function whereNotNull(string $column): QueryBuilder
+    {
+        $instance = new static();
+        $builder = new QueryBuilder($instance);
+        
+        return $builder->whereNotNull($column);
+    }
+
+    /**
      * Cria um novo registro
      */
     public static function create(array $attributes): static
