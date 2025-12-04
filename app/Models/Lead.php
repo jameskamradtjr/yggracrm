@@ -55,6 +55,30 @@ class Lead extends Model
     ];
 
     /**
+     * Retorna as respostas do quiz deste lead
+     */
+    public function quizResponses(): array
+    {
+        $responses = \App\Models\LeadQuizResponse::where('lead_id', $this->id)
+            ->orderBy('id', 'ASC')
+            ->get();
+        return is_array($responses) ? $responses : [];
+    }
+    
+    /**
+     * Retorna o quiz relacionado (se o lead veio de um quiz)
+     */
+    public function quiz(): ?\App\Models\Quiz
+    {
+        if (!$this->origem || !str_starts_with($this->origem, 'quiz_')) {
+            return null;
+        }
+        
+        $slug = str_replace('quiz_', '', $this->origem);
+        return \App\Models\Quiz::where('slug', $slug)->first();
+    }
+    
+    /**
      * Retorna leads por etapa do funil
      */
     public static function byEtapaFunil(string $etapa): array

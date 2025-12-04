@@ -596,20 +596,25 @@ class QuizController extends Controller
         $leadData['instagram'] = $data['instagram'] ?? '';
 
         // Processa respostas e calcula pontuação
+        $quizResponses = []; // Armazena respostas para salvar depois
+        
         foreach ($steps as $step) {
             $fieldName = $step->field_name ?: 'step_' . $step->id;
             $answer = $data[$fieldName] ?? null;
 
             if ($answer !== null && $answer !== '') {
                 // Adiciona pontos da etapa
-                $totalPoints += $step->points;
+                $stepPoints = $step->points;
+                $totalPoints += $stepPoints;
 
                 // Se tiver opções, verifica pontos da opção selecionada
+                $optionPoints = 0;
                 if (in_array($step->type, ['select', 'radio', 'checkbox'])) {
                     $options = $step->options();
                     foreach ($options as $option) {
                         $optionValue = $option->value ?: $option->label;
                         if ($answer == $optionValue || (is_array($answer) && in_array($optionValue, $answer))) {
+                            $optionPoints += $option->points;
                             $totalPoints += $option->points;
                         }
                     }
@@ -619,6 +624,15 @@ class QuizController extends Controller
                 if ($step->field_name && !in_array($step->field_name, ['nome', 'name', 'email', 'telefone', 'phone', 'instagram'])) {
                     $leadData[$step->field_name] = is_array($answer) ? implode(', ', $answer) : trim($answer);
                 }
+                
+                // Armazena resposta para salvar depois
+                $quizResponses[] = [
+                    'quiz_id' => $quiz->id,
+                    'quiz_step_id' => $step->id,
+                    'field_name' => $step->field_name,
+                    'response' => is_array($answer) ? implode(', ', $answer) : trim($answer),
+                    'points' => $stepPoints + $optionPoints
+                ];
             }
         }
 
@@ -645,6 +659,18 @@ class QuizController extends Controller
             'origem' => 'quiz_' . $quiz->slug,
             'user_id' => $quiz->user_id
         ]);
+
+        // Salva respostas do quiz
+        foreach ($quizResponses as $responseData) {
+            \App\Models\LeadQuizResponse::create([
+                'lead_id' => $lead->id,
+                'quiz_id' => $responseData['quiz_id'],
+                'quiz_step_id' => $responseData['quiz_step_id'],
+                'field_name' => $responseData['field_name'],
+                'response' => $responseData['response'],
+                'points' => $responseData['points']
+            ]);
+        }
 
         // Adiciona tag padrão se configurada
         if ($quiz->default_tag_id) {

@@ -1026,6 +1026,8 @@ Dados do lead:
         $proposals = $lead->proposals();
         $contacts = $lead->contacts();
         $users = \App\Models\User::where('status', 'active')->get();
+        $quizResponses = $lead->quizResponses();
+        $quiz = $lead->quiz();
 
         return $this->view('leads/show', [
             'title' => 'Detalhes do Lead',
@@ -1033,8 +1035,95 @@ Dados do lead:
             'client' => $client,
             'proposals' => $proposals,
             'contacts' => $contacts,
-            'users' => $users
+            'users' => $users,
+            'quizResponses' => $quizResponses,
+            'quiz' => $quiz
         ]);
+    }
+    
+    /**
+     * Exibe formulário de edição
+     */
+    public function edit(array $params): string
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        $userId = auth()->getDataUserId();
+        $lead = Lead::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$lead) {
+            abort(404, 'Lead não encontrado.');
+        }
+        
+        $clients = \App\Models\Client::where('user_id', $userId)
+            ->orderBy('nome_razao_social', 'ASC')
+            ->get();
+
+        return $this->view('leads/edit', [
+            'title' => 'Editar Lead',
+            'lead' => $lead,
+            'clients' => $clients
+        ]);
+    }
+    
+    /**
+     * Atualiza lead
+     */
+    public function updateLead(array $params): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $lead = Lead::where('id', $params['id'])
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$lead) {
+                abort(404, 'Lead não encontrado.');
+            }
+
+            $data = $this->validate([
+                'nome' => 'required',
+                'email' => 'required|email',
+                'telefone' => 'required',
+                'instagram' => 'nullable',
+                'objetivo' => 'nullable',
+                'valor_oportunidade' => 'nullable|numeric|min:0',
+                'client_id' => 'nullable|integer'
+            ]);
+
+            $lead->update([
+                'nome' => $data['nome'],
+                'email' => $data['email'],
+                'telefone' => $data['telefone'],
+                'instagram' => $data['instagram'] ?? null,
+                'objetivo' => $data['objetivo'] ?? null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) ? (float)$data['valor_oportunidade'] : null,
+                'client_id' => !empty($data['client_id']) ? (int)$data['client_id'] : null
+            ]);
+
+            SistemaLog::registrar(
+                'leads',
+                'UPDATE',
+                $lead->id,
+                "Lead atualizado: {$lead->nome}",
+                null,
+                $lead->toArray()
+            );
+
+            session()->flash('success', 'Lead atualizado com sucesso!');
+            $this->redirect('/leads/' . $lead->id);
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao atualizar lead: ' . $e->getMessage());
+            $this->redirect('/leads/' . $params['id'] . '/edit');
+        }
     }
     
     /**

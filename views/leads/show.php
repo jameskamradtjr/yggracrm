@@ -10,10 +10,16 @@ ob_start();
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4 class="card-title fw-semibold mb-0">Detalhes do Lead</h4>
-                    <a href="<?php echo url('/leads'); ?>" class="btn btn-outline-secondary">
-                        <i class="ti ti-arrow-left me-2"></i>
-                        Voltar
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo url('/leads/' . $lead->id . '/edit'); ?>" class="btn btn-primary">
+                            <i class="ti ti-edit me-2"></i>
+                            Editar
+                        </a>
+                        <a href="<?php echo url('/leads'); ?>" class="btn btn-outline-secondary">
+                            <i class="ti ti-arrow-left me-2"></i>
+                            Voltar
+                        </a>
+                    </div>
                 </div>
 
                 <div class="row">
@@ -255,6 +261,47 @@ ob_start();
                                         <?php echo e($tag); ?>
                                     </span>
                                 <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Respostas do Quiz -->
+                <?php if (!empty($quizResponses) && $quiz): ?>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="ti ti-file-question me-2"></i>Respostas do Quiz: <?php echo e($quiz->name); ?></h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 30%;">Pergunta</th>
+                                                <th>Resposta</th>
+                                                <th style="width: 10%;" class="text-center">Pontos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($quizResponses as $response): ?>
+                                                <?php 
+                                                $step = $response->step();
+                                                $pergunta = $step ? $step->title : ($response->field_name ?? 'Pergunta');
+                                                ?>
+                                                <tr>
+                                                    <td class="fw-semibold"><?php echo e($pergunta); ?></td>
+                                                    <td><?php echo e($response->response); ?></td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-info"><?php echo $response->points; ?></span>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
