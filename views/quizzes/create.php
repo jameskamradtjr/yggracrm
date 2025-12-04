@@ -77,6 +77,12 @@ ob_start();
                             <label class="form-label">Cor do Texto do Botão</label>
                             <input type="color" name="button_text_color" class="form-control form-control-color" value="#ffffff">
                         </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Cor do Hover do Botão</label>
+                            <input type="color" name="button_hover_color" class="form-control form-control-color" value="#0056b3">
+                            <small class="text-muted">Cor quando o mouse passa sobre o botão</small>
+                        </div>
                     </div>
                     
                     <hr class="my-4">

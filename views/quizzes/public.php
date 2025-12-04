@@ -24,6 +24,7 @@ $steps = $steps ?? [];
             --background-color: <?php echo e($quiz->background_color ?? '#ffffff'); ?>;
             --button-color: <?php echo e($quiz->button_color ?? '#007bff'); ?>;
             --button-text-color: <?php echo e($quiz->button_text_color ?? '#ffffff'); ?>;
+            --button-hover-color: <?php echo e($quiz->button_hover_color ?? '#0056b3'); ?>;
         }
         
         body {
@@ -119,7 +120,8 @@ $steps = $steps ?? [];
         }
         
         .btn-primary:hover {
-            opacity: 0.9;
+            background-color: var(--button-hover-color);
+            border-color: var(--button-hover-color);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }

@@ -117,6 +117,7 @@ class QuizController extends Controller
             'background_color' => $data['background_color'] ?? '#ffffff',
             'button_color' => $data['button_color'] ?? '#007bff',
             'button_text_color' => $data['button_text_color'] ?? '#ffffff',
+            'button_hover_color' => $data['button_hover_color'] ?? null,
             'logo_url' => $data['logo_url'] ?? null,
             'welcome_message' => $data['welcome_message'] ?? null,
             'completion_message' => $data['completion_message'] ?? null,
@@ -186,6 +187,7 @@ class QuizController extends Controller
             'background_color' => 'nullable|string|max:7',
             'button_color' => 'nullable|string|max:7',
             'button_text_color' => 'nullable|string|max:7',
+            'button_hover_color' => 'nullable|string|max:7',
             'logo_url' => 'nullable|string',
             'welcome_message' => 'nullable|string',
             'completion_message' => 'nullable|string',
@@ -584,7 +586,7 @@ class QuizController extends Controller
             $fieldName = $step->field_name ?: 'step_' . $step->id;
             $answer = $data[$fieldName] ?? null;
 
-            if ($answer !== null) {
+            if ($answer !== null && $answer !== '') {
                 // Adiciona pontos da etapa
                 $totalPoints += $step->points;
 
@@ -601,16 +603,31 @@ class QuizController extends Controller
 
                 // Mapeia resposta para campos do lead
                 if ($step->field_name) {
-                    $leadData[$step->field_name] = is_array($answer) ? implode(', ', $answer) : $answer;
+                    $leadData[$step->field_name] = is_array($answer) ? implode(', ', $answer) : trim($answer);
                 }
             }
         }
 
-        // Cria lead
+        // Normaliza nomes de campos (aceita variações)
+        $nome = $leadData['nome'] ?? $leadData['name'] ?? '';
+        $email = $leadData['email'] ?? '';
+        $telefone = $leadData['telefone'] ?? $leadData['phone'] ?? '';
+        $instagram = $leadData['instagram'] ?? '';
+
+        // Cria lead com todos os campos disponíveis
         $lead = \App\Models\Lead::create([
-            'nome' => $leadData['nome'] ?? $leadData['name'] ?? 'Lead do Quiz',
-            'email' => $leadData['email'] ?? '',
-            'telefone' => $leadData['telefone'] ?? $leadData['phone'] ?? '',
+            'nome' => !empty($nome) ? $nome : 'Lead do Quiz',
+            'email' => $email,
+            'telefone' => $telefone,
+            'instagram' => !empty($instagram) ? $instagram : null,
+            'ramo' => $leadData['ramo'] ?? null,
+            'objetivo' => $leadData['objetivo'] ?? null,
+            'tem_software' => isset($leadData['tem_software']) && ($leadData['tem_software'] === 'sim' || $leadData['tem_software'] === true || $leadData['tem_software'] === '1'),
+            'investimento_software' => $leadData['investimento_software'] ?? null,
+            'tipo_sistema' => $leadData['tipo_sistema'] ?? null,
+            'plataforma_app' => $leadData['plataforma_app'] ?? null,
+            'valor_oportunidade' => isset($leadData['valor_oportunidade']) && !empty($leadData['valor_oportunidade']) ? (float)$leadData['valor_oportunidade'] : null,
+            'origem_conheceu' => $leadData['origem_conheceu'] ?? null,
             'score_potencial' => $totalPoints,
             'etapa_funil' => 'interessados',
             'origem' => 'quiz_' . $quiz->slug,

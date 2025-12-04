@@ -21,6 +21,7 @@ class Quiz extends Model
         'background_color',
         'button_color',
         'button_text_color',
+        'button_hover_color',
         'logo_url',
         'welcome_message',
         'completion_message',
