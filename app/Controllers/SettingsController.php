@@ -177,7 +177,7 @@ class SettingsController extends Controller
                     
                     // Remove logo antiga do S3 se existir
                     $oldLogo = SystemSetting::get('logo_dark');
-                    if ($oldLogo && (strpos($oldLogo, 's3.') !== false || strpos($oldLogo, 'amazonaws.com') !== false)) {
+                    if ($oldLogo && is_string($oldLogo) && (strpos($oldLogo, 's3.') !== false || strpos($oldLogo, 'amazonaws.com') !== false)) {
                         // Extrai a chave S3 da URL antiga
                         if (preg_match('/amazonaws\.com\/(.+)$/', $oldLogo, $matches)) {
                             $oldS3Key = urldecode($matches[1]);
