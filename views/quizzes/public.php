@@ -492,6 +492,14 @@ $steps = $steps ?? [];
         function submitQuiz() {
             // Usa slug se disponível, senão usa ID
             const quizIdentifier = quizSlug || quizId;
+            
+            // Debug: log dos dados que serão enviados
+            console.log('=== SUBMIT QUIZ ===');
+            console.log('Quiz Identifier:', quizIdentifier);
+            console.log('Form Data:', formData);
+            console.log('Form Data Keys:', Object.keys(formData));
+            console.log('Form Data JSON:', JSON.stringify(formData));
+            
             fetch(`<?php echo url('/quiz'); ?>/${quizIdentifier}/submit`, {
                 method: 'POST',
                 headers: {
