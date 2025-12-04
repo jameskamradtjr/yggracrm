@@ -50,7 +50,7 @@ class SystemSetting extends Model
         
         $setting = (object)$result[0];
         
-        error_log("SystemSetting::get() - '{$key}' encontrado (id={$setting->id}, type={$setting->type}, key={$setting->key}) para user_id={$userId}");
+       // error_log("SystemSetting::get() - '{$key}' encontrado (id={$setting->id}, type={$setting->type}, key={$setting->key}) para user_id={$userId}");
 
         // Processa o valor baseado no tipo
         switch ($setting->type) {
@@ -75,7 +75,7 @@ class SystemSetting extends Model
         $userId = auth()->check() ? auth()->getDataUserId() : null;
         
         if ($userId === null) {
-            error_log("SystemSetting::set() - ERRO: Usuário não autenticado! Não é possível salvar configuração '{$key}'");
+           // error_log("SystemSetting::set() - ERRO: Usuário não autenticado! Não é possível salvar configuração '{$key}'");
             return false;
         }
         
@@ -86,7 +86,7 @@ class SystemSetting extends Model
             $value = $value ? '1' : '0';
         }
 
-        error_log("SystemSetting::set() - Salvando '{$key}' para user_id={$userId}, type={$type}, group={$group}");
+       // error_log("SystemSetting::set() - Salvando '{$key}' para user_id={$userId}, type={$type}, group={$group}");
 
         $db = \Core\Database::getInstance();
         
@@ -100,7 +100,7 @@ class SystemSetting extends Model
 
         if ($setting) {
             // UPDATE DIRETO com WHERE explícito para garantir que atualiza APENAS o registro correto
-            error_log("SystemSetting::set() - UPDATE: Registro encontrado (id={$setting->id}, key_atual={$setting->key}, key_nova={$key})");
+           // error_log("SystemSetting::set() - UPDATE: Registro encontrado (id={$setting->id}, key_atual={$setting->key}, key_nova={$key})");
             
             // Verifica se a key do registro encontrado corresponde à key que queremos salvar
             if ($setting->key !== $key) {
