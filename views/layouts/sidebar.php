@@ -184,6 +184,12 @@
                         <span class="hide-menu">Base de Conhecimento</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/site/manage'); ?>">
+                        <span><i class="ti ti-world"></i></span>
+                        <span class="hide-menu">Meu Site</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- Usuários -->

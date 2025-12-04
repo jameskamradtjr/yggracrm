@@ -144,6 +144,24 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/knowledge-base/{id}/edit', [\App\Controllers\KnowledgeBaseController::class, 'edit']);
     $router->post('/knowledge-base/{id}/update', [\App\Controllers\KnowledgeBaseController::class, 'update']);
     $router->post('/knowledge-base/{id}/delete', [\App\Controllers\KnowledgeBaseController::class, 'destroy']);
+    
+    // Gerenciamento de Site (administrativo - DEVE VIR ANTES das rotas públicas)
+    $router->get('/site/manage', [\App\Controllers\SiteController::class, 'manage']);
+    $router->get('/site/manage/analytics', [\App\Controllers\SiteController::class, 'analytics']);
+    $router->post('/site/manage/update', [\App\Controllers\SiteController::class, 'updateSite']);
+    $router->get('/site/manage/posts/create', [\App\Controllers\SiteController::class, 'createPost']);
+    $router->post('/site/manage/posts', [\App\Controllers\SiteController::class, 'storePost']);
+    $router->get('/site/manage/posts/{id}/edit', [\App\Controllers\SiteController::class, 'editPost']);
+    $router->get('/site/manage/posts/{id}/analytics', [\App\Controllers\SiteController::class, 'postAnalytics']);
+    $router->post('/site/manage/posts/{id}/update', [\App\Controllers\SiteController::class, 'updatePost']);
+    $router->post('/site/manage/posts/{id}/delete', [\App\Controllers\SiteController::class, 'deletePost']);
+    
+    // Sites Públicos (devem vir DEPOIS das rotas administrativas)
+    $router->get('/site/{slug}', [\App\Controllers\SiteController::class, 'show']);
+    $router->get('/site/{slug}/post/{post_slug}', [\App\Controllers\SiteController::class, 'showPost']);
+    $router->post('/site/{slug}/newsletter/subscribe', [\App\Controllers\SiteController::class, 'subscribeNewsletter']);
+    $router->post('/site/post/{post_id}/like', [\App\Controllers\SiteController::class, 'toggleLike']);
+    $router->post('/api/site/track', [\App\Controllers\SiteController::class, 'trackEvent']);
     $router->post('/leads/update-etapa-funil', [LeadController::class, 'updateEtapaFunil']);
     $router->post('/leads/update-responsible', [LeadController::class, 'updateResponsible']);
     $router->post('/leads/update-status', [LeadController::class, 'updateStatus']);
