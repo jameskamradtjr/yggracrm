@@ -598,9 +598,14 @@ class QuizController extends Controller
         // Processa respostas e calcula pontuação
         $quizResponses = []; // Armazena respostas para salvar depois
         
+        error_log("QuizController::submitQuiz() - Total de steps do quiz: " . count($steps));
+        error_log("QuizController::submitQuiz() - Dados recebidos: " . json_encode(array_keys($data)));
+        
         foreach ($steps as $step) {
             $fieldName = $step->field_name ?: 'step_' . $step->id;
             $answer = $data[$fieldName] ?? null;
+            
+            error_log("QuizController::submitQuiz() - Processando step ID: {$step->id}, Field: {$fieldName}, Answer: " . ($answer !== null ? (is_array($answer) ? json_encode($answer) : $answer) : 'NULL'));
 
             if ($answer !== null && $answer !== '') {
                 // Adiciona pontos da etapa
@@ -661,16 +666,35 @@ class QuizController extends Controller
         ]);
 
         // Salva respostas do quiz
-        foreach ($quizResponses as $responseData) {
-            \App\Models\LeadQuizResponse::create([
-                'lead_id' => $lead->id,
-                'quiz_id' => $responseData['quiz_id'],
-                'quiz_step_id' => $responseData['quiz_step_id'],
-                'field_name' => $responseData['field_name'],
-                'response' => $responseData['response'],
-                'points' => $responseData['points']
-            ]);
+        error_log("QuizController::submitQuiz() - Total de respostas para salvar: " . count($quizResponses));
+        
+        if (empty($quizResponses)) {
+            error_log("QuizController::submitQuiz() - AVISO: Nenhuma resposta coletada do quiz! Steps: " . count($steps));
+            foreach ($steps as $step) {
+                $fieldName = $step->field_name ?: 'step_' . $step->id;
+                $answer = $data[$fieldName] ?? null;
+                error_log("QuizController::submitQuiz() - Step ID: {$step->id}, Field: {$fieldName}, Answer: " . ($answer ?? 'NULL'));
+            }
         }
+        
+        foreach ($quizResponses as $responseData) {
+            try {
+                $saved = \App\Models\LeadQuizResponse::create([
+                    'lead_id' => $lead->id,
+                    'quiz_id' => $responseData['quiz_id'],
+                    'quiz_step_id' => $responseData['quiz_step_id'],
+                    'field_name' => $responseData['field_name'],
+                    'response' => $responseData['response'],
+                    'points' => $responseData['points']
+                ]);
+                error_log("QuizController::submitQuiz() - Resposta salva: LeadQuizResponse ID {$saved->id} para Step {$responseData['quiz_step_id']}");
+            } catch (\Exception $e) {
+                error_log("QuizController::submitQuiz() - ERRO ao salvar resposta: " . $e->getMessage());
+                error_log("QuizController::submitQuiz() - Stack trace: " . $e->getTraceAsString());
+            }
+        }
+        
+        error_log("QuizController::submitQuiz() - Lead criado com ID: {$lead->id}, Origem: quiz_{$quiz->slug}");
 
         // Adiciona tag padrão se configurada
         if ($quiz->default_tag_id) {
