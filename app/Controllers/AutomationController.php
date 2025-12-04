@@ -256,12 +256,13 @@ class AutomationController extends Controller
         
         try {
             $name = $automation->name;
+            $automationId = (int)$automation->id; // Salva o ID antes de deletar
             $automation->delete();
             
             SistemaLog::registrar(
                 'automations',
                 'DELETE',
-                $params['id'],
+                $automationId,
                 "Automação '{$name}' deletada",
                 ['name' => $name],
                 null
@@ -524,6 +525,56 @@ class AutomationController extends Controller
             'title' => 'Histórico de Execuções',
             'automation' => $automation,
             'executions' => $executions
+        ]);
+    }
+    
+    /**
+     * API: Obtém detalhes de uma execução
+     */
+    public function getExecutionDetails(array $params): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        $execution = AutomationExecution::find($params['execution_id']);
+        
+        if (!$execution) {
+            json_response(['success' => false, 'message' => 'Execução não encontrada'], 404);
+            return;
+        }
+        
+        // Verifica se a automação pertence ao usuário
+        $automation = $execution->automation();
+        if (!$automation || $automation->user_id !== auth()->getDataUserId()) {
+            json_response(['success' => false, 'message' => 'Acesso negado'], 403);
+            return;
+        }
+        
+        // Garante que execution_log é sempre um array
+        $executionLog = $execution->execution_log ?? [];
+        if (!is_array($executionLog)) {
+            // Se for string JSON, tenta decodificar
+            if (is_string($executionLog)) {
+                $decoded = json_decode($executionLog, true);
+                $executionLog = is_array($decoded) ? $decoded : [];
+            } else {
+                $executionLog = [];
+            }
+        }
+        
+        json_response([
+            'success' => true,
+            'execution' => [
+                'id' => $execution->id,
+                'status' => $execution->status,
+                'started_at' => $execution->started_at,
+                'completed_at' => $execution->completed_at,
+                'error_message' => $execution->error_message,
+                'trigger_data' => $execution->trigger_data ?? [],
+                'execution_log' => $executionLog
+            ]
         ]);
     }
 }

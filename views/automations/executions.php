@@ -125,14 +125,168 @@ ob_start();
 
 <script>
 function viewExecutionDetails(executionId) {
-    // Por enquanto, apenas mostra ID
-    // Pode ser expandido para buscar detalhes via AJAX
-    document.getElementById('executionDetailsContent').innerHTML = `
-        <p><strong>ID da Execução:</strong> ${executionId}</p>
-        <p class="text-muted">Detalhes completos serão implementados em breve.</p>
+    const contentDiv = document.getElementById('executionDetailsContent');
+    
+    // Mostra loading
+    contentDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando detalhes...</p>
+        </div>
     `;
+    
     const modal = new bootstrap.Modal(document.getElementById('executionDetailsModal'));
     modal.show();
+    
+    // Busca detalhes via AJAX
+    fetch('<?php echo url('/automations/executions'); ?>/' + executionId + '/details')
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Erro de conexão:</strong> Não foi possível conectar ao servidor.
+                    <br><small>${error.message}</small>
+                </div>
+            `;
+            throw error; // Re-throw para ser capturado pelo catch externo
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Erro:</strong> ${data.message || 'Não foi possível carregar os detalhes'}
+                    </div>
+                `;
+                return;
+            }
+            
+            const execution = data.execution;
+            // Garante que logs é sempre um array
+            let logs = execution.execution_log || [];
+            if (!Array.isArray(logs)) {
+                logs = [];
+            }
+            
+            let html = `
+                <div class="mb-4">
+                    <h6 class="fw-semibold mb-3">Informações Gerais</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <strong>ID:</strong> ${execution.id}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Status:</strong> 
+                            <span class="badge ${execution.status === 'completed' ? 'bg-success' : execution.status === 'failed' ? 'bg-danger' : 'bg-warning'}">
+                                ${execution.status === 'completed' ? 'Concluída' : execution.status === 'failed' ? 'Falhou' : 'Em execução'}
+                            </span>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Iniciado em:</strong> ${new Date(execution.started_at).toLocaleString('pt-BR')}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Concluído em:</strong> ${execution.completed_at ? new Date(execution.completed_at).toLocaleString('pt-BR') : '-'}
+                        </div>
+                    </div>
+                    ${execution.error_message ? `
+                        <div class="alert alert-danger mt-3">
+                            <strong>Erro:</strong> ${execution.error_message}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Dados do trigger
+            let triggerData = execution.trigger_data;
+            if (triggerData) {
+                // Se for string, tenta parsear
+                if (typeof triggerData === 'string') {
+                    try {
+                        triggerData = JSON.parse(triggerData);
+                    } catch (e) {
+                        triggerData = null;
+                    }
+                }
+                
+                if (triggerData && typeof triggerData === 'object' && Object.keys(triggerData).length > 0) {
+                    html += `
+                        <div class="mb-4">
+                            <h6 class="fw-semibold mb-3">Dados do Trigger</h6>
+                            <pre class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;"><code>${JSON.stringify(triggerData, null, 2)}</code></pre>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Logs de execução
+            if (logs.length > 0) {
+                html += `
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-3">Logs de Execução (${logs.length})</h6>
+                        <div class="timeline" style="max-height: 400px; overflow-y: auto;">
+                `;
+                
+                logs.forEach((log, index) => {
+                    const timestamp = log.timestamp || 'N/A';
+                    const message = log.message || 'Sem mensagem';
+                    const data = log.data || {};
+                    
+                    html += `
+                        <div class="timeline-item mb-3 pb-3 ${index < logs.length - 1 ? 'border-bottom' : ''}">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-xs">
+                                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary">
+                                            ${index + 1}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <h6 class="mb-0 me-2">${message}</h6>
+                                        <small class="text-muted">${timestamp}</small>
+                                    </div>
+                                    ${Object.keys(data).length > 0 ? `
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#logData${index}" aria-expanded="false">
+                                                Ver detalhes <i class="ti ti-chevron-down"></i>
+                                            </button>
+                                            <div class="collapse mt-2" id="logData${index}">
+                                                <pre class="bg-light p-2 rounded small" style="max-height: 200px; overflow-y: auto;"><code>${JSON.stringify(data, null, 2)}</code></pre>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="alert alert-info">
+                        Nenhum log de execução disponível.
+                    </div>
+                `;
+            }
+            
+            contentDiv.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erro ao buscar detalhes:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Erro:</strong> Não foi possível carregar os detalhes da execução.
+                    <br><small>${error.message}</small>
+                </div>
+            `;
+        });
 }
 </script>
 

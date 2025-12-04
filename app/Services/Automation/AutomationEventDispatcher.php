@@ -48,17 +48,27 @@ class AutomationEventDispatcher
             $triggerNode = $this->findTriggerForEvent($nodes, $eventType);
             
             if ($triggerNode) {
+                // Extrai o tipo de evento simples (ex: "created" de "calendar.event.created")
+                $simpleEventType = $eventData['event_type'] ?? null;
+                if (!$simpleEventType && preg_match('/\.([^.]+)$/', $eventType, $matches)) {
+                    $simpleEventType = $matches[1]; // Pega a última parte após o último ponto
+                }
+                
                 // Prepara dados do trigger
                 $triggerData = array_merge($eventData, [
-                    'event_type' => $eventType,
+                    'event_type' => $simpleEventType, // Usa o tipo simples (created, updated, etc)
                     'automation_id' => $automation->id
                 ]);
                 
                 // Executa automação
                 try {
+                    error_log("AutomationEventDispatcher::dispatch() - Executando automação ID: {$automation->id} para evento: {$eventType} (tipo simples: {$simpleEventType})");
+                    error_log("AutomationEventDispatcher::dispatch() - triggerData: " . json_encode($triggerData));
                     $this->engine->execute($automation, $triggerData);
+                    error_log("AutomationEventDispatcher::dispatch() - Automação ID: {$automation->id} executada com sucesso");
                 } catch (\Exception $e) {
-                    error_log("Erro ao executar automação {$automation->id} no evento {$eventType}: " . $e->getMessage());
+                    error_log("AutomationEventDispatcher::dispatch() - ERRO ao executar automação {$automation->id} no evento {$eventType}: " . $e->getMessage());
+                    error_log("AutomationEventDispatcher::dispatch() - Stack trace: " . $e->getTraceAsString());
                 }
             }
         }

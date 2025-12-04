@@ -328,9 +328,12 @@ class CalendarController extends Controller
             
             // Tenta disparar evento de automação, mas não falha se der erro
             try {
+                error_log("CalendarController::store() - Disparando evento de automação para evento ID: " . $event->id);
                 AutomationEventDispatcher::onCalendarEvent('created', $event->id, auth()->getDataUserId());
+                error_log("CalendarController::store() - Evento de automação disparado com sucesso");
             } catch (\Exception $autoError) {
-                error_log("Erro ao disparar evento de automação (não crítico): " . $autoError->getMessage());
+                error_log("CalendarController::store() - ERRO ao disparar evento de automação: " . $autoError->getMessage());
+                error_log("CalendarController::store() - Stack trace: " . $autoError->getTraceAsString());
             }
 
             // Tenta obter evento formatado para FullCalendar

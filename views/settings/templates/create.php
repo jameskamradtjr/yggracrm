@@ -20,7 +20,7 @@ ob_start();
                     </a>
                 </div>
 
-                <form action="<?php echo url('/settings/templates'); ?>" method="POST">
+                <form id="templateForm" action="<?php echo url('/settings/templates'); ?>" method="POST">
                     <?php echo csrf_field(); ?>
                     
                     <div class="row">
@@ -62,8 +62,7 @@ ob_start();
                             <textarea class="form-control" 
                                       id="body" 
                                       name="body" 
-                                      rows="15" 
-                                      required><?php echo e(old('body')); ?></textarea>
+                                      rows="15"><?php echo e(old('body')); ?></textarea>
                             <small class="text-muted">
                                 Use o editor visual para formatar o email. Variáveis: {{variavel}}
                             </small>
@@ -83,7 +82,10 @@ ob_start();
                     
                     <div class="d-flex gap-2 justify-content-end">
                         <a href="<?php echo url('/settings?tab=templates'); ?>" class="btn btn-light">Cancelar</a>
-                        <button type="submit" class="btn btn-primary">Criar Template</button>
+                        <button type="submit" id="submitBtn" class="btn btn-primary">
+                            <span id="submitText">Criar Template</span>
+                            <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -98,7 +100,7 @@ $content = ob_get_clean();
 // Scripts adicionais
 $scripts = <<<'SCRIPTS'
 <!-- TinyMCE -->
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/o7tsgeqi6ge25a2owg2f57segvoz4ujqxpwajukett59f8af/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script>
 tinymce.init({
@@ -113,10 +115,10 @@ tinymce.init({
     toolbar: 'undo redo | blocks | ' +
         'bold italic forecolor backcolor | alignleft aligncenter ' +
         'alignright alignjustify | bullist numlist outdent indent | ' +
-        'removeformat | link image | code | help',
+        'removeformat | link image | variablebutton | code | help',
     content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
     language: 'pt_BR',
-    language_url: 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/langs/pt_BR.js',
+    language_url: 'https://cdn.tiny.cloud/1/o7tsgeqi6ge25a2owg2f57segvoz4ujqxpwajukett59f8af/tinymce/6/langs/pt_BR.js',
     promotion: false,
     branding: false,
     setup: function(editor) {
@@ -131,20 +133,123 @@ tinymce.init({
                 }
             }
         });
-        
-        // Adiciona o botão à toolbar
-        editor.on('init', function() {
-            const toolbar = editor.getContainer().querySelector('.tox-toolbar__primary');
-            if (toolbar) {
-                // Botão já adicionado via setup
-            }
-        });
     },
-    toolbar: 'undo redo | blocks | ' +
-        'bold italic forecolor backcolor | alignleft aligncenter ' +
-        'alignright alignjustify | bullist numlist outdent indent | ' +
-        'removeformat | link image | variablebutton | code | help'
+    init_instance_callback: function(editor) {
+        console.log('TinyMCE inicializado');
+    }
 });
+
+// Handler de submit do formulário - versão simplificada e robusta
+(function() {
+    function setupForm() {
+        const form = document.getElementById('templateForm');
+        if (!form) {
+            console.error('Formulário não encontrado! Tentando novamente...');
+            setTimeout(setupForm, 100);
+            return;
+        }
+        
+        console.log('✓ Formulário encontrado');
+        
+        // Handler de submit - previne submit, sincroniza TinyMCE e submete programaticamente
+        function handleSubmit(e) {
+            console.log('=== SUBMIT INICIADO ===');
+            
+            // SEMPRE previne o submit para sincronizar TinyMCE primeiro
+            e.preventDefault();
+            e.stopPropagation();
+            
+            try {
+                // Sincroniza TinyMCE
+                const editor = tinymce.get('body');
+                if (editor) {
+                    console.log('Sincronizando TinyMCE...');
+                    editor.save();
+                }
+                
+                // Aguarda um pouco para garantir que o save foi processado
+                setTimeout(function() {
+                    // Valida campos
+                    const nameEl = document.getElementById('name');
+                    const slugEl = document.getElementById('slug');
+                    const subjectEl = document.getElementById('subject');
+                    const bodyEl = document.getElementById('body');
+                    
+                    if (!nameEl || !slugEl || !subjectEl || !bodyEl) {
+                        console.error('Campos não encontrados!');
+                        alert('❌ Erro: Campos do formulário não encontrados.');
+                        return;
+                    }
+                    
+                    const name = nameEl.value.trim();
+                    const slug = slugEl.value.trim();
+                    const subject = subjectEl.value.trim();
+                    const body = bodyEl.value.trim();
+                    
+                    console.log('Validação:', {
+                        name: name ? 'OK' : 'VAZIO',
+                        slug: slug ? 'OK' : 'VAZIO',
+                        subject: subject ? 'OK' : 'VAZIO',
+                        body: body ? 'OK (' + body.length + ' chars)' : 'VAZIO'
+                    });
+                    
+                    if (!name || !slug || !subject || !body) {
+                        alert('❌ Por favor, preencha todos os campos obrigatórios.');
+                        if (editor && !body) {
+                            editor.focus();
+                        } else if (!name) {
+                            nameEl.focus();
+                        } else if (!slug) {
+                            slugEl.focus();
+                        } else if (!subject) {
+                            subjectEl.focus();
+                        }
+                        return;
+                    }
+                    
+                    // Mostra loading
+                    const submitBtn = document.getElementById('submitBtn');
+                    const submitText = document.getElementById('submitText');
+                    const submitSpinner = document.getElementById('submitSpinner');
+                    if (submitBtn) submitBtn.disabled = true;
+                    if (submitText) submitText.textContent = 'Salvando...';
+                    if (submitSpinner) submitSpinner.classList.remove('d-none');
+                    
+                    console.log('✓ Validação OK, enviando formulário...');
+                    
+                    // Remove o handler temporariamente e submete o formulário
+                    form.removeEventListener('submit', handleSubmit);
+                    form.submit();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Erro no handler:', error);
+                alert('❌ Erro ao processar formulário: ' + error.message);
+            }
+        }
+        
+        form.addEventListener('submit', handleSubmit);
+        
+        // Debug do botão
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function() {
+                console.log('✓ Botão clicado!');
+            });
+        }
+        
+        console.log('✓ Setup concluído');
+    }
+    
+    // Tenta múltiplas vezes
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(setupForm, 100);
+        });
+    } else {
+        setTimeout(setupForm, 100);
+    }
+})();
 </script>
 SCRIPTS;
 

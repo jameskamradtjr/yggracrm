@@ -112,7 +112,7 @@ $content = ob_get_clean();
 // Scripts adicionais
 $scripts = <<<'SCRIPTS'
 <!-- TinyMCE -->
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/o7tsgeqi6ge25a2owg2f57segvoz4ujqxpwajukett59f8af/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script>
 tinymce.init({
@@ -130,7 +130,7 @@ tinymce.init({
         'removeformat | link image | code | help',
     content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
     language: 'pt_BR',
-    language_url: 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/langs/pt_BR.js',
+    language_url: 'https://cdn.tiny.cloud/1/o7tsgeqi6ge25a2owg2f57segvoz4ujqxpwajukett59f8af/tinymce/6/langs/pt_BR.js',
     promotion: false,
     branding: false,
     setup: function(editor) {

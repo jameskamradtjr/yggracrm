@@ -300,6 +300,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/automations/{id}', [AutomationController::class, 'update']);
     $router->post('/automations/{id}/delete', [AutomationController::class, 'destroy']);
     $router->get('/automations/{id}/executions', [AutomationController::class, 'executions']);
+    $router->get('/automations/executions/{execution_id}/details', [AutomationController::class, 'getExecutionDetails']);
     $router->get('/api/automations/components', [AutomationController::class, 'getComponents']);
     $router->get('/api/automations/email-templates', [AutomationController::class, 'getEmailTemplates']);
     $router->get('/api/automations/whatsapp-templates', [AutomationController::class, 'getWhatsAppTemplates']);

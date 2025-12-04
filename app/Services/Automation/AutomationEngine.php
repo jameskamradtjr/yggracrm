@@ -43,11 +43,26 @@ class AutomationEngine
         ]);
         
         try {
+            $execution->addLog("Iniciando execução da automação", [
+                'automation_id' => $automation->id,
+                'automation_name' => $automation->name,
+                'trigger_data_keys' => array_keys($triggerData)
+            ]);
+            
             // Encontra o nó de trigger
             $triggerNode = $this->findTriggerNode($nodes);
             if (!$triggerNode) {
+                $execution->addLog("Erro: Nó de trigger não encontrado no workflow", [
+                    'nodes_count' => count($nodes),
+                    'nodes_types' => array_map(function($n) { return $n['type'] ?? 'unknown'; }, $nodes)
+                ]);
                 throw new \Exception('Nó de trigger não encontrado');
             }
+            
+            $execution->addLog("Nó de trigger encontrado", [
+                'trigger_type' => $triggerNode['type'] ?? 'unknown',
+                'trigger_config' => $triggerNode['config'] ?? []
+            ]);
             
             // Remove o prefixo 'trigger_' do type para obter o ID do trigger
             $triggerId = str_replace('trigger_', '', $triggerNode['type']);
@@ -58,25 +73,68 @@ class AutomationEngine
                 // Lista triggers disponíveis para debug
                 $allTriggers = AutomationRegistry::getAllTriggers();
                 $availableTriggerIds = array_map(function($t) { return $t['id']; }, $allTriggers);
+                $execution->addLog("Erro: Trigger não encontrado no registry", [
+                    'trigger_id' => $triggerId,
+                    'trigger_type_original' => $triggerNode['type'],
+                    'available_triggers' => $availableTriggerIds
+                ]);
                 error_log("Trigger '{$triggerId}' não encontrado. Triggers disponíveis: " . implode(', ', $availableTriggerIds));
                 throw new \Exception("Trigger '{$triggerId}' não encontrado (type original: '{$triggerNode['type']}')");
             }
             
+            $execution->addLog("Trigger encontrado no registry", [
+                'trigger_id' => $triggerId,
+                'trigger_name' => $trigger->getName()
+            ]);
+            
             $trigger->setConfig($triggerNode['config'] ?? []);
+            $execution->addLog("Verificando se trigger foi acionado", [
+                'trigger_config' => $triggerNode['config'] ?? [],
+                'trigger_data_received' => $triggerData
+            ]);
+            
             $triggerData = $trigger->check($triggerData);
             
             if (!$triggerData) {
+                $execution->addLog("Trigger não foi acionado (check retornou null/false)", [
+                    'trigger_id' => $triggerId,
+                    'trigger_config' => $triggerNode['config'] ?? [],
+                    'trigger_data_sent' => $triggerData
+                ]);
                 $execution->markAsCompleted();
                 return;
             }
+            
+            $execution->addLog("Trigger acionado com sucesso", [
+                'trigger_id' => $triggerId,
+                'trigger_data_keys' => array_keys($triggerData)
+            ]);
             
             // Executa o workflow
             $this->executeWorkflow($nodes, $connections, $triggerData, $execution);
             
             $execution->markAsCompleted();
+            error_log("AutomationEngine::execute() - Automação {$automation->id} executada com sucesso");
         } catch (\Exception $e) {
-            $execution->markAsFailed($e->getMessage());
-            error_log("Erro ao executar automação {$automation->id}: " . $e->getMessage());
+            $errorMsg = $e->getMessage();
+            error_log("AutomationEngine::execute() - ERRO ao executar automação {$automation->id}: " . $errorMsg);
+            error_log("AutomationEngine::execute() - Stack trace: " . $e->getTraceAsString());
+            
+            // Adiciona log de erro na execução se possível
+            try {
+                if (isset($execution)) {
+                    $execution->addLog("ERRO na execução da automação", [
+                        'error' => $errorMsg,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                error_log("Erro ao adicionar log de erro na execução: " . $logError->getMessage());
+            }
+            
+            $execution->markAsFailed($errorMsg);
         }
     }
     
@@ -163,7 +221,13 @@ class AutomationEngine
             $actionTriggerData = array_merge($triggerData, [
                 'automation_id' => $execution->automation_id,
                 'execution_id' => $execution->id,
-                'node_id' => $node['id'] ?? null
+                'node_id' => $node['id'] ?? null,
+                '_execution' => $execution // Passa o objeto execution para ações adicionarem logs
+            ]);
+            
+            $execution->addLog("Executando ação '{$actionId}'", [
+                'node_id' => $node['id'] ?? null,
+                'config' => $config
             ]);
             
             $result = $action->execute($actionTriggerData, $config);

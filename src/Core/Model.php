@@ -204,11 +204,21 @@ abstract class Model
                 implode(', ', $placeholders)
             );
 
+            // Aplica casts antes de salvar (converte arrays para JSON)
+            $values = [];
+            foreach ($this->attributes as $key => $value) {
+                if (isset($this->casts[$key]) && $this->casts[$key] === 'array' && is_array($value)) {
+                    $values[] = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                } else {
+                    $values[] = $value;
+                }
+            }
+
             // Log apenas em modo debug (comentado para não gerar output)
             // error_log("SQL INSERT: " . $sql);
-            // error_log("Valores: " . print_r(array_values($this->attributes), true));
+            // error_log("Valores: " . print_r($values, true));
 
-            $this->db->execute($sql, array_values($this->attributes));
+            $this->db->execute($sql, $values);
             
             $this->attributes[$this->primaryKey] = (int) $this->db->lastInsertId();
             $this->exists = true;
@@ -243,7 +253,15 @@ abstract class Model
             $escapedPrimaryKey
         );
 
-        $values = array_values($this->attributes);
+        // Aplica casts antes de salvar (converte arrays para JSON)
+        $values = [];
+        foreach ($this->attributes as $key => $value) {
+            if (isset($this->casts[$key]) && $this->casts[$key] === 'array' && is_array($value)) {
+                $values[] = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } else {
+                $values[] = $value;
+            }
+        }
         $values[] = $this->attributes[$this->primaryKey];
 
         $this->db->execute($sql, $values);
@@ -299,6 +317,20 @@ abstract class Model
     public static function newInstance(array $attributes, bool $exists = false): static
     {
         $instance = new static();
+        
+        // Aplica casts ao carregar do banco
+        foreach ($attributes as $key => $value) {
+            if (isset($instance->casts[$key])) {
+                $castType = $instance->casts[$key];
+                
+                // Converte JSON string para array se o cast for 'array'
+                if ($castType === 'array' && is_string($value) && !empty($value)) {
+                    $decoded = json_decode($value, true);
+                    $attributes[$key] = is_array($decoded) ? $decoded : [];
+                }
+            }
+        }
+        
         $instance->attributes = $attributes;
         $instance->original = $attributes;
         $instance->exists = $exists;

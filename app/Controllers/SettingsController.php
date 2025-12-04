@@ -340,34 +340,42 @@ class SettingsController extends Controller
         if (!verify_csrf($this->request->input('_csrf_token'))) {
             session()->flash('error', 'Token de segurança inválido.');
             $this->redirect('/settings/templates/create');
+            return;
         }
 
-        $data = $this->validate([
-            'name' => 'required|min:3|max:100',
-            'slug' => 'required|unique:email_templates,slug',
-            'subject' => 'required',
-            'body' => 'required'
-        ]);
+        try {
+            $data = $this->validate([
+                'name' => 'required|min:3|max:100',
+                'slug' => 'required|unique:email_templates,slug',
+                'subject' => 'required',
+                'body' => 'required'
+            ]);
 
-        $variables = $this->request->input('variables', '');
-        if (!empty($variables)) {
-            $data['variables'] = json_encode(explode(',', $variables));
+            $variables = $this->request->input('variables', '');
+            if (!empty($variables)) {
+                $data['variables'] = json_encode(explode(',', $variables));
+            }
+
+            $template = EmailTemplate::create($data);
+
+            // Registra log
+            SistemaLog::registrar(
+                'email_templates',
+                'CREATE',
+                $template->id,
+                "Template de email '{$template->name}' criado",
+                null,
+                ['name' => $template->name, 'slug' => $template->slug, 'subject' => $template->subject]
+            );
+
+            session()->flash('success', 'Template criado com sucesso!');
+            $this->redirect('/settings?tab=templates');
+        } catch (\Exception $e) {
+            error_log("Erro ao criar template de email: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            session()->flash('error', 'Erro ao criar template: ' . $e->getMessage());
+            $this->redirect('/settings/templates/create');
         }
-
-        $template = EmailTemplate::create($data);
-
-        // Registra log
-        SistemaLog::registrar(
-            'email_templates',
-            'CREATE',
-            $template->id,
-            "Template de email '{$template->name}' criado",
-            null,
-            ['name' => $template->name, 'slug' => $template->slug, 'subject' => $template->subject]
-        );
-
-        session()->flash('success', 'Template criado com sucesso!');
-        $this->redirect('/settings?tab=templates');
     }
 
     /**
