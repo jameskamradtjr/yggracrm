@@ -42,11 +42,9 @@ class QuizController extends Controller
         }
 
         $userId = auth()->getDataUserId();
-        $tags = Tag::where('user_id', $userId)->get();
 
         return $this->view('quizzes/create', [
-            'title' => 'Criar Quiz',
-            'tags' => $tags
+            'title' => 'Criar Quiz'
         ]);
     }
 
@@ -78,7 +76,7 @@ class QuizController extends Controller
             'logo_url' => 'nullable|string',
             'welcome_message' => 'nullable|string',
             'completion_message' => 'nullable|string',
-            'default_tag_id' => 'nullable|integer',
+            'default_tag_name' => 'nullable|string',
             'active' => 'nullable'
         ]);
 
@@ -89,6 +87,25 @@ class QuizController extends Controller
         // Como ambos têm value="1" na criação, sempre será 1
         $activeInput = $this->request->input('active');
         $active = ($activeInput === '1' || $activeInput === 1 || $activeInput === true) ? 1 : 1; // Sempre 1 na criação
+        
+        // Processa tag: busca ou cria pelo nome
+        $defaultTagId = null;
+        if (!empty($data['default_tag_name'])) {
+            $tagName = trim($data['default_tag_name']);
+            $tag = Tag::where('name', $tagName)
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$tag) {
+                // Cria nova tag
+                $tag = Tag::create([
+                    'name' => $tagName,
+                    'color' => '#0dcaf0', // Cor padrão
+                    'user_id' => $userId
+                ]);
+            }
+            $defaultTagId = $tag->id;
+        }
         
         $quiz = Quiz::create([
             'name' => $data['name'],
@@ -103,7 +120,7 @@ class QuizController extends Controller
             'logo_url' => $data['logo_url'] ?? null,
             'welcome_message' => $data['welcome_message'] ?? null,
             'completion_message' => $data['completion_message'] ?? null,
-            'default_tag_id' => $data['default_tag_id'] ?? null,
+            'default_tag_id' => $defaultTagId,
             'active' => $active,
             'user_id' => $userId
         ]);
@@ -130,13 +147,11 @@ class QuizController extends Controller
         }
 
         $steps = $quiz->steps();
-        $tags = Tag::where('user_id', $userId)->get();
 
         return $this->view('quizzes/edit', [
             'title' => 'Editar Quiz',
             'quiz' => $quiz,
-            'steps' => $steps,
-            'tags' => $tags
+            'steps' => $steps
         ]);
     }
 
@@ -174,7 +189,7 @@ class QuizController extends Controller
             'logo_url' => 'nullable|string',
             'welcome_message' => 'nullable|string',
             'completion_message' => 'nullable|string',
-            'default_tag_id' => 'nullable|integer',
+            'default_tag_name' => 'nullable|string',
             'active' => 'nullable'
         ]);
 
@@ -197,6 +212,25 @@ class QuizController extends Controller
             $active = ($activeInput === '1' || $activeInput === 1 || $activeInput === true) ? 1 : 0;
         }
         
+        // Processa tag: busca ou cria pelo nome
+        $defaultTagId = null;
+        if (!empty($data['default_tag_name'])) {
+            $tagName = trim($data['default_tag_name']);
+            $tag = Tag::where('name', $tagName)
+                ->where('user_id', $userId)
+                ->first();
+            
+            if (!$tag) {
+                // Cria nova tag
+                $tag = Tag::create([
+                    'name' => $tagName,
+                    'color' => '#0dcaf0', // Cor padrão
+                    'user_id' => $userId
+                ]);
+            }
+            $defaultTagId = $tag->id;
+        }
+        
         $quiz->update([
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
@@ -210,7 +244,7 @@ class QuizController extends Controller
             'logo_url' => $data['logo_url'] ?? null,
             'welcome_message' => $data['welcome_message'] ?? null,
             'completion_message' => $data['completion_message'] ?? null,
-            'default_tag_id' => $data['default_tag_id'] ?? null,
+            'default_tag_id' => $defaultTagId,
             'active' => $active
         ]);
 
@@ -580,8 +614,7 @@ class QuizController extends Controller
             'score_potencial' => $totalPoints,
             'etapa_funil' => 'interessados',
             'origem' => 'quiz_' . $quiz->slug,
-            'user_id' => $quiz->user_id,
-            'responsible_user_id' => $quiz->user_id
+            'user_id' => $quiz->user_id
         ]);
 
         // Adiciona tag padrão se configurada

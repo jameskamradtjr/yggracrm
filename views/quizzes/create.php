@@ -29,13 +29,8 @@ ob_start();
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tag Padrão</label>
-                            <select name="default_tag_id" class="form-select">
-                                <option value="">Nenhuma</option>
-                                <?php foreach ($tags as $tag): ?>
-                                    <option value="<?php echo $tag->id; ?>"><?php echo e($tag->name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="text-muted">Tag que será aplicada automaticamente aos leads deste quiz</small>
+                            <input type="text" name="default_tag_name" class="form-control" placeholder="Digite o nome da tag...">
+                            <small class="text-muted">Tag que será aplicada automaticamente aos leads deste quiz (será criada se não existir)</small>
                         </div>
                         
                         <div class="col-md-6 mb-3">
