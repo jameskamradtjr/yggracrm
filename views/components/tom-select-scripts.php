@@ -81,6 +81,16 @@ document.addEventListener("DOMContentLoaded", function() {
         element.tomselect = tomSelect;
         
         console.log("✓ Tom Select inicializado:", "<?php echo $config['id']; ?>");
+        
+        // Dispara evento customizado após inicialização
+        var event = new CustomEvent('tomselect:initialized', {
+            detail: {
+                element: element,
+                tomSelect: tomSelect,
+                id: "<?php echo $config['id']; ?>"
+            }
+        });
+        element.dispatchEvent(event);
     })();
     <?php endforeach; ?>
     

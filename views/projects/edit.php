@@ -307,16 +307,26 @@ if (isset($project->client_id) && $project->client_id && isset($clients)) {
             var select = document.getElementById('client_id');
             
             if (select) {
-                // Aguarda o Tom Select ser inicializado
-                setTimeout(function() {
-                    if (select.tomselect) {
-                        select.tomselect.addOption({
-                            id: <?php echo $selectedClient->id; ?>,
-                            text: <?php echo json_encode($selectedClient->nome_razao_social); ?>
-                        });
-                        select.tomselect.setValue(<?php echo $selectedClient->id; ?>);
-                    }
-                }, 500);
+                // Escuta o evento customizado disparado após inicialização do Tom Select
+                select.addEventListener('tomselect:initialized', function(event) {
+                    var tomSelect = event.detail.tomSelect;
+                    
+                    // Adiciona a opção e define como selecionada
+                    tomSelect.addOption({
+                        id: <?php echo $selectedClient->id; ?>,
+                        text: <?php echo json_encode($selectedClient->nome_razao_social); ?>
+                    });
+                    tomSelect.setValue(<?php echo $selectedClient->id; ?>);
+                });
+                
+                // Fallback: se o Tom Select já foi inicializado antes deste script rodar
+                if (select.tomselect) {
+                    select.tomselect.addOption({
+                        id: <?php echo $selectedClient->id; ?>,
+                        text: <?php echo json_encode($selectedClient->nome_razao_social); ?>
+                    });
+                    select.tomselect.setValue(<?php echo $selectedClient->id; ?>);
+                }
             }
         });
         </script>
