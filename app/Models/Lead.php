@@ -34,10 +34,6 @@ class Lead extends Model
         'invest_categoria',
         'objetivo',
         'faz_trafego',
-        'tem_software',
-        'investimento_software',
-        'tipo_sistema',
-        'plataforma_app',
         'tags_ai',
         'score_potencial',
         'valor_oportunidade',
@@ -46,7 +42,6 @@ class Lead extends Model
         'status_kanban',
         'etapa_funil',
         'origem',
-        'origem_conheceu',
         'responsible_user_id',
         'client_id',
         'user_id'
@@ -54,7 +49,6 @@ class Lead extends Model
 
     protected array $casts = [
         'faz_trafego' => 'boolean',
-        'tem_software' => 'boolean',
         'tags_ai' => 'json',
         'score_potencial' => 'integer',
         'valor_oportunidade' => 'float'
