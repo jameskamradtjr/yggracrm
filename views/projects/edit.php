@@ -90,14 +90,13 @@ $title = $title ?? 'Editar Projeto';
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="client_id" class="form-label">Cliente</label>
-                    <select class="form-select" id="client_id" name="client_id">
-                        <option value="">Selecione um cliente (opcional)</option>
-                        <?php foreach ($clients as $client): ?>
-                            <option value="<?php echo $client->id; ?>" <?php echo $project->client_id == $client->id ? 'selected' : ''; ?>>
-                                <?php echo e($client->nome_razao_social); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?php 
+                    $id = 'client_id';
+                    $name = 'client_id';
+                    $placeholder = 'Digite para buscar cliente...';
+                    $selected = $project->client_id ?? '';
+                    include base_path('views/components/tom-select-client.php'); 
+                    ?>
                 </div>
                 
                 <div class="col-md-6 mb-3">
@@ -281,38 +280,50 @@ $title = $title ?? 'Editar Projeto';
 <?php
 $content = ob_get_clean();
 
-// Scripts para Tom Select no cliente
-ob_start();
-?>
-<link rel="stylesheet" href="<?php echo asset('tema/assets/libs/tom-select/dist/css/tom-select.bootstrap5.css'); ?>">
-<script src="<?php echo asset('tema/assets/libs/tom-select/dist/js/tom-select.complete.min.js'); ?>"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Tom Select no campo de cliente
-    new TomSelect('#client_id', {
-        placeholder: 'Selecione um cliente (opcional)',
-        allowEmptyOption: true,
-        create: false,
-        sortField: {
-            field: 'text',
-            direction: 'asc'
+// Tom Select Scripts
+$scripts = '';
+if (isset($GLOBALS['tom_select_inits'])) {
+    ob_start();
+    include base_path('views/components/tom-select-scripts.php');
+    $scripts = ob_get_clean();
+}
+
+// Script para pré-carregar o cliente selecionado
+if (isset($project->client_id) && $project->client_id && isset($clients)) {
+    $selectedClient = null;
+    foreach ($clients as $client) {
+        if ($client->id == $project->client_id) {
+            $selectedClient = $client;
+            break;
         }
-    });
+    }
     
-    // Tom Select no campo de responsável
-    new TomSelect('#responsible_user_id', {
-        placeholder: 'Selecione um responsável (opcional)',
-        allowEmptyOption: true,
-        create: false,
-        sortField: {
-            field: 'text',
-            direction: 'asc'
-        }
-    });
-});
-</script>
-<?php
-$scripts = ob_get_clean();
+    if ($selectedClient) {
+        ob_start();
+        ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pré-carrega o cliente selecionado após o Tom Select ser inicializado
+            var select = document.getElementById('client_id');
+            
+            if (select) {
+                // Aguarda o Tom Select ser inicializado
+                setTimeout(function() {
+                    if (select.tomselect) {
+                        select.tomselect.addOption({
+                            id: <?php echo $selectedClient->id; ?>,
+                            text: <?php echo json_encode($selectedClient->nome_razao_social); ?>
+                        });
+                        select.tomselect.setValue(<?php echo $selectedClient->id; ?>);
+                    }
+                }, 500);
+            }
+        });
+        </script>
+        <?php
+        $scripts .= ob_get_clean();
+    }
+}
 
 include base_path('views/layouts/app.php');
 ?>
