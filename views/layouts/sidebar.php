@@ -178,6 +178,12 @@
                         <span class="hide-menu">Templates de Contratos</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/knowledge-base'); ?>">
+                        <span><i class="ti ti-book"></i></span>
+                        <span class="hide-menu">Base de Conhecimento</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- Usuários -->

@@ -135,6 +135,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/leads/{id}/update', [LeadController::class, 'updateLead']);
     $router->post('/leads/{id}/delete', [LeadController::class, 'destroy']);
     $router->get('/leads/{id}/edit-modal', [LeadController::class, 'editModal']);
+    
+    // Base de Conhecimento
+    $router->get('/knowledge-base', [\App\Controllers\KnowledgeBaseController::class, 'index']);
+    $router->get('/knowledge-base/create', [\App\Controllers\KnowledgeBaseController::class, 'create']);
+    $router->post('/knowledge-base', [\App\Controllers\KnowledgeBaseController::class, 'store']);
+    $router->get('/knowledge-base/{id}', [\App\Controllers\KnowledgeBaseController::class, 'show']);
+    $router->get('/knowledge-base/{id}/edit', [\App\Controllers\KnowledgeBaseController::class, 'edit']);
+    $router->post('/knowledge-base/{id}/update', [\App\Controllers\KnowledgeBaseController::class, 'update']);
+    $router->post('/knowledge-base/{id}/delete', [\App\Controllers\KnowledgeBaseController::class, 'destroy']);
     $router->post('/leads/update-etapa-funil', [LeadController::class, 'updateEtapaFunil']);
     $router->post('/leads/update-responsible', [LeadController::class, 'updateResponsible']);
     $router->post('/leads/update-status', [LeadController::class, 'updateStatus']);
