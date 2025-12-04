@@ -412,21 +412,26 @@ class AutomationController extends Controller
             }
             
             // Templates de email são globais (não multi-tenant)
-            $templates = \App\Models\EmailTemplate::where('is_active', 1)
-                ->orderBy('name', 'ASC')
-                ->get();
+            // Busca todos os templates usando query SQL direta para evitar problemas com QueryBuilder
+            $db = \Core\Database::getInstance();
+            $sql = "SELECT * FROM `email_templates` ORDER BY `name` ASC";
+            $results = $db->query($sql);
             
-            // Verifica se $templates é array e não está vazio
-            if (!is_array($templates)) {
-                $templates = [];
+            error_log("AutomationController::getEmailTemplates() - Templates encontrados: " . count($results));
+            
+            // Verifica se $results é array e não está vazio
+            if (!is_array($results)) {
+                $results = [];
             }
             
-            $templatesArray = array_map(function($template) {
+            $templatesArray = array_map(function($row) {
                 return [
-                    'slug' => $template->slug ?? '',
-                    'name' => $template->name ?? ''
+                    'slug' => $row['slug'] ?? '',
+                    'name' => $row['name'] ?? ''
                 ];
-            }, $templates);
+            }, $results);
+            
+            error_log("AutomationController::getEmailTemplates() - Templates processados: " . count($templatesArray));
             
             json_response([
                 'success' => true,

@@ -757,15 +757,31 @@ function loadOriginsForSelect(selector, selectedValue = null) {
 }
 
 function loadEmailTemplatesForSelect(selector, selectedValue = null) {
+    console.log('Carregando templates de email...', selector);
+    
     fetch('<?php echo url('/api/automations/email-templates'); ?>')
-        .then(response => response.json())
+        .then(async response => {
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Resposta não é JSON:', text);
+                throw new Error('Resposta do servidor não é JSON');
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Templates de email recebidos:', data);
+            
             const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
-            if (!select) return;
+            if (!select) {
+                console.error('Select não encontrado:', selector);
+                return;
+            }
             
             select.innerHTML = '<option value="">Selecione um template de email...</option>';
             
             if (data.success && data.email_templates && Array.isArray(data.email_templates)) {
+                console.log('Adicionando', data.email_templates.length, 'templates ao select');
                 data.email_templates.forEach(template => {
                     const option = document.createElement('option');
                     option.value = template.slug;
@@ -775,10 +791,17 @@ function loadEmailTemplatesForSelect(selector, selectedValue = null) {
                     }
                     select.appendChild(option);
                 });
+            } else {
+                console.warn('Nenhum template encontrado ou formato inválido:', data);
+                select.innerHTML = '<option value="">Nenhum template disponível</option>';
             }
         })
         .catch(error => {
             console.error('Erro ao carregar templates de email:', error);
+            const select = typeof selector === 'string' ? document.querySelector(selector) : selector;
+            if (select) {
+                select.innerHTML = '<option value="">Erro ao carregar templates</option>';
+            }
         });
 }
 

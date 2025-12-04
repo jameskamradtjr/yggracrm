@@ -130,6 +130,17 @@ abstract class Model
         
         return $builder->whereNotNull($column);
     }
+    
+    /**
+     * Busca todos os registros ordenados
+     */
+    public static function orderBy(string $column, string $direction = 'ASC'): QueryBuilder
+    {
+        $instance = new static();
+        $builder = new QueryBuilder($instance);
+        
+        return $builder->orderBy($column, $direction);
+    }
 
     /**
      * Cria um novo registro
