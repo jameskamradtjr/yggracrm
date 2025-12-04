@@ -201,47 +201,53 @@ class CalendarController extends Controller
      */
     public function store(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if (!auth()->check()) {
-            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
-            return;
-        }
-
-        if (!verify_csrf($this->request->input('_csrf_token'))) {
-            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
-            return;
-        }
-
-        $input = $this->request->all();
-
-        $validator = new \Core\Validator($input, [
-            'titulo' => 'required|min:3|max:255',
-            'data_inicio' => 'required|date',
-            'data_fim' => 'nullable|date',
-            'cor' => 'nullable|in:danger,success,primary,warning',
-            'descricao' => 'nullable',
-            'localizacao' => 'nullable|max:255',
-            'observacoes' => 'nullable',
-            'dia_inteiro' => 'nullable|boolean',
-            'client_id' => 'nullable|numeric',
-            'lead_id' => 'nullable|numeric',
-            'project_id' => 'nullable|numeric',
-            'responsible_user_id' => 'nullable|numeric'
-        ]);
-
-        if (!$validator->passes()) {
-            error_log("Erro de validação ao criar evento: " . print_r($validator->errors(), true));
-            error_log("Dados recebidos: " . print_r($input, true));
-            json_response([
-                'success' => false,
-                'message' => 'Dados inválidos. Verifique os campos obrigatórios.',
-                'errors' => $validator->errors()
-            ], 400);
-            return;
-        }
-
+        // Garante que sempre retorna JSON, mesmo em caso de erro
         try {
+            // Limpa qualquer output anterior
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            header('Content-Type: application/json; charset=utf-8');
+
+            if (!auth()->check()) {
+                json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+                return;
+            }
+
+            if (!verify_csrf($this->request->input('_csrf_token'))) {
+                json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+                return;
+            }
+
+            $input = $this->request->all();
+
+            $validator = new \Core\Validator($input, [
+                'titulo' => 'required|min:3|max:255',
+                'data_inicio' => 'required|date',
+                'data_fim' => 'nullable|date',
+                'cor' => 'nullable|in:danger,success,primary,warning',
+                'descricao' => 'nullable',
+                'localizacao' => 'nullable|max:255',
+                'observacoes' => 'nullable',
+                'dia_inteiro' => 'nullable|boolean',
+                'client_id' => 'nullable|numeric',
+                'lead_id' => 'nullable|numeric',
+                'project_id' => 'nullable|numeric',
+                'responsible_user_id' => 'nullable|numeric'
+            ]);
+
+            if (!$validator->passes()) {
+                error_log("Erro de validação ao criar evento: " . print_r($validator->errors(), true));
+                error_log("Dados recebidos: " . print_r($input, true));
+                json_response([
+                    'success' => false,
+                    'message' => 'Dados inválidos. Verifique os campos obrigatórios.',
+                    'errors' => $validator->errors()
+                ], 400);
+                return;
+            }
+
             $validatedData = $validator->validated();
             
             // Se não tem data_fim, usa data_inicio
@@ -279,45 +285,92 @@ class CalendarController extends Controller
                 $diaInteiro = true;
             }
             
-            $event = CalendarEvent::create([
+            // Prepara dados para criação
+            $eventData = [
                 'user_id' => auth()->getDataUserId(),
                 'titulo' => $validatedData['titulo'],
                 'descricao' => $validatedData['descricao'] ?? null,
                 'data_inicio' => $validatedData['data_inicio'],
                 'data_fim' => $validatedData['data_fim'],
                 'cor' => $validatedData['cor'] ?? 'primary',
-                'dia_inteiro' => $diaInteiro,
+                'dia_inteiro' => $diaInteiro, // Boolean será convertido pelo Model
                 'localizacao' => $validatedData['localizacao'] ?? null,
                 'observacoes' => $validatedData['observacoes'] ?? null,
                 'client_id' => !empty($validatedData['client_id']) ? (int)$validatedData['client_id'] : null,
                 'lead_id' => !empty($validatedData['lead_id']) ? (int)$validatedData['lead_id'] : null,
                 'project_id' => !empty($validatedData['project_id']) ? (int)$validatedData['project_id'] : null,
                 'responsible_user_id' => !empty($validatedData['responsible_user_id']) ? (int)$validatedData['responsible_user_id'] : null
-            ]);
-
-            SistemaLog::registrar(
-                'calendar_events',
-                'CREATE',
-                $event->id,
-                "Evento criado: {$event->titulo}",
-                null,
-                $event->toArray()
-            );
+            ];
             
-            // Dispara evento de automação
-            AutomationEventDispatcher::onCalendarEvent('created', $event->id, auth()->getDataUserId());
+            error_log("CalendarController::store() - Dados para criar evento: " . json_encode($eventData));
+            
+            $event = CalendarEvent::create($eventData);
+            
+            if (!$event || !isset($event->id)) {
+                throw new \Exception('Falha ao criar evento. Evento não foi criado corretamente.');
+            }
+            
+            error_log("CalendarController::store() - Evento criado com sucesso. ID: " . $event->id);
+
+            // Tenta registrar log, mas não falha se der erro
+            try {
+                SistemaLog::registrar(
+                    'calendar_events',
+                    'CREATE',
+                    $event->id,
+                    "Evento criado: {$event->titulo}",
+                    null,
+                    $event->toArray()
+                );
+            } catch (\Exception $logError) {
+                error_log("Erro ao registrar log de evento (não crítico): " . $logError->getMessage());
+            }
+            
+            // Tenta disparar evento de automação, mas não falha se der erro
+            try {
+                AutomationEventDispatcher::onCalendarEvent('created', $event->id, auth()->getDataUserId());
+            } catch (\Exception $autoError) {
+                error_log("Erro ao disparar evento de automação (não crítico): " . $autoError->getMessage());
+            }
+
+            // Tenta obter evento formatado para FullCalendar
+            $eventData = null;
+            try {
+                $eventData = $event->toFullCalendar();
+            } catch (\Exception $fcError) {
+                error_log("Erro ao formatar evento para FullCalendar: " . $fcError->getMessage());
+                // Usa dados básicos se toFullCalendar() falhar
+                $eventData = [
+                    'id' => $event->id,
+                    'title' => $event->titulo,
+                    'start' => $event->data_inicio,
+                    'end' => $event->data_fim ?? $event->data_inicio
+                ];
+            }
 
             json_response([
                 'success' => true,
                 'message' => 'Evento criado com sucesso!',
-                'event' => $event->toFullCalendar()
+                'event' => $eventData
             ]);
 
-        } catch (\Exception $e) {
-            json_response([
+        } catch (\Throwable $e) {
+            // Captura qualquer erro (Exception, Error, etc)
+            error_log("Erro ao criar evento: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            
+            // Garante que retorna JSON mesmo em caso de erro
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
                 'success' => false,
                 'message' => 'Erro ao criar evento: ' . $e->getMessage()
-            ], 500);
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
         }
     }
 

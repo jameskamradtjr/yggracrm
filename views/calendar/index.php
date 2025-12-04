@@ -462,7 +462,17 @@ document.addEventListener("DOMContentLoaded", function () {
             method: method,
             body: formData
         })
-        .then(response => response.json())
+        .then(async response => {
+            // Verifica se a resposta é JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                // Se não é JSON, tenta ler como texto para ver o erro
+                const text = await response.text();
+                console.error('Resposta não é JSON:', text);
+                throw new Error('Resposta do servidor não é JSON. Verifique o console para mais detalhes.');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 eventModal.hide();
@@ -480,8 +490,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao salvar evento.');
+            console.error('Erro ao salvar evento:', error);
+            alert('Erro ao salvar evento: ' + error.message);
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         });

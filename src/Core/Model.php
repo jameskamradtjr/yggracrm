@@ -204,8 +204,9 @@ abstract class Model
                 implode(', ', $placeholders)
             );
 
-            error_log("SQL INSERT: " . $sql);
-            error_log("Valores: " . print_r(array_values($this->attributes), true));
+            // Log apenas em modo debug (comentado para não gerar output)
+            // error_log("SQL INSERT: " . $sql);
+            // error_log("Valores: " . print_r(array_values($this->attributes), true));
 
             $this->db->execute($sql, array_values($this->attributes));
             
