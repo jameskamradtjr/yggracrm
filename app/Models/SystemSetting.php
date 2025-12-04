@@ -104,7 +104,7 @@ class SystemSetting extends Model
             
             // Verifica se a key do registro encontrado corresponde à key que queremos salvar
             if ($setting->key !== $key) {
-                error_log("SystemSetting::set() - ERRO CRÍTICO: Key do registro encontrado ({$setting->key}) não corresponde à key solicitada ({$key})!");
+               // error_log("SystemSetting::set() - ERRO CRÍTICO: Key do registro encontrado ({$setting->key}) não corresponde à key solicitada ({$key})!");
                 // Força INSERT ao invés de UPDATE
                 $setting = null;
             } else {
@@ -123,13 +123,13 @@ class SystemSetting extends Model
                     $setting->id    // WHERE id (garantia extra)
                 ]);
                 
-                error_log("SystemSetting::set() - UPDATE " . ($result !== false ? "✓ SUCESSO" : "✗ FALHOU"));
+              //  error_log("SystemSetting::set() - UPDATE " . ($result !== false ? "✓ SUCESSO" : "✗ FALHOU"));
                 return $result !== false;
             }
         }
         
         // INSERT DIRETO para garantir que user_id seja salvo corretamente
-        error_log("SystemSetting::set() - INSERT: Criando novo registro para key='{$key}'");
+       // error_log("SystemSetting::set() - INSERT: Criando novo registro para key='{$key}'");
         
         $sql = "INSERT INTO `system_settings` (`key`, `value`, `type`, `group`, `description`, `user_id`, `created_at`, `updated_at`) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -145,7 +145,7 @@ class SystemSetting extends Model
             $now
         ]);
         
-        error_log("SystemSetting::set() - INSERT " . ($result !== false ? "✓ SUCESSO" : "✗ FALHOU"));
+       // error_log("SystemSetting::set() - INSERT " . ($result !== false ? "✓ SUCESSO" : "✗ FALHOU"));
         return $result !== false;
     }
 
