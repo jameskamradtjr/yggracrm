@@ -45,10 +45,13 @@ class AutomationEngine
                 throw new \Exception('Nó de trigger não encontrado');
             }
             
+            // Remove o prefixo 'trigger_' do type para obter o ID do trigger
+            $triggerId = str_replace('trigger_', '', $triggerNode['type']);
+            
             // Verifica se o trigger foi acionado
-            $trigger = AutomationRegistry::getTrigger($triggerNode['type']);
+            $trigger = AutomationRegistry::getTrigger($triggerId);
             if (!$trigger) {
-                throw new \Exception("Trigger '{$triggerNode['type']}' não encontrado");
+                throw new \Exception("Trigger '{$triggerId}' não encontrado (type original: '{$triggerNode['type']}')");
             }
             
             $trigger->setConfig($triggerNode['config'] ?? []);
