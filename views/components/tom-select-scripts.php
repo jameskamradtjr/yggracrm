@@ -74,6 +74,13 @@ document.addEventListener("DOMContentLoaded", function() {
                     return "<div class='no-results'>Nenhum cliente encontrado</div>";
                 }
             },
+            onItemAdd: function(value) {
+                // Quando um item é adicionado, salva os dados extras no options
+                var item = this.options[value];
+                if (item && item.email) {
+                    // Os dados já estão no item retornado pela API
+                }
+            },
             plugins: ["clear_button"]
         });
         

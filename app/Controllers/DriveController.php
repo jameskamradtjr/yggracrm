@@ -140,7 +140,7 @@ class DriveController extends Controller
                 $total = $countResult['total'] ?? 0;
                 
                 // Busca clientes
-                $sql = "SELECT id, nome_razao_social, nome_fantasia, email 
+                $sql = "SELECT id, nome_razao_social, nome_fantasia, email, telefone, celular 
                         FROM clients 
                         WHERE user_id = ? 
                         AND (nome_razao_social LIKE ? OR nome_fantasia LIKE ? OR email LIKE ?)
@@ -153,7 +153,7 @@ class DriveController extends Controller
                 $countResult = $db->queryOne($countSql, [$userId]);
                 $total = $countResult['total'] ?? 0;
                 
-                $sql = "SELECT id, nome_razao_social, nome_fantasia, email 
+                $sql = "SELECT id, nome_razao_social, nome_fantasia, email, telefone, celular 
                         FROM clients 
                         WHERE user_id = ? 
                         ORDER BY nome_razao_social ASC 
@@ -164,9 +164,19 @@ class DriveController extends Controller
             error_log("Drive searchClients: Encontrados {$total} clientes");
 
             $results = array_map(function($client) {
+                $text = $client['nome_razao_social'];
+                if (!empty($client['nome_fantasia'])) {
+                    $text .= ' (' . $client['nome_fantasia'] . ')';
+                }
+                if (!empty($client['email'])) {
+                    $text .= ' - ' . $client['email'];
+                }
                 return [
                     'id' => $client['id'],
-                    'text' => $client['nome_razao_social'] . ($client['nome_fantasia'] ? ' (' . $client['nome_fantasia'] . ')' : '')
+                    'text' => $text,
+                    'nome_razao_social' => $client['nome_razao_social'],
+                    'email' => $client['email'] ?? null,
+                    'telefone' => $client['telefone'] ?? $client['celular'] ?? null
                 ];
             }, $clients);
 

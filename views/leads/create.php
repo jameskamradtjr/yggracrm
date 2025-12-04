@@ -29,22 +29,13 @@ ob_start();
                             
                             <div class="mb-3">
                                 <label for="client_id" class="form-label">Cliente Existente (Opcional)</label>
-                                <select class="form-select" id="client_id" name="client_id" onchange="preencherDadosCliente()">
-                                    <option value="">Selecione um cliente existente ou cadastre novo</option>
-                                    <?php if (!empty($clients)): ?>
-                                        <?php foreach ($clients as $client): ?>
-                                            <option value="<?php echo $client->id; ?>" 
-                                                    data-nome="<?php echo e($client->nome_razao_social); ?>"
-                                                    data-email="<?php echo e($client->email ?? ''); ?>"
-                                                    data-telefone="<?php echo e($client->telefone ?? ''); ?>">
-                                                <?php echo e($client->nome_razao_social); ?>
-                                                <?php if ($client->email): ?>
-                                                    (<?php echo e($client->email); ?>)
-                                                <?php endif; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
+                                <?php 
+                                $id = 'client_id';
+                                $name = 'client_id';
+                                $placeholder = 'Digite para buscar cliente...';
+                                $selected = old('client_id') ?? '';
+                                include base_path('views/components/tom-select-client.php'); 
+                                ?>
                                 <small class="text-muted">Se selecionar um cliente, os campos abaixo serão preenchidos automaticamente. Se não selecionar, um novo cliente será criado automaticamente.</small>
                             </div>
                             
@@ -190,21 +181,9 @@ ob_start();
 <script>
 let tags = [];
 
-function preencherDadosCliente() {
-    const select = document.getElementById('client_id');
-    const selectedOption = select.options[select.selectedIndex];
-    
-    if (selectedOption.value) {
-        // Preenche os campos com os dados do cliente selecionado
-        document.getElementById('nome').value = selectedOption.getAttribute('data-nome') || '';
-        document.getElementById('email').value = selectedOption.getAttribute('data-email') || '';
-        document.getElementById('telefone').value = selectedOption.getAttribute('data-telefone') || '';
-        
-        // Desabilita os campos (mas mantém required para validação)
-        document.getElementById('nome').readOnly = true;
-        document.getElementById('email').readOnly = true;
-        document.getElementById('telefone').readOnly = true;
-    } else {
+// Função para buscar dados do cliente e preencher campos
+function buscarDadosCliente(clientId) {
+    if (!clientId) {
         // Limpa e habilita os campos
         document.getElementById('nome').value = '';
         document.getElementById('email').value = '';
@@ -213,7 +192,42 @@ function preencherDadosCliente() {
         document.getElementById('nome').readOnly = false;
         document.getElementById('email').readOnly = false;
         document.getElementById('telefone').readOnly = false;
+        return;
     }
+    
+    // Busca dados do cliente via AJAX
+    fetch('<?php echo url('/api/clients'); ?>/' + clientId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.client) {
+                const client = data.client;
+                document.getElementById('nome').value = client.nome_razao_social || '';
+                document.getElementById('email').value = client.email || '';
+                document.getElementById('telefone').value = client.telefone || client.celular || '';
+                
+                // Desabilita os campos (mas mantém required para validação)
+                document.getElementById('nome').readOnly = true;
+                document.getElementById('email').readOnly = true;
+                document.getElementById('telefone').readOnly = true;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar dados do cliente:', error);
+            // Tenta usar dados do Tom Select se disponíveis
+            const clientSelect = document.getElementById('client_id');
+            if (clientSelect && clientSelect.tomselect) {
+                const selectedOption = clientSelect.tomselect.options[clientId];
+                if (selectedOption) {
+                    document.getElementById('nome').value = selectedOption.nome_razao_social || selectedOption.text || '';
+                    document.getElementById('email').value = selectedOption.email || '';
+                    document.getElementById('telefone').value = selectedOption.telefone || '';
+                    
+                    document.getElementById('nome').readOnly = true;
+                    document.getElementById('email').readOnly = true;
+                    document.getElementById('telefone').readOnly = true;
+                }
+            }
+        });
 }
 
 function addTag(tagName) {
@@ -289,8 +303,51 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('formCreateLead').addEventListener('submit', function() {
         updateHiddenInput();
     });
+    
+    // Listener para quando o Tom Select for inicializado
+    const clientSelect = document.getElementById('client_id');
+    if (clientSelect) {
+        clientSelect.addEventListener('tomselect:initialized', function(e) {
+            const tomSelect = e.detail.tomSelect;
+            
+            // Quando um cliente é selecionado
+            tomSelect.on('change', function(value) {
+                if (!value) {
+                    // Cliente desmarcado - limpa campos
+                    document.getElementById('nome').value = '';
+                    document.getElementById('email').value = '';
+                    document.getElementById('telefone').value = '';
+                    document.getElementById('nome').readOnly = false;
+                    document.getElementById('email').readOnly = false;
+                    document.getElementById('telefone').readOnly = false;
+                    return;
+                }
+                
+                // Tenta usar dados do Tom Select primeiro
+                const selectedOption = tomSelect.options[value];
+                if (selectedOption && selectedOption.email) {
+                    // Usa dados já carregados pelo Tom Select
+                    document.getElementById('nome').value = selectedOption.nome_razao_social || selectedOption.text || '';
+                    document.getElementById('email').value = selectedOption.email || '';
+                    document.getElementById('telefone').value = selectedOption.telefone || '';
+                    
+                    document.getElementById('nome').readOnly = true;
+                    document.getElementById('email').readOnly = true;
+                    document.getElementById('telefone').readOnly = true;
+                } else {
+                    // Se não tiver dados completos, busca via API
+                    buscarDadosCliente(value);
+                }
+            });
+        });
+    }
 });
 </script>
+
+<?php
+// Inclui scripts do Tom Select
+include base_path('views/components/tom-select-scripts.php');
+?>
 
 <?php
 $content = ob_get_clean();

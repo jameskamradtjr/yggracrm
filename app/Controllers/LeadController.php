@@ -832,13 +832,9 @@ Dados do lead:
         }
 
         $userId = auth()->getDataUserId();
-        $clients = \App\Models\Client::where('user_id', $userId)
-            ->orderBy('nome_razao_social', 'ASC')
-            ->get();
 
         return $this->view('leads/create', [
-            'title' => 'Cadastrar Lead',
-            'clients' => $clients
+            'title' => 'Cadastrar Lead'
         ]);
     }
 

@@ -156,6 +156,40 @@ class ClientController extends Controller
     }
 
     /**
+     * Retorna dados do cliente em JSON (para uso em AJAX)
+     */
+    public function getClientJson(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $client = Client::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$client) {
+            json_response(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            return;
+        }
+        
+        json_response([
+            'success' => true,
+            'client' => [
+                'id' => $client->id,
+                'nome_razao_social' => $client->nome_razao_social,
+                'email' => $client->email,
+                'telefone' => $client->telefone,
+                'celular' => $client->celular
+            ]
+        ]);
+    }
+    
+    /**
      * Exibe detalhes do cliente
      */
     public function show(array $params): string

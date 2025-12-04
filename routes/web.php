@@ -327,6 +327,9 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/drive/search/users', [DriveController::class, 'searchUsers']);
     $router->get('/drive/search/tags', [DriveController::class, 'searchTags']);
     
+    // API endpoints
+    $router->get('/api/clients/{id}', [\App\Controllers\ClientController::class, 'getClientJson']);
+    
     // Pastas (antes das rotas genéricas)
     $router->post('/drive/folders', [DriveController::class, 'createFolder']);
     $router->delete('/drive/folders/{id}', [DriveController::class, 'deleteFolder']);
