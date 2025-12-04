@@ -214,6 +214,62 @@ $steps = $steps ?? [];
                 <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
             </div>
             
+            <!-- Formulário de Dados Pessoais (sempre primeiro) -->
+            <div class="quiz-card step-container personal-data-step" data-step-index="-1" data-step-type="personal">
+                <h2 class="step-title">Seus Dados</h2>
+                <p class="step-description">Preencha seus dados para continuar</p>
+                
+                <form class="step-form" onsubmit="handlePersonalDataSubmit(event)">
+                    <div class="mb-3">
+                        <label for="lead_nome" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               id="lead_nome" 
+                               name="nome" 
+                               class="form-control" 
+                               required
+                               placeholder="Digite seu nome completo">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lead_email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" 
+                               id="lead_email" 
+                               name="email" 
+                               class="form-control" 
+                               required
+                               placeholder="seu@email.com">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lead_telefone" class="form-label">Telefone <span class="text-danger">*</span></label>
+                        <input type="tel" 
+                               id="lead_telefone" 
+                               name="telefone" 
+                               class="form-control" 
+                               required
+                               placeholder="(00) 00000-0000"
+                               pattern="[\(][0-9]{2}[\)][\s][0-9]{4,5}[-][0-9]{4}">
+                        <small class="text-muted">Formato: (00) 00000-0000</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lead_instagram" class="form-label">Instagram</label>
+                        <input type="text" 
+                               id="lead_instagram" 
+                               name="instagram" 
+                               class="form-control" 
+                               placeholder="@seuinstagram">
+                    </div>
+                    
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            Continuar
+                            <i class="ri-arrow-right-line ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
             <?php if (empty($steps)): ?>
                 <div class="quiz-card">
                     <p class="text-center text-muted">Este quiz ainda não possui etapas configuradas.</p>
@@ -314,7 +370,10 @@ $steps = $steps ?? [];
                                     Anterior
                                 </button>
                             <?php else: ?>
-                                <div></div>
+                                <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                                    <i class="ri-arrow-left-line me-1"></i>
+                                    Voltar
+                                </button>
                             <?php endif; ?>
                             
                             <button type="submit" class="btn btn-primary">
@@ -339,7 +398,7 @@ $steps = $steps ?? [];
     </div>
 
     <script>
-        let currentStep = 0;
+        let currentStep = -1; // Começa em -1 para dados pessoais
         const totalSteps = <?php echo count($steps); ?>;
         const quizSlug = '<?php echo $quiz->slug; ?>';
         const quizId = <?php echo $quiz->id; ?>;
@@ -348,12 +407,13 @@ $steps = $steps ?? [];
         function startQuiz() {
             document.getElementById('welcome-card').style.display = 'none';
             document.getElementById('quiz-steps').style.display = 'block';
-            showStep(0);
+            showStep(-1); // Mostra dados pessoais primeiro
         }
         
         function showStep(index) {
-            document.querySelectorAll('.step-container').forEach((step, i) => {
-                step.classList.toggle('active', i === index);
+            document.querySelectorAll('.step-container').forEach((step) => {
+                const stepIndex = parseInt(step.getAttribute('data-step-index'));
+                step.classList.toggle('active', stepIndex === index);
             });
             
             currentStep = index;
@@ -361,8 +421,36 @@ $steps = $steps ?? [];
         }
         
         function updateProgress() {
-            const progress = ((currentStep + 1) / totalSteps) * 100;
+            // Progresso considera dados pessoais + steps do quiz
+            const totalStepsWithPersonal = totalSteps + 1;
+            const progress = ((currentStep + 2) / totalStepsWithPersonal) * 100; // +2 porque começa em -1
             document.getElementById('progress-fill').style.width = progress + '%';
+        }
+        
+        function handlePersonalDataSubmit(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const formDataObj = new FormData(form);
+            
+            // Coleta dados pessoais
+            for (let [key, value] of formDataObj.entries()) {
+                formData[key] = value;
+            }
+            
+            // Valida campos obrigatórios
+            if (!formData['nome'] || !formData['email'] || !formData['telefone']) {
+                alert('Por favor, preencha todos os campos obrigatórios.');
+                return;
+            }
+            
+            // Se não há steps, submete direto
+            if (totalSteps === 0) {
+                submitQuiz();
+            } else {
+                // Vai para o primeiro step do quiz
+                showStep(0);
+            }
         }
         
         function handleStepSubmit(event, stepIndex, totalSteps) {
@@ -393,7 +481,10 @@ $steps = $steps ?? [];
         }
         
         function previousStep() {
-            if (currentStep > 0) {
+            if (currentStep === 0) {
+                // Volta para dados pessoais
+                showStep(-1);
+            } else if (currentStep > 0) {
                 showStep(currentStep - 1);
             }
         }
@@ -423,6 +514,24 @@ $steps = $steps ?? [];
             .catch(error => {
                 console.error('Erro:', error);
                 alert('Erro ao enviar quiz. Tente novamente.');
+            });
+        }
+        
+        // Máscara de telefone
+        const telefoneInput = document.getElementById('lead_telefone');
+        if (telefoneInput) {
+            telefoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    if (value.length <= 2) {
+                        value = value ? `(${value}` : '';
+                    } else if (value.length <= 7) {
+                        value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                    } else {
+                        value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+                    }
+                    e.target.value = value;
+                }
             });
         }
         

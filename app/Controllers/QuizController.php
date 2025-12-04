@@ -589,6 +589,12 @@ class QuizController extends Controller
         $leadData = [];
         $totalPoints = 0;
 
+        // Primeiro, coleta dados pessoais diretamente do request (sempre presentes)
+        $leadData['nome'] = $data['nome'] ?? $data['name'] ?? '';
+        $leadData['email'] = $data['email'] ?? '';
+        $leadData['telefone'] = $data['telefone'] ?? $data['phone'] ?? '';
+        $leadData['instagram'] = $data['instagram'] ?? '';
+
         // Processa respostas e calcula pontuação
         foreach ($steps as $step) {
             $fieldName = $step->field_name ?: 'step_' . $step->id;
@@ -609,8 +615,8 @@ class QuizController extends Controller
                     }
                 }
 
-                // Mapeia resposta para campos do lead
-                if ($step->field_name) {
+                // Mapeia resposta para campos do lead (não sobrescreve dados pessoais)
+                if ($step->field_name && !in_array($step->field_name, ['nome', 'name', 'email', 'telefone', 'phone', 'instagram'])) {
                     $leadData[$step->field_name] = is_array($answer) ? implode(', ', $answer) : trim($answer);
                 }
             }
@@ -621,6 +627,9 @@ class QuizController extends Controller
         $email = $leadData['email'] ?? '';
         $telefone = $leadData['telefone'] ?? $leadData['phone'] ?? '';
         $instagram = $leadData['instagram'] ?? '';
+        
+        // Log para debug
+        error_log("QuizController::submitQuiz() - Dados pessoais coletados: nome={$nome}, email={$email}, telefone={$telefone}, instagram={$instagram}");
 
         // Cria lead com todos os campos disponíveis
         $lead = \App\Models\Lead::create([
