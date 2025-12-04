@@ -7,6 +7,7 @@ namespace App\Services\Automation;
 use App\Models\Automation;
 use App\Models\AutomationExecution;
 use App\Models\AutomationDelay;
+use App\Services\Automation\AutomationBootstrap;
 
 /**
  * Engine de execução de automações
@@ -18,6 +19,9 @@ class AutomationEngine
      */
     public function execute(Automation $automation, array $triggerData): void
     {
+        // Garante que os componentes estão registrados antes de executar
+        AutomationBootstrap::registerAll();
+        
         if (!$automation->is_active) {
             return;
         }
@@ -51,6 +55,10 @@ class AutomationEngine
             // Verifica se o trigger foi acionado
             $trigger = AutomationRegistry::getTrigger($triggerId);
             if (!$trigger) {
+                // Lista triggers disponíveis para debug
+                $allTriggers = AutomationRegistry::getAllTriggers();
+                $availableTriggerIds = array_map(function($t) { return $t['id']; }, $allTriggers);
+                error_log("Trigger '{$triggerId}' não encontrado. Triggers disponíveis: " . implode(', ', $availableTriggerIds));
                 throw new \Exception("Trigger '{$triggerId}' não encontrado (type original: '{$triggerNode['type']}')");
             }
             
@@ -222,6 +230,9 @@ class AutomationEngine
      */
     public function continueAfterDelay(AutomationDelay $delay): void
     {
+        // Garante que os componentes estão registrados antes de continuar
+        AutomationBootstrap::registerAll();
+        
         $automation = $delay->automation();
         if (!$automation || !$automation->is_active) {
             $delay->markAsCancelled();
