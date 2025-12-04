@@ -1028,6 +1028,9 @@ Dados do lead:
         $users = \App\Models\User::where('status', 'active')->get();
         $quizResponses = $lead->quizResponses();
         $quiz = $lead->quiz();
+        
+        // Debug: log para verificar se as respostas estão sendo encontradas
+        error_log("LeadController::show() - Lead ID: {$lead->id}, Origem: {$lead->origem}, Quiz Responses: " . count($quizResponses));
 
         return $this->view('leads/show', [
             'title' => 'Detalhes do Lead',

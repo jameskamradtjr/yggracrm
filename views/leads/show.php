@@ -121,6 +121,64 @@ ob_start();
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Respostas do Quiz -->
+                    <?php 
+                    // Busca respostas do quiz
+                    $hasQuizResponses = !empty($quizResponses) && is_array($quizResponses) && count($quizResponses) > 0;
+                    if ($hasQuizResponses || ($lead->origem && str_starts_with($lead->origem, 'quiz_'))): 
+                    ?>
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="ti ti-file-question me-2"></i>
+                                    Respostas do Quiz
+                                    <?php if ($quiz): ?>
+                                        : <?php echo e($quiz->name); ?>
+                                    <?php elseif ($lead->origem && str_starts_with($lead->origem, 'quiz_')): ?>
+                                        (<?php echo e(str_replace('quiz_', '', $lead->origem)); ?>)
+                                    <?php endif; ?>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <?php if ($hasQuizResponses): ?>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th style="width: 40%;">Pergunta</th>
+                                                    <th>Resposta</th>
+                                                    <th style="width: 10%;" class="text-center">Pontos</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($quizResponses as $response): ?>
+                                                    <?php 
+                                                    $step = $response->step();
+                                                    $pergunta = $step ? $step->title : ($response->field_name ?? 'Pergunta');
+                                                    ?>
+                                                    <tr>
+                                                        <td class="fw-semibold small"><?php echo e($pergunta); ?></td>
+                                                        <td class="small"><?php echo e($response->response); ?></td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-info"><?php echo $response->points; ?></span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-info mb-0">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        Este lead foi criado a partir de um quiz, mas as respostas não foram encontradas.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Análise da IA -->
                     <div class="col-md-6">
@@ -267,46 +325,6 @@ ob_start();
                 </div>
                 <?php endif; ?>
 
-                <!-- Respostas do Quiz -->
-                <?php if (!empty($quizResponses) && $quiz): ?>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="ti ti-file-question me-2"></i>Respostas do Quiz: <?php echo e($quiz->name); ?></h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 30%;">Pergunta</th>
-                                                <th>Resposta</th>
-                                                <th style="width: 10%;" class="text-center">Pontos</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($quizResponses as $response): ?>
-                                                <?php 
-                                                $step = $response->step();
-                                                $pergunta = $step ? $step->title : ($response->field_name ?? 'Pergunta');
-                                                ?>
-                                                <tr>
-                                                    <td class="fw-semibold"><?php echo e($pergunta); ?></td>
-                                                    <td><?php echo e($response->response); ?></td>
-                                                    <td class="text-center">
-                                                        <span class="badge bg-info"><?php echo $response->points; ?></span>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
 
                 <!-- Informações Adicionais -->
                 <div class="row mt-3">
