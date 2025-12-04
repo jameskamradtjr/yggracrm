@@ -92,7 +92,7 @@ ob_start();
                         </div>
                         <div class="col-md-2 mb-3">
                             <label class="form-label">Cor Hover Botão</label>
-                            <input type="color" name="button_hover_color" class="form-control form-control-color" value="<?php echo e($quiz->button_hover_color ?? '#0056b3'); ?>">
+                            <input type="color" name="button_hover_color" class="form-control form-control-color" value="<?php echo e(!empty($quiz->button_hover_color) ? $quiz->button_hover_color : '#0056b3'); ?>">
                             <small class="text-muted">Cor quando o mouse passa sobre o botão</small>
                         </div>
                     </div>

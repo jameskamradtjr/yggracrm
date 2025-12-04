@@ -233,6 +233,9 @@ class QuizController extends Controller
             $defaultTagId = $tag->id;
         }
         
+        // Log para debug
+        error_log("QuizController::update() - button_hover_color recebido: " . ($data['button_hover_color'] ?? 'NULL'));
+        
         $quiz->update([
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
@@ -243,12 +246,17 @@ class QuizController extends Controller
             'background_color' => $data['background_color'] ?? '#ffffff',
             'button_color' => $data['button_color'] ?? '#007bff',
             'button_text_color' => $data['button_text_color'] ?? '#ffffff',
+            'button_hover_color' => !empty($data['button_hover_color']) ? $data['button_hover_color'] : null,
             'logo_url' => $data['logo_url'] ?? null,
             'welcome_message' => $data['welcome_message'] ?? null,
             'completion_message' => $data['completion_message'] ?? null,
             'default_tag_id' => $defaultTagId,
             'active' => $active
         ]);
+        
+        // Log para debug após update
+        $quizUpdated = Quiz::find($quiz->id);
+        error_log("QuizController::update() - button_hover_color após update: " . ($quizUpdated->button_hover_color ?? 'NULL'));
 
         session()->flash('success', 'Quiz atualizado com sucesso!');
         $this->redirect('/quizzes/' . $quiz->id . '/edit');
