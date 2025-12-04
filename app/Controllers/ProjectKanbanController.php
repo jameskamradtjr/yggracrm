@@ -371,25 +371,65 @@ class ProjectKanbanController extends Controller
         try {
             $titulo = $card->titulo;
             $dadosAnteriores = $card->toArray();
+            $cardId = $card->id;
             
-            $card->delete();
+            // Exclui registros relacionados primeiro usando SQL direto
+            $db = \Core\Database::getInstance();
+            
+            // 1. Exclui checklists
+            try {
+                $db->execute("DELETE FROM project_card_checklists WHERE card_id = ?", [$cardId]);
+            } catch (\Exception $e) {
+                error_log("Erro ao excluir checklists do card {$cardId}: " . $e->getMessage());
+            }
+            
+            // 2. Exclui tags
+            try {
+                $db->execute("DELETE FROM project_card_tags WHERE card_id = ?", [$cardId]);
+            } catch (\Exception $e) {
+                error_log("Erro ao excluir tags do card {$cardId}: " . $e->getMessage());
+            }
+            
+            // 3. Exclui time tracking
+            try {
+                $db->execute("DELETE FROM project_card_time_tracking WHERE card_id = ?", [$cardId]);
+            } catch (\Exception $e) {
+                error_log("Erro ao excluir timers do card {$cardId}: " . $e->getMessage());
+            }
+            
+            // 4. Exclui o card usando SQL direto para garantir que funciona
+            $stmt = $db->execute(
+                "DELETE FROM project_cards WHERE id = ? AND user_id = ?",
+                [$cardId, $userId]
+            );
+            
+            if ($stmt->rowCount() === 0) {
+                throw new \Exception("Falha ao excluir o card do banco de dados (nenhuma linha afetada)");
+            }
             
             // Registra log
-            SistemaLog::registrar(
-                'project_cards',
-                'DELETE',
-                $params['id'],
-                "Card excluído: {$titulo}",
-                $dadosAnteriores,
-                null
-            );
+            try {
+                SistemaLog::registrar(
+                    'project_cards',
+                    'DELETE',
+                    $cardId,
+                    "Card excluído: {$titulo}",
+                    $dadosAnteriores,
+                    null
+                );
+            } catch (\Exception $e) {
+                error_log("Erro ao registrar log de exclusão: " . $e->getMessage());
+            }
             
             json_response([
                 'success' => true,
                 'message' => 'Card excluído com sucesso!'
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            $cardIdLog = isset($cardId) ? $cardId : ($card->id ?? 'N/A');
+            error_log("Erro ao excluir card {$cardIdLog}: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             json_response([
                 'success' => false,
                 'message' => 'Erro ao excluir card: ' . $e->getMessage()
