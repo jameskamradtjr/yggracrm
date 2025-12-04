@@ -473,37 +473,11 @@ class LeadController extends Controller
         $urgencia = 'baixa';
         $resumo = '';
 
-        // Calcula score baseado nos dados
-        if (!empty($data['investimento_software'])) {
-            $investimento = strtolower($data['investimento_software']);
-            if (strpos($investimento, '50k') !== false || strpos($investimento, '50') !== false) {
-                $score += 30;
-                $tags[] = 'Alto Investimento';
-            } elseif (strpos($investimento, '25k') !== false || strpos($investimento, '25') !== false) {
-                $score += 20;
-                $tags[] = 'Médio-Alto Investimento';
-            } elseif (strpos($investimento, '10k') !== false || strpos($investimento, '10') !== false) {
-                $score += 15;
-                $tags[] = 'Médio Investimento';
-            } else {
-                $score += 10;
-                $tags[] = 'Baixo Investimento';
-            }
-        }
-
-        if (!empty($data['tem_software']) && $data['tem_software'] === 'não') {
-            $score += 20;
-            $tags[] = 'Sem Sistema';
-            $urgencia = 'alta';
-        }
-
-        if (!empty($data['ramo'])) {
-            $tags[] = 'Ramo: ' . $data['ramo'];
-        }
-
+        // Calcula score baseado nos dados disponíveis
         if (!empty($data['objetivo'])) {
             $tags[] = 'Objetivo Definido';
             $score += 10;
+            $resumo = "Objetivo: " . $data['objetivo'];
         }
 
         // Determina urgência baseada no score
@@ -511,18 +485,6 @@ class LeadController extends Controller
             $urgencia = 'alta';
         } elseif ($score >= 30) {
             $urgencia = 'media';
-        }
-
-        // Gera resumo simples
-        $resumo = "Lead qualificado através de quiz. ";
-        if (!empty($data['ramo'])) {
-            $resumo .= "Ramo: " . $data['ramo'] . ". ";
-        }
-        if (!empty($data['objetivo'])) {
-            $resumo .= "Objetivo: " . $data['objetivo'] . ". ";
-        }
-        if (!empty($data['investimento_software'])) {
-            $resumo .= "Investimento: " . $data['investimento_software'] . ". ";
         }
 
         return [
@@ -899,15 +861,10 @@ Dados do lead:
             'nome' => 'required',
             'email' => 'required|email',
             'telefone' => 'required',
-            'tem_software' => 'required|in:sim,nao',
-            'investimento_software' => 'required|in:5k,10k,25k,50k,50k+',
-            'tipo_sistema' => 'required|in:interno,cliente,saas',
-            'plataforma_app' => 'required|in:ios_android,ios,android,nenhum',
             'valor_oportunidade' => 'nullable|numeric|min:0',
             'instagram' => 'nullable',
-            'ramo' => 'nullable',
             'objetivo' => 'nullable',
-            'origem_conheceu' => 'nullable'
+            'tags' => 'nullable|string'
         ]);
 
         try {
@@ -961,15 +918,9 @@ Dados do lead:
                 }
             }
 
-            // Prepara dados para Gemini (mesmo formato do quiz)
+            // Prepara dados para análise simples (sem Gemini)
             $promptData = [
-                'tem_software' => $data['tem_software'] ?? false,
-                'investimento_software' => $data['investimento_software'] ?? '',
-                'tipo_sistema' => $data['tipo_sistema'] ?? '',
-                'plataforma_app' => $data['plataforma_app'] ?? '',
-                'ramo' => $data['ramo'] ?? '',
-                'objetivo' => $data['objetivo'] ?? '',
-                'origem_conheceu' => $data['origem_conheceu'] ?? ''
+                'objetivo' => $data['objetivo'] ?? ''
             ];
 
             // Análise simples baseada nos dados (sem Gemini)
@@ -989,20 +940,14 @@ Dados do lead:
                 'email' => $data['email'],
                 'telefone' => $data['telefone'],
                 'instagram' => $data['instagram'] ?? null,
-                'ramo' => $data['ramo'] ?? null,
-                'tem_software' => isset($data['tem_software']) && ($data['tem_software'] === true || $data['tem_software'] === 'sim'),
-                'investimento_software' => $data['investimento_software'] ?? null,
-                'tipo_sistema' => $data['tipo_sistema'] ?? null,
-                'plataforma_app' => $data['plataforma_app'] ?? null,
-                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'objetivo' => $data['objetivo'] ?? null,
+                'valor_oportunidade' => isset($data['valor_oportunidade']) && !empty($data['valor_oportunidade']) && (float)$data['valor_oportunidade'] > 0 ? (float)$data['valor_oportunidade'] : null,
                 'tags_ai' => $tagsAi,
                 'score_potencial' => $aiAnalysis['score_potencial'] ?? 0,
                 'urgencia' => $aiAnalysis['urgencia'] ?? 'baixa',
                 'resumo' => $aiAnalysis['resumo'] ?? null,
                 'etapa_funil' => 'interessados',
                 'origem' => 'cadastro_manual',
-                'origem_conheceu' => $data['origem_conheceu'] ?? null,
                 'user_id' => $userId
             ];
 
@@ -1012,6 +957,33 @@ Dados do lead:
             }
 
             $lead = Lead::create($leadData);
+            
+            // Processa tags se fornecidas
+            if (!empty($data['tags'])) {
+                $tagNames = array_filter(array_map('trim', explode(',', $data['tags'])));
+                foreach ($tagNames as $tagName) {
+                    if (empty($tagName)) {
+                        continue;
+                    }
+                    
+                    // Busca ou cria a tag pelo nome
+                    $tag = \App\Models\Tag::where('name', $tagName)
+                        ->where('user_id', $userId)
+                        ->first();
+                    
+                    if (!$tag) {
+                        // Cria nova tag
+                        $tag = \App\Models\Tag::create([
+                            'name' => $tagName,
+                            'color' => '#0dcaf0', // Cor padrão
+                            'user_id' => $userId
+                        ]);
+                    }
+                    
+                    // Adiciona tag ao lead
+                    $lead->addTag($tag->id);
+                }
+            }
             
             // Registra log
             SistemaLog::registrar(

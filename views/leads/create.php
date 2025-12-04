@@ -24,7 +24,7 @@ ob_start();
                     
                     <div class="row">
                         <!-- Informações Básicas -->
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <h5 class="mb-3">Informações Básicas</h5>
                             
                             <div class="mb-3">
@@ -48,148 +48,77 @@ ob_start();
                                 <small class="text-muted">Se selecionar um cliente, os campos abaixo serão preenchidos automaticamente. Se não selecionar, um novo cliente será criado automaticamente.</small>
                             </div>
                             
-                            <div class="mb-3">
-                                <label for="nome" class="form-label">Nome Completo <span class="text-danger">*</span></label>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="nome" 
-                                       name="nome" 
-                                       value="<?php echo old('nome'); ?>" 
-                                       required>
-                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nome" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="nome" 
+                                           name="nome" 
+                                           value="<?php echo old('nome'); ?>" 
+                                           required>
+                                </div>
 
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" 
-                                       class="form-control" 
-                                       id="email" 
-                                       name="email" 
-                                       value="<?php echo old('email'); ?>" 
-                                       required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="telefone" class="form-label">Telefone <span class="text-danger">*</span></label>
-                                <input type="tel" 
-                                       class="form-control" 
-                                       id="telefone" 
-                                       name="telefone" 
-                                       value="<?php echo old('telefone'); ?>" 
-                                       placeholder="(00) 00000-0000"
-                                       required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="instagram" class="form-label">Instagram</label>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="instagram" 
-                                       name="instagram" 
-                                       value="<?php echo old('instagram'); ?>" 
-                                       placeholder="@seuinstagram">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ramo" class="form-label">Ramo da Empresa</label>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="ramo" 
-                                       name="ramo" 
-                                       value="<?php echo old('ramo'); ?>" 
-                                       placeholder="Ex: E-commerce, Serviços, SaaS...">
-                            </div>
-                        </div>
-
-                        <!-- Informações de Software -->
-                        <div class="col-md-6">
-                            <h5 class="mb-3">Informações de Software</h5>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Já possui software/sistema? <span class="text-danger">*</span></label>
-                                <div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="tem_software" id="tem_software_sim" value="sim" <?php echo old('tem_software') === 'sim' ? 'checked' : ''; ?> required>
-                                        <label class="form-check-label" for="tem_software_sim">Sim, já tenho</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="tem_software" id="tem_software_nao" value="nao" <?php echo old('tem_software') === 'nao' || old('tem_software') === '' ? 'checked' : ''; ?> required>
-                                        <label class="form-check-label" for="tem_software_nao">Não, ainda não tenho</label>
-                                    </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           id="email" 
+                                           name="email" 
+                                           value="<?php echo old('email'); ?>" 
+                                           required>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="investimento_software" class="form-label">Investimento em Software <span class="text-danger">*</span></label>
-                                <select class="form-select" id="investimento_software" name="investimento_software" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="5k" <?php echo old('investimento_software') === '5k' ? 'selected' : ''; ?>>Até R$ 5.000</option>
-                                    <option value="10k" <?php echo old('investimento_software') === '10k' ? 'selected' : ''; ?>>R$ 5.000 - R$ 10.000</option>
-                                    <option value="25k" <?php echo old('investimento_software') === '25k' ? 'selected' : ''; ?>>R$ 10.000 - R$ 25.000</option>
-                                    <option value="50k" <?php echo old('investimento_software') === '50k' ? 'selected' : ''; ?>>R$ 25.000 - R$ 50.000</option>
-                                    <option value="50k+" <?php echo old('investimento_software') === '50k+' ? 'selected' : ''; ?>>Acima de R$ 50.000</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="telefone" class="form-label">Telefone <span class="text-danger">*</span></label>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           id="telefone" 
+                                           name="telefone" 
+                                           value="<?php echo old('telefone'); ?>" 
+                                           placeholder="(00) 00000-0000"
+                                           required>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="instagram" class="form-label">Instagram</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="instagram" 
+                                           name="instagram" 
+                                           value="<?php echo old('instagram'); ?>" 
+                                           placeholder="@seuinstagram">
+                                </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="tipo_sistema" class="form-label">Tipo de Sistema <span class="text-danger">*</span></label>
-                                <select class="form-select" id="tipo_sistema" name="tipo_sistema" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="interno" <?php echo old('tipo_sistema') === 'interno' ? 'selected' : ''; ?>>Sistema para utilização interna da empresa</option>
-                                    <option value="cliente" <?php echo old('tipo_sistema') === 'cliente' ? 'selected' : ''; ?>>Software para um cliente específico</option>
-                                    <option value="saas" <?php echo old('tipo_sistema') === 'saas' ? 'selected' : ''; ?>>SaaS (Software como Serviço) para múltiplos clientes</option>
-                                </select>
-                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="valor_oportunidade" class="form-label">Valor da Oportunidade (R$)</label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="valor_oportunidade" 
+                                           name="valor_oportunidade" 
+                                           value="<?php echo old('valor_oportunidade'); ?>" 
+                                           step="0.01"
+                                           min="0"
+                                           placeholder="0.00">
+                                    <small class="text-muted">Valor estimado da oportunidade de negócio</small>
+                                </div>
 
-                            <div class="mb-3">
-                                <label for="plataforma_app" class="form-label">Plataforma de Aplicativo <span class="text-danger">*</span></label>
-                                <select class="form-select" id="plataforma_app" name="plataforma_app" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="ios_android" <?php echo old('plataforma_app') === 'ios_android' ? 'selected' : ''; ?>>iOS e Android</option>
-                                    <option value="ios" <?php echo old('plataforma_app') === 'ios' ? 'selected' : ''; ?>>Apenas iOS</option>
-                                    <option value="android" <?php echo old('plataforma_app') === 'android' ? 'selected' : ''; ?>>Apenas Android</option>
-                                    <option value="nenhum" <?php echo old('plataforma_app') === 'nenhum' ? 'selected' : ''; ?>>Não preciso de aplicativo</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="origem_conheceu" class="form-label">De onde nos conheceu?</label>
-                                <select class="form-select" id="origem_conheceu" name="origem_conheceu">
-                                    <option value="">Selecione...</option>
-                                    <?php
-                                    // Busca origens do sistema
-                                    $userId = auth()->getDataUserId();
-                                    $origens = \App\Models\LeadOrigin::where('user_id', $userId)->get();
-                                    if (empty($origens)) {
-                                        // Fallback para lista padrão
-                                        $origens = [
-                                            (object)['nome' => 'Google'],
-                                            (object)['nome' => 'Facebook/Instagram'],
-                                            (object)['nome' => 'Indicação'],
-                                            (object)['nome' => 'LinkedIn'],
-                                            (object)['nome' => 'YouTube'],
-                                            (object)['nome' => 'Outro']
-                                        ];
-                                    }
-                                    foreach ($origens as $origem):
-                                    ?>
-                                        <option value="<?php echo e($origem->nome); ?>" <?php echo old('origem_conheceu') === $origem->nome ? 'selected' : ''; ?>>
-                                            <?php echo e($origem->nome); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="valor_oportunidade" class="form-label">Valor da Oportunidade (R$)</label>
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="valor_oportunidade" 
-                                       name="valor_oportunidade" 
-                                       value="<?php echo old('valor_oportunidade'); ?>" 
-                                       step="0.01"
-                                       min="0"
-                                       placeholder="0.00">
-                                <small class="text-muted">Valor estimado da oportunidade de negócio</small>
+                                <div class="col-md-6 mb-3">
+                                    <label for="tags" class="form-label">Tags</label>
+                                    <div class="tags-input-container">
+                                        <div id="tags-display" class="tags-display mb-2"></div>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="tags-input" 
+                                               placeholder="Digite uma tag e pressione Enter ou vírgula">
+                                        <input type="hidden" id="tags-hidden" name="tags" value="">
+                                        <small class="text-muted">Digite tags separadas por Enter ou vírgula</small>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="mb-3">
@@ -198,7 +127,7 @@ ob_start();
                                           id="objetivo" 
                                           name="objetivo" 
                                           rows="4" 
-                                          placeholder="Descreva seu objetivo principal com o software..."><?php echo old('objetivo'); ?></textarea>
+                                          placeholder="Descreva o objetivo principal..."><?php echo old('objetivo'); ?></textarea>
                             </div>
                         </div>
                     </div>
@@ -222,7 +151,45 @@ ob_start();
     </div>
 </div>
 
+<style>
+.tags-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+}
+
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background-color: #0dcaf0;
+    color: white;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.tag-item .tag-remove {
+    cursor: pointer;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.tag-item .tag-remove:hover {
+    opacity: 1;
+}
+</style>
+
 <script>
+let tags = [];
+
 function preencherDadosCliente() {
     const select = document.getElementById('client_id');
     const selectedOption = select.options[select.selectedIndex];
@@ -248,10 +215,84 @@ function preencherDadosCliente() {
         document.getElementById('telefone').readOnly = false;
     }
 }
+
+function addTag(tagName) {
+    tagName = tagName.trim();
+    if (!tagName || tags.includes(tagName)) {
+        return;
+    }
+    
+    tags.push(tagName);
+    updateTagsDisplay();
+    updateHiddenInput();
+    document.getElementById('tags-input').value = '';
+}
+
+function removeTag(tagName) {
+    tags = tags.filter(t => t !== tagName);
+    updateTagsDisplay();
+    updateHiddenInput();
+}
+
+function removeTagByIndex(index) {
+    tags.splice(index, 1);
+    updateTagsDisplay();
+    updateHiddenInput();
+}
+
+function updateTagsDisplay() {
+    const display = document.getElementById('tags-display');
+    display.innerHTML = '';
+    
+    tags.forEach((tag, index) => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'tag-item';
+        const escapedTag = tag.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        tagElement.innerHTML = `
+            ${escapedTag}
+            <span class="tag-remove" onclick="removeTagByIndex(${index})" title="Remover tag">×</span>
+        `;
+        display.appendChild(tagElement);
+    });
+}
+
+function updateHiddenInput() {
+    document.getElementById('tags-hidden').value = tags.join(',');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tagsInput = document.getElementById('tags-input');
+    
+    tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+                addTag(value);
+            }
+        }
+    });
+    
+    tagsInput.addEventListener('keyup', function(e) {
+        if (e.key === ',') {
+            const value = this.value.trim();
+            if (value && value.endsWith(',')) {
+                const tagValue = value.slice(0, -1).trim();
+                if (tagValue) {
+                    addTag(tagValue);
+                }
+            }
+        }
+    });
+    
+    // Atualiza o campo hidden antes de submeter
+    document.getElementById('formCreateLead').addEventListener('submit', function() {
+        updateHiddenInput();
+    });
+});
 </script>
 
 <?php
 $content = ob_get_clean();
 include base_path('views/layouts/app.php');
 ?>
-
