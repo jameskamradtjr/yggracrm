@@ -219,6 +219,16 @@
                 </li>
                 <?php endif; ?>
                 
+                <?php if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('super-admin')): ?>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/settings'); ?>">
+                        <span><i class="ti ti-settings"></i></span>
+                        <span class="hide-menu">Configurações</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+                <?php endif; ?>
+                
                 <!-- Automações -->
                 <?php if (auth()->check()): ?>
                 <li class="nav-small-cap">
@@ -231,16 +241,6 @@
                         <span class="hide-menu">Automações</span>
                     </a>
                 </li>
-                <?php endif; ?>
-                
-                <?php if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('super-admin')): ?>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="<?php echo url('/settings'); ?>">
-                        <span><i class="ti ti-settings"></i></span>
-                        <span class="hide-menu">Configurações</span>
-                    </a>
-                </li>
-                <?php endif; ?>
                 <?php endif; ?>
 
                 <!-- Perfil -->
