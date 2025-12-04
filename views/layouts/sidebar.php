@@ -104,6 +104,12 @@
                         <span class="hide-menu">Formas de Pagamento</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/imports/financial'); ?>">
+                        <span><i class="ti ti-file-import"></i></span>
+                        <span class="hide-menu">Importar Lançamentos</span>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <!-- CRM de Leads -->
@@ -128,6 +134,12 @@
                     <a class="sidebar-link" href="<?php echo url('/clients'); ?>">
                         <span><i class="ti ti-user"></i></span>
                         <span class="hide-menu">Clientes</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/imports/clients'); ?>">
+                        <span><i class="ti ti-file-import"></i></span>
+                        <span class="hide-menu">Importar Clientes</span>
                     </a>
                 </li>
                 <li class="sidebar-item">

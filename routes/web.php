@@ -340,6 +340,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/drive/{id}/favorite', [DriveController::class, 'toggleFavorite']);
     $router->post('/drive/{id}/trash', [DriveController::class, 'trash']);
     $router->delete('/drive/{id}', [DriveController::class, 'destroy']);
+    
+    // Rotas de Importação
+    $router->get('/imports/clients', [\App\Controllers\ImportController::class, 'clients']);
+    $router->get('/imports/clients/template', [\App\Controllers\ImportController::class, 'clientsTemplate']);
+    $router->post('/imports/clients/upload', [\App\Controllers\ImportController::class, 'clientsUpload']);
+    
+    $router->get('/imports/financial', [\App\Controllers\ImportController::class, 'financial']);
+    $router->get('/imports/financial/template', [\App\Controllers\ImportController::class, 'financialTemplate']);
+    $router->post('/imports/financial/upload', [\App\Controllers\ImportController::class, 'financialUpload']);
 });
 
 // Rotas Públicas (sem autenticação)
