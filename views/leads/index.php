@@ -328,8 +328,11 @@ ob_start();
                                                             <a href="<?php echo url('/leads/' . $lead->id); ?>" class="btn btn-sm btn-info" title="Ver">
                                                                 <i class="ti ti-eye"></i>
                                                             </a>
-                                                            <button class="btn btn-sm btn-primary" onclick="editarLead(<?php echo $lead->id; ?>)" title="Editar">
+                                                            <a href="<?php echo url('/leads/' . $lead->id . '/edit'); ?>" class="btn btn-sm btn-primary" title="Editar">
                                                                 <i class="ti ti-edit"></i>
+                                                            </a>
+                                                            <button class="btn btn-sm btn-danger" onclick="excluirLead(<?php echo $lead->id; ?>, '<?php echo e($lead->nome); ?>')" title="Excluir">
+                                                                <i class="ti ti-trash"></i>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -406,8 +409,11 @@ ob_start();
                                                             <a href="<?php echo url('/leads/' . $lead->id); ?>" class="btn btn-sm btn-info" title="Ver">
                                                                 <i class="ti ti-eye"></i>
                                                             </a>
-                                                            <button class="btn btn-sm btn-primary" onclick="editarLead(<?php echo $lead->id; ?>)" title="Editar">
+                                                            <a href="<?php echo url('/leads/' . $lead->id . '/edit'); ?>" class="btn btn-sm btn-primary" title="Editar">
                                                                 <i class="ti ti-edit"></i>
+                                                            </a>
+                                                            <button class="btn btn-sm btn-danger" onclick="excluirLead(<?php echo $lead->id; ?>, '<?php echo e($lead->nome); ?>')" title="Excluir">
+                                                                <i class="ti ti-trash"></i>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -695,6 +701,32 @@ window.salvarLead = function(event, leadId) {
         submitBtn.innerHTML = originalText;
     });
 };
+
+function excluirLead(leadId, leadNome) {
+    if (!leadId) {
+        console.error('ID do lead não fornecido');
+        return;
+    }
+    
+    if (!confirm(`Tem certeza que deseja excluir o lead "${leadNome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        return;
+    }
+    
+    // Cria formulário para enviar requisição DELETE
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<?php echo url('/leads'); ?>/' + leadId + '/delete';
+    
+    // Adiciona CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_csrf_token';
+    csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 <?php
 $scripts = ob_get_clean();

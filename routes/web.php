@@ -133,6 +133,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/leads/{id}', [LeadController::class, 'show']);
     $router->get('/leads/{id}/edit', [LeadController::class, 'edit']);
     $router->post('/leads/{id}/update', [LeadController::class, 'updateLead']);
+    $router->post('/leads/{id}/delete', [LeadController::class, 'destroy']);
     $router->get('/leads/{id}/edit-modal', [LeadController::class, 'editModal']);
     $router->post('/leads/update-etapa-funil', [LeadController::class, 'updateEtapaFunil']);
     $router->post('/leads/update-responsible', [LeadController::class, 'updateResponsible']);

@@ -1130,6 +1130,63 @@ Dados do lead:
     }
     
     /**
+     * Exclui um lead
+     */
+    public function destroy(array $params): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+
+        try {
+            $userId = auth()->getDataUserId();
+            $lead = Lead::where('id', $params['id'])
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$lead) {
+                abort(404, 'Lead não encontrado.');
+            }
+
+            $leadId = $lead->id;
+            $leadNome = $lead->nome;
+            
+            // Exclui respostas do quiz relacionadas
+            $db = \Core\Database::getInstance();
+            try {
+                $db->execute("DELETE FROM lead_quiz_responses WHERE lead_id = ?", [$leadId]);
+            } catch (\Exception $e) {
+                error_log("Erro ao excluir respostas do quiz do lead {$leadId}: " . $e->getMessage());
+            }
+            
+            // Exclui tags relacionadas
+            try {
+                $db->execute("DELETE FROM lead_tags WHERE lead_id = ?", [$leadId]);
+            } catch (\Exception $e) {
+                error_log("Erro ao excluir tags do lead {$leadId}: " . $e->getMessage());
+            }
+
+            // Exclui o lead
+            $lead->delete();
+
+            SistemaLog::registrar(
+                'leads',
+                'DELETE',
+                $leadId,
+                "Lead excluído: {$leadNome}",
+                $lead->toArray(),
+                null
+            );
+
+            session()->flash('success', 'Lead excluído com sucesso!');
+            $this->redirect('/leads');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erro ao excluir lead: ' . $e->getMessage());
+            $this->redirect('/leads');
+        }
+    }
+    
+    /**
      * Retorna HTML do modal de edição (via AJAX)
      */
     public function editModal(array $params): void
