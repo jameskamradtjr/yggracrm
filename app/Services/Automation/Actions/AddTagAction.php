@@ -32,24 +32,23 @@ class AddTagAction extends BaseAction
                 ]
             ],
             [
-                'name' => 'tag_id',
-                'label' => 'Tag',
-                'type' => 'select',
+                'name' => 'tag_name',
+                'label' => 'Nome da Tag',
+                'type' => 'text',
                 'required' => true,
-                'options' => [], // Será preenchido dinamicamente
-                'loadOptions' => 'tags' // Indica que as opções devem ser carregadas da API de tags
+                'placeholder' => 'Digite o nome da tag...'
             ]
         ];
     }
     
     public function execute(array $triggerData, array $config): bool
     {
-        if (!isset($config['entity_type']) || !isset($config['tag_id'])) {
+        if (!isset($config['entity_type']) || !isset($config['tag_name']) || empty(trim($config['tag_name']))) {
             return false;
         }
         
         $entityType = $config['entity_type'];
-        $tagId = (int)$config['tag_id'];
+        $tagName = trim($config['tag_name']);
         
         // Obtém ID da entidade do trigger
         $entityId = $this->getEntityId($entityType, $triggerData);
@@ -58,7 +57,7 @@ class AddTagAction extends BaseAction
         }
         
         try {
-            return $this->addTagToEntity($entityType, $entityId, $tagId);
+            return $this->addTagToEntity($entityType, $entityId, $tagName);
         } catch (\Exception $e) {
             error_log("Erro ao adicionar tag na automação: " . $e->getMessage());
             return false;
@@ -77,22 +76,16 @@ class AddTagAction extends BaseAction
         return $field ? ($triggerData[$field] ?? null) : null;
     }
     
-    private function addTagToEntity(string $entityType, int $entityId, int $tagId): bool
+    private function addTagToEntity(string $entityType, int $entityId, string $tagName): bool
     {
         $db = \Core\Database::getInstance();
         
         // Para project_card_tags, a estrutura é diferente (tem nome e cor, não tag_id)
         if ($entityType === 'project_card') {
-            // Busca a tag para obter nome e cor
-            $tag = \App\Models\Tag::find($tagId);
-            if (!$tag) {
-                return false;
-            }
-            
             // Verifica se já existe
             $existing = $db->query(
                 "SELECT id FROM project_card_tags WHERE card_id = ? AND nome = ?",
-                [$entityId, $tag->name]
+                [$entityId, $tagName]
             );
             
             if (!empty($existing)) {
@@ -102,13 +95,26 @@ class AddTagAction extends BaseAction
             // Adiciona a tag
             $db->execute(
                 "INSERT INTO project_card_tags (card_id, nome, cor, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-                [$entityId, $tag->name, $tag->color ?? '#0dcaf0']
+                [$entityId, $tagName, '#0dcaf0']
             );
             
             return true;
         }
         
-        // Para leads e clients, usa tabelas de relacionamento padrão
+        // Para leads e clients, busca ou cria a tag pelo nome e depois associa
+        $tag = \App\Models\Tag::where('name', $tagName)->first();
+        
+        if (!$tag) {
+            // Cria a tag se não existir
+            $tag = \App\Models\Tag::create([
+                'name' => $tagName,
+                'color' => '#0dcaf0'
+            ]);
+        }
+        
+        $tagId = $tag->id;
+        
+        // Usa tabelas de relacionamento padrão
         $tableMap = [
             'lead' => 'lead_tags',
             'client' => 'client_tags'

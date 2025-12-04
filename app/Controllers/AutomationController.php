@@ -387,6 +387,64 @@ class AutomationController extends Controller
     }
     
     /**
+     * API: Obtém templates de email para selects dinâmicos
+     */
+    public function getEmailTemplates(): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            // Templates de email são globais (não multi-tenant)
+            $templates = \App\Models\EmailTemplate::where('is_active', 1)
+                ->orderBy('name', 'ASC')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'email_templates' => $templates->map(fn($template) => [
+                    'slug' => $template->slug,
+                    'name' => $template->name
+                ])->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao obter templates de email: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao carregar templates de email'], 500);
+        }
+    }
+    
+    /**
+     * API: Obtém templates de WhatsApp para selects dinâmicos
+     */
+    public function getWhatsAppTemplates(): void
+    {
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            // Templates de WhatsApp são globais (não multi-tenant)
+            $templates = \App\Models\WhatsAppTemplate::where('is_active', 1)
+                ->orderBy('name', 'ASC')
+                ->get();
+            
+            json_response([
+                'success' => true,
+                'whatsapp_templates' => $templates->map(fn($template) => [
+                    'slug' => $template->slug,
+                    'name' => $template->name
+                ])->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao obter templates de WhatsApp: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao carregar templates de WhatsApp'], 500);
+        }
+    }
+    
+    /**
      * Obtém histórico de execuções
      */
     public function executions(array $params): string

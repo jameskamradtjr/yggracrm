@@ -27,7 +27,8 @@ class SendWhatsAppAction extends BaseAction
                 'label' => 'Template de WhatsApp',
                 'type' => 'select',
                 'required' => true,
-                'options' => [] // Será preenchido dinamicamente
+                'options' => [], // Será preenchido dinamicamente
+                'loadOptions' => 'whatsapp-templates' // Carrega templates dinamicamente
             ],
             [
                 'name' => 'to',
