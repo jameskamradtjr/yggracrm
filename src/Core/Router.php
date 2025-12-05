@@ -152,8 +152,28 @@ class Router
         error_log("Router dispatch - Method: {$method}, URI: {$uri}");
         error_log("Total de rotas registradas: " . count($this->routes));
 
+        // Separa rotas em específicas (sem parâmetros) e genéricas (com parâmetros)
+        $specificRoutes = [];
+        $genericRoutes = [];
+        
         foreach ($this->routes as $index => $route) {
-            if ($route['method'] === $method && preg_match($route['regex'], $uri, $matches)) {
+            if ($route['method'] !== $method) {
+                continue;
+            }
+            
+            // Verifica se a rota tem parâmetros (contém {})
+            if (strpos($route['path'], '{') !== false) {
+                $genericRoutes[] = $route;
+            } else {
+                $specificRoutes[] = $route;
+            }
+        }
+        
+        // Verifica rotas específicas primeiro, depois genéricas
+        $routesToCheck = array_merge($specificRoutes, $genericRoutes);
+        
+        foreach ($routesToCheck as $index => $route) {
+            if (preg_match($route['regex'], $uri, $matches)) {
                 error_log("Rota encontrada! Index: {$index}, Path: {$route['path']}, Regex: {$route['regex']}");
                 // Extrai parâmetros da URL
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
