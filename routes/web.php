@@ -49,6 +49,13 @@ $router->post('/quiz/{slug}/submit', [QuizController::class, 'submitQuiz']);
 // Rota pública do Quiz antigo (aceita parâmetros ?u=USER_ID ou ?token=TOKEN)
 $router->get('/quiz', [LeadController::class, 'quiz']);
 
+// Sites Públicos (devem vir ANTES das rotas administrativas para evitar conflito)
+$router->get('/site/{slug}', [\App\Controllers\SiteController::class, 'show']);
+$router->get('/site/{slug}/post/{post_slug}', [\App\Controllers\SiteController::class, 'showPost']);
+$router->post('/site/{slug}/newsletter/subscribe', [\App\Controllers\SiteController::class, 'subscribeNewsletter']);
+$router->post('/site/post/{post_id}/like', [\App\Controllers\SiteController::class, 'toggleLike']);
+$router->post('/api/site/track', [\App\Controllers\SiteController::class, 'trackEvent']);
+
 // API pública para buscar origens (usa token)
 $router->get('/api/leads/origens', [LeadController::class, 'getOrigens']);
 
@@ -155,13 +162,6 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/site/manage/posts/{id}/analytics', [\App\Controllers\SiteController::class, 'postAnalytics']);
     $router->post('/site/manage/posts/{id}/update', [\App\Controllers\SiteController::class, 'updatePost']);
     $router->post('/site/manage/posts/{id}/delete', [\App\Controllers\SiteController::class, 'deletePost']);
-    
-    // Sites Públicos (devem vir DEPOIS das rotas administrativas)
-    $router->get('/site/{slug}', [\App\Controllers\SiteController::class, 'show']);
-    $router->get('/site/{slug}/post/{post_slug}', [\App\Controllers\SiteController::class, 'showPost']);
-    $router->post('/site/{slug}/newsletter/subscribe', [\App\Controllers\SiteController::class, 'subscribeNewsletter']);
-    $router->post('/site/post/{post_id}/like', [\App\Controllers\SiteController::class, 'toggleLike']);
-    $router->post('/api/site/track', [\App\Controllers\SiteController::class, 'trackEvent']);
     $router->post('/leads/update-etapa-funil', [LeadController::class, 'updateEtapaFunil']);
     $router->post('/leads/update-responsible', [LeadController::class, 'updateResponsible']);
     $router->post('/leads/update-status', [LeadController::class, 'updateStatus']);
