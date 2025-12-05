@@ -310,13 +310,28 @@ class SiteController extends Controller
         }
         
         $posts = $site->allPosts();
-        $subscribers = $site->subscribers();
+        // Não carrega todos os assinantes, apenas conta para performance
+        $subscribersCount = $db->queryOne(
+            "SELECT COUNT(*) as total FROM newsletter_subscribers WHERE user_site_id = ?",
+            [$site->id]
+        );
+        $subscribersCount = (int)($subscribersCount['total'] ?? 0);
+        
+        // Para exibição, carrega apenas os últimos 5 como preview
+        $subscribersPreview = $db->query(
+            "SELECT * FROM newsletter_subscribers WHERE user_site_id = ? ORDER BY created_at DESC LIMIT 5",
+            [$site->id]
+        );
+        $subscribers = array_map(function($row) {
+            return \App\Models\NewsletterSubscriber::newInstance($row, true);
+        }, $subscribersPreview);
         
         return $this->view('site/manage/index', [
             'title' => 'Meu Site',
             'site' => $site,
             'posts' => $posts,
-            'subscribers' => $subscribers
+            'subscribers' => $subscribers,
+            'subscribersCount' => $subscribersCount
         ]);
     }
     
@@ -1335,6 +1350,75 @@ class SiteController extends Controller
             'content' => $content,
             'scripts' => $scripts
         ]);
+    }
+    
+    /**
+     * Exporta assinantes da newsletter para CSV
+     */
+    public function exportSubscribers(): void
+    {
+        if (!auth()->check()) {
+            $this->redirect('/login');
+        }
+        
+        $userId = auth()->getDataUserId();
+        $db = \Core\Database::getInstance();
+        
+        $siteRow = $db->queryOne(
+            "SELECT * FROM user_sites WHERE user_id = ? LIMIT 1",
+            [$userId]
+        );
+        
+        if (!$siteRow) {
+            abort(404, 'Site não encontrado.');
+        }
+        
+        $site = UserSite::newInstance($siteRow, true);
+        
+        // Busca todos os assinantes
+        $subscribers = $db->query(
+            "SELECT email, name, confirmed, created_at, confirmed_at 
+             FROM newsletter_subscribers 
+             WHERE user_site_id = ? 
+             ORDER BY created_at DESC",
+            [$site->id]
+        );
+        
+        // Define headers para download CSV
+        $filename = 'assinantes_newsletter_' . date('Y-m-d_His') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        // Abre output stream
+        $output = fopen('php://output', 'w');
+        
+        // Adiciona BOM para UTF-8 (para Excel reconhecer corretamente)
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Cabeçalhos do CSV
+        fputcsv($output, [
+            'Email',
+            'Nome',
+            'Status',
+            'Data de Inscrição',
+            'Data de Confirmação'
+        ], ';');
+        
+        // Dados dos assinantes
+        foreach ($subscribers as $subscriber) {
+            fputcsv($output, [
+                $subscriber['email'] ?? '',
+                $subscriber['name'] ?? '',
+                ($subscriber['confirmed'] ?? 0) ? 'Confirmado' : 'Pendente',
+                $subscriber['created_at'] ? date('d/m/Y H:i:s', strtotime($subscriber['created_at'])) : '',
+                $subscriber['confirmed_at'] ? date('d/m/Y H:i:s', strtotime($subscriber['confirmed_at'])) : ''
+            ], ';');
+        }
+        
+        fclose($output);
+        exit;
     }
 }
 

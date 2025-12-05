@@ -215,33 +215,28 @@ ob_start();
         
         <!-- Assinantes -->
         <div class="card">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Assinantes da Newsletter</h6>
+                <?php 
+                $totalSubscribers = $subscribersCount ?? count($subscribers);
+                if ($totalSubscribers > 0): 
+                ?>
+                    <a href="<?php echo url('/site/manage/subscribers/export'); ?>" class="btn btn-sm btn-success">
+                        <i class="ti ti-download me-2"></i>Exportar CSV
+                    </a>
+                <?php endif; ?>
             </div>
             <div class="card-body">
-                <div class="mb-2">
-                    <strong><?php echo count($subscribers); ?></strong> assinantes
+                <div class="mb-3">
+                    <strong><?php echo $totalSubscribers ?? count($subscribers); ?></strong> assinantes cadastrados
                 </div>
-                <?php if (!empty($subscribers)): ?>
-                    <div class="list-group" style="max-height: 300px; overflow-y: auto;">
-                        <?php foreach ($subscribers as $subscriber): ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong><?php echo e($subscriber->email); ?></strong>
-                                        <?php if ($subscriber->name): ?>
-                                            <br><small class="text-muted"><?php echo e($subscriber->name); ?></small>
-                                        <?php endif; ?>
-                                    </div>
-                                    <small class="text-muted">
-                                        <?php echo date('d/m/Y', strtotime($subscriber->created_at)); ?>
-                                    </small>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php else: ?>
+                <?php if ($totalSubscribers === 0): ?>
                     <p class="text-muted mb-0">Nenhum assinante ainda.</p>
+                <?php else: ?>
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        Clique em <strong>"Exportar CSV"</strong> para baixar a lista completa de assinantes.
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
