@@ -345,6 +345,9 @@ document.addEventListener("DOMContentLoaded", function () {
             btnAddEvent.style.display = 'none';
             btnUpdateEvent.style.display = 'inline-block';
             btnDeleteEvent.style.display = 'inline-block';
+            // Garante que o botão de excluir está no estado correto ao abrir o modal
+            btnDeleteEvent.disabled = false;
+            btnDeleteEvent.innerHTML = 'Excluir';
             
             if (eventObj) {
                 document.getElementById('event-title').value = eventObj.title || '';
@@ -522,6 +525,9 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Reseta o botão antes de fechar o modal
+                btnDeleteEvent.disabled = false;
+                btnDeleteEvent.innerHTML = 'Excluir';
                 eventModal.hide();
                 calendar.refetchEvents();
                 alert('Evento excluído com sucesso!');
@@ -546,6 +552,12 @@ document.addEventListener("DOMContentLoaded", function () {
         btnAddEvent.style.display = 'inline-block';
         btnUpdateEvent.style.display = 'none';
         btnDeleteEvent.style.display = 'none';
+        // Reseta estado do botão de excluir
+        btnDeleteEvent.disabled = false;
+        btnDeleteEvent.innerHTML = 'Excluir';
+        // Reseta estado do botão de excluir
+        btnDeleteEvent.disabled = false;
+        btnDeleteEvent.innerHTML = 'Excluir';
     });
 
     // Atualiza apenas as datas do evento quando arrastado
