@@ -15,7 +15,11 @@ class ChatMessage extends Model
         'chat_room_id',
         'user_id',
         'message',
-        'attachment_url'
+        'attachment_url',
+        'attachment_s3_key',
+        'attachment_name',
+        'attachment_size',
+        'attachment_mime_type'
     ];
     
     /**

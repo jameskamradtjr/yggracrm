@@ -150,9 +150,12 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/chat', [\App\Controllers\ChatController::class, 'index']);
     $router->get('/api/chat/rooms', [\App\Controllers\ChatController::class, 'getRooms']);
     $router->get('/api/chat/rooms/{room_id}/messages', [\App\Controllers\ChatController::class, 'getMessages']);
+    $router->get('/api/chat/rooms/{room_id}/media', [\App\Controllers\ChatController::class, 'getMedia']);
     $router->post('/api/chat/messages/send', [\App\Controllers\ChatController::class, 'sendMessage']);
+    $router->get('/api/chat/messages/{message_id}/download', [\App\Controllers\ChatController::class, 'downloadAttachment']);
     $router->post('/api/chat/rooms/create', [\App\Controllers\ChatController::class, 'createRoom']);
     $router->post('/api/chat/rooms/add-member', [\App\Controllers\ChatController::class, 'addMember']);
+    $router->post('/api/chat/private/start', [\App\Controllers\ChatController::class, 'startPrivateChat']);
     $router->post('/api/chat/users/search', [\App\Controllers\ChatController::class, 'searchUsers']);
     
     $router->get('/site/manage', [\App\Controllers\SiteController::class, 'manage']);

@@ -15,6 +15,9 @@ class ChatRoom extends Model
         'name',
         'description',
         'type',
+        'is_private',
+        'participant1_id',
+        'participant2_id',
         'created_by'
     ];
     

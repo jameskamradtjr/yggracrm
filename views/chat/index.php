@@ -146,18 +146,23 @@ $userAvatar = asset($userAvatar);
                     <input type="text" class="form-control search-chat py-2 ps-5" id="search-rooms" placeholder="Buscar Sala" />
                     <i class="ti ti-search position-absolute top-50 start-0 translate-middle-y fs-6 text-dark ms-3"></i>
                 </form>
-                <div class="dropdown mb-3">
-                    <a class="text-muted fw-semibold d-flex align-items-center" href="javascript:void(0)" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Salas <i class="ti ti-chevron-down ms-1 fs-5"></i>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a class="dropdown-item" href="javascript:void(0)" onclick="sortRooms('time')">Ordenar por tempo</a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="javascript:void(0)" onclick="sortRooms('name')">Ordenar por nome</a>
-                        </li>
-                    </ul>
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-primary btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#startPrivateChatModal">
+                        <i class="ti ti-message-plus me-1"></i>Nova Conversa
+                    </button>
+                    <div class="dropdown">
+                        <a class="text-muted fw-semibold d-flex align-items-center btn btn-sm btn-outline-secondary" href="javascript:void(0)" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-chevron-down ms-1 fs-5"></i>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="sortRooms('time')">Ordenar por tempo</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="sortRooms('name')">Ordenar por nome</a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="app-chat">
@@ -199,6 +204,15 @@ $userAvatar = asset($userAvatar);
                         <ul class="list-unstyled mb-0 d-flex align-items-center">
                             <li>
                                 <button class="text-dark px-2 fs-7 bg-hover-primary nav-icon-hover position-relative z-index-5 btn btn-link border-0" 
+                                        data-bs-toggle="offcanvas" 
+                                        data-bs-target="#mediaOffcanvas"
+                                        onclick="loadMedia()"
+                                        title="Ver Mídia">
+                                    <i class="ti ti-photo"></i>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="text-dark px-2 fs-7 bg-hover-primary nav-icon-hover position-relative z-index-5 btn btn-link border-0" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#addMemberModal"
                                         title="Adicionar Membro">
@@ -218,14 +232,25 @@ $userAvatar = asset($userAvatar);
                                 </div>
                             </div>
                             <div class="px-9 py-6 border-top chat-send-message-footer">
-                                <form id="send-message-form" onsubmit="sendMessage(event)">
+                                <form id="send-message-form" enctype="multipart/form-data" onsubmit="sendMessage(event)">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center gap-2 w-85">
+                                            <input type="file" 
+                                                   id="attachment-input" 
+                                                   name="attachment" 
+                                                   class="d-none" 
+                                                   accept="*/*" />
+                                            <button type="button" 
+                                                    class="text-dark px-2 fs-7 bg-hover-primary nav-icon-hover position-relative z-index-5 btn btn-link border-0"
+                                                    id="attach-button"
+                                                    title="Anexar arquivo">
+                                                <i class="ti ti-paperclip"></i>
+                                            </button>
+                                            <span id="attachment-name" class="text-muted fs-3 d-none ms-2 fw-semibold text-primary"></span>
                                             <input type="text" 
                                                    class="form-control message-type-box text-muted border-0 p-0 ms-2" 
                                                    id="message-input" 
-                                                   placeholder="Digite uma mensagem..." 
-                                                   required />
+                                                   placeholder="Digite uma mensagem..." />
                                         </div>
                                         <ul class="list-unstyled mb-0 d-flex align-items-center">
                                             <li>
@@ -279,6 +304,32 @@ $userAvatar = asset($userAvatar);
                 </div>
                 <?php echo csrf_field(); ?>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Iniciar Conversa Privada -->
+<div class="modal fade" id="startPrivateChatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Iniciar Conversa Privada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="search-private-user" class="form-label">Buscar Usuário</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="search-private-user" 
+                           placeholder="Digite o nome ou email do usuário..."
+                           oninput="searchUsersForPrivateChat(this.value)">
+                </div>
+                <div id="private-chat-users-list" style="max-height: 300px; overflow-y: auto;">
+                    <p class="text-muted text-center p-3">Digite para buscar usuários...</p>
+                </div>
+            </div>
+            <?php echo csrf_field(); ?>
         </div>
     </div>
 </div>
@@ -492,23 +543,39 @@ function appendMessage(msg, container, prepend = false) {
     messageDiv.setAttribute('data-message-id', msg.id);
     messageDiv.className = `hstack gap-3 align-items-start mb-7 ${isCurrentUser ? 'justify-content-end' : 'justify-content-start'}`;
     
+    let attachmentHtml = '';
+    if (msg.attachment && msg.attachment.s3_key) {
+        const fileSize = msg.attachment.size ? formatFileSize(msg.attachment.size) : '';
+        const fileIcon = getFileIcon(msg.attachment.mime_type || '', msg.attachment.name || '');
+        attachmentHtml = `
+            <div class="mt-2 p-2 ${isCurrentUser ? 'bg-info-subtle' : 'text-bg-light'} rounded-1">
+                <a href="javascript:void(0)" onclick="downloadAttachment(${msg.id})" class="text-decoration-none text-dark d-flex align-items-center gap-2">
+                    <i class="ti ${fileIcon} fs-5"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${escapeHtml(msg.attachment.name || 'Anexo')}</div>
+                        ${fileSize ? `<div class="fs-3 text-muted">${fileSize}</div>` : ''}
+                    </div>
+                    <i class="ti ti-download fs-5"></i>
+                </a>
+            </div>
+        `;
+    }
+    
     if (!isCurrentUser) {
         messageDiv.innerHTML = `
             <img src="${avatarUrl}" alt="${escapeHtml(msg.user.name)}" width="40" height="40" class="rounded-circle" />
             <div>
                 <h6 class="fs-2 text-muted">${escapeHtml(msg.user.name)}, ${time}</h6>
-                <div class="p-2 text-bg-light rounded-1 d-inline-block text-dark fs-3">
-                    ${escapeHtml(msg.message)}
-                </div>
+                ${msg.message ? `<div class="p-2 text-bg-light rounded-1 d-inline-block text-dark fs-3">${escapeHtml(msg.message)}</div>` : ''}
+                ${attachmentHtml}
             </div>
         `;
     } else {
         messageDiv.innerHTML = `
             <div class="text-end">
                 <h6 class="fs-2 text-muted">${time}</h6>
-                <div class="p-2 bg-info-subtle text-dark rounded-1 d-inline-block fs-3">
-                    ${escapeHtml(msg.message)}
-                </div>
+                ${msg.message ? `<div class="p-2 bg-info-subtle text-dark rounded-1 d-inline-block fs-3">${escapeHtml(msg.message)}</div>` : ''}
+                ${attachmentHtml}
             </div>
         `;
     }
@@ -549,18 +616,25 @@ function sendMessage(event) {
     
     const roomId = document.getElementById('current-room-id').value;
     const messageInput = document.getElementById('message-input');
+    const attachmentInput = document.getElementById('attachment-input');
     const message = messageInput.value.trim();
+    const attachment = attachmentInput.files[0];
     
-    if (!message || !roomId) {
-        console.warn('Não é possível enviar mensagem:', { message, roomId });
+    if ((!message && !attachment) || !roomId) {
+        console.warn('Não é possível enviar mensagem:', { message, attachment, roomId });
         return;
     }
     
-    console.log('Enviando mensagem:', { roomId, message });
+    console.log('Enviando mensagem:', { roomId, message, attachment: attachment ? attachment.name : null });
     
     const formData = new FormData();
     formData.append('room_id', roomId);
-    formData.append('message', message);
+    if (message) {
+        formData.append('message', message);
+    }
+    if (attachment) {
+        formData.append('attachment', attachment);
+    }
     formData.append('_csrf_token', '<?php echo csrf_token(); ?>');
     
     fetch('<?php echo url('/api/chat/messages/send'); ?>', {
@@ -572,6 +646,13 @@ function sendMessage(event) {
         console.log('Resposta do envio:', data);
         if (data.success) {
             messageInput.value = '';
+            if (attachmentInput) {
+                attachmentInput.value = '';
+                const attachmentName = document.getElementById('attachment-name');
+                if (attachmentName) {
+                    attachmentName.classList.add('d-none');
+                }
+            }
             
             // Adiciona a mensagem diretamente ao DOM
             if (data.message && data.message.id) {
@@ -835,8 +916,8 @@ function loadRooms() {
                                data-room-id="${room.id}"
                                onclick="loadRoom(${room.id})">
                                 <div class="d-flex align-items-center w-100">
-                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
-                                        <i class="ti ti-hash fs-5"></i>
+                                    <div class="rounded-circle ${room.is_private ? 'bg-success' : 'bg-primary'} text-white d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                                        <i class="ti ${room.is_private ? 'ti-user' : 'ti-hash'} fs-5"></i>
                                     </div>
                                     <div class="d-inline-block w-75">
                                         <h6 class="mb-1 fw-semibold">${escapeHtml(room.name)}</h6>
@@ -941,6 +1022,35 @@ function loadOlderMessages(roomId) {
         });
 }
 
+// Formata tamanho do arquivo
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Retorna ícone baseado no tipo de arquivo
+function getFileIcon(mimeType, fileName) {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    
+    if (mimeType.startsWith('image/')) return 'ti-photo';
+    if (mimeType.startsWith('video/')) return 'ti-video';
+    if (mimeType.startsWith('audio/')) return 'ti-music';
+    if (mimeType.includes('pdf')) return 'ti-file-type-pdf';
+    if (mimeType.includes('word') || ext === 'doc' || ext === 'docx') return 'ti-file-type-doc';
+    if (mimeType.includes('excel') || ext === 'xls' || ext === 'xlsx') return 'ti-file-type-xls';
+    if (mimeType.includes('powerpoint') || ext === 'ppt' || ext === 'pptx') return 'ti-file-type-ppt';
+    if (ext === 'zip' || ext === 'rar' || ext === '7z') return 'ti-file-zip';
+    return 'ti-file';
+}
+
+// Download de anexo
+function downloadAttachment(messageId) {
+    window.location.href = `<?php echo url('/api/chat/messages'); ?>/${messageId}/download`;
+}
+
 // Inicializa SimpleBar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     // Carrega salas via AJAX
@@ -962,7 +1072,186 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }, 1000);
+    
+    // Configura anexo de arquivo
+    console.log('=== Inicializando anexo de arquivo ===');
+    const attachmentInput = document.getElementById('attachment-input');
+    const attachmentName = document.getElementById('attachment-name');
+    const attachButton = document.getElementById('attach-button');
+    
+    console.log('Elementos encontrados:', {
+        attachmentInput: !!attachmentInput,
+        attachmentName: !!attachmentName,
+        attachButton: !!attachButton
+    });
+    
+    if (!attachmentInput) {
+        console.error('ERRO: attachment-input não encontrado!');
+    }
+    if (!attachmentName) {
+        console.error('ERRO: attachment-name não encontrado!');
+    }
+    if (!attachButton) {
+        console.error('ERRO: attach-button não encontrado!');
+    }
+    
+    if (attachmentInput && attachmentName && attachButton) {
+        console.log('Todos os elementos encontrados, configurando event listeners...');
+        
+        // Event listener para quando arquivo é selecionado
+        attachmentInput.addEventListener('change', function(e) {
+            console.log('=== Evento change disparado no input de arquivo ===', e);
+            console.log('Files:', this.files);
+            console.log('Files length:', this.files ? this.files.length : 0);
+            
+            try {
+                if (this.files && this.files.length > 0) {
+                    const fileName = this.files[0].name;
+                    const fileSize = this.files[0].size;
+                    console.log('Arquivo selecionado:', fileName, 'Tamanho:', fileSize);
+                    
+                    if (typeof formatFileSize === 'function') {
+                        const sizeText = formatFileSize(fileSize);
+                        attachmentName.innerHTML = `<i class="ti ti-file me-1"></i>${escapeHtml(fileName)} <small class="text-muted">(${sizeText})</small>`;
+                    } else {
+                        console.error('ERRO: formatFileSize não está definida!');
+                        attachmentName.innerHTML = `<i class="ti ti-file me-1"></i>${escapeHtml(fileName)}`;
+                    }
+                    
+                    attachmentName.classList.remove('d-none');
+                    console.log('Nome do arquivo exibido com sucesso');
+                } else {
+                    console.warn('Nenhum arquivo selecionado');
+                    attachmentName.classList.add('d-none');
+                }
+            } catch (error) {
+                console.error('ERRO ao processar arquivo selecionado:', error);
+                console.error('Stack:', error.stack);
+            }
+        });
+        
+        // Event listener para o botão de anexo
+        attachButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('=== Botão de anexo clicado ===');
+            
+            try {
+                if (attachmentInput) {
+                    console.log('Abrindo seletor de arquivo...');
+                    attachmentInput.click();
+                    console.log('Seletor de arquivo aberto');
+                } else {
+                    console.error('ERRO: attachmentInput não existe ao clicar no botão!');
+                }
+            } catch (error) {
+                console.error('ERRO ao clicar no input de arquivo:', error);
+                console.error('Stack:', error.stack);
+            }
+        });
+        
+        console.log('Event listeners configurados com sucesso');
+    } else {
+        console.error('ERRO: Nem todos os elementos foram encontrados!');
+        console.error('Detalhes:', {
+            attachmentInput: attachmentInput ? 'OK' : 'FALTANDO',
+            attachmentName: attachmentName ? 'OK' : 'FALTANDO',
+            attachButton: attachButton ? 'OK' : 'FALTANDO'
+        });
+    }
+    
+    console.log('=== Fim da inicialização de anexo ===');
 });
+
+// Busca usuários para conversa privada
+function searchUsersForPrivateChat(search) {
+    if (search.length < 2) {
+        document.getElementById('private-chat-users-list').innerHTML = '<p class="text-muted text-center p-3">Digite pelo menos 2 caracteres...</p>';
+        return;
+    }
+    
+    fetch('<?php echo url('/api/chat/users/search'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `search=${encodeURIComponent(search)}&for_private_chat=1&_csrf_token=<?php echo csrf_token(); ?>`
+    })
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('private-chat-users-list');
+        container.innerHTML = '';
+        
+        if (data.success && data.users.length > 0) {
+            data.users.forEach(user => {
+                let avatarUrl = '<?php echo asset('tema/assets/images/profile/user-1.jpg'); ?>';
+                if (user.avatar) {
+                    if (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) {
+                        avatarUrl = user.avatar;
+                    } else if (user.avatar.startsWith('/uploads/')) {
+                        avatarUrl = '<?php echo asset(''); ?>' + user.avatar;
+                    } else {
+                        avatarUrl = '<?php echo asset('uploads/'); ?>' + user.avatar;
+                    }
+                }
+                const userDiv = document.createElement('div');
+                userDiv.className = 'd-flex align-items-center justify-content-between p-3 border-bottom cursor-pointer';
+                userDiv.style.cursor = 'pointer';
+                userDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${avatarUrl}" alt="${user.name}" width="40" height="40" class="rounded-circle me-3" />
+                        <div>
+                            <h6 class="mb-0">${escapeHtml(user.name)}</h6>
+                            <small class="text-muted">${escapeHtml(user.email)}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="startPrivateChat(${user.id})">
+                        <i class="ti ti-message me-1"></i>Conversar
+                    </button>
+                `;
+                container.appendChild(userDiv);
+            });
+        } else {
+            container.innerHTML = '<p class="text-muted text-center p-3">Nenhum usuário encontrado</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao buscar usuários:', error);
+        document.getElementById('private-chat-users-list').innerHTML = '<p class="text-danger text-center p-3">Erro ao buscar usuários</p>';
+    });
+}
+
+// Inicia conversa privada
+function startPrivateChat(userId) {
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('_csrf_token', '<?php echo csrf_token(); ?>');
+    
+    fetch('<?php echo url('/api/chat/private/start'); ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fecha o modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('startPrivateChatModal'));
+            modal.hide();
+            
+            // Recarrega salas e abre a conversa
+            loadRooms();
+            setTimeout(() => {
+                loadRoom(data.room.id);
+            }, 500);
+        } else {
+            alert('Erro ao iniciar conversa: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao iniciar conversa privada:', error);
+        alert('Erro ao iniciar conversa privada');
+    });
+}
 </script>
 
 <?php
