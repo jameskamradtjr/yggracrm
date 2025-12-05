@@ -425,6 +425,12 @@ if (!is_array($smtpConfig)) {
                             if (!is_array($resendConfig)) {
                                 $resendConfig = [];
                             }
+                            
+                            $openaiApiKey = \App\Models\SystemSetting::get('openai_api_key', '');
+                            // Garante que seja string
+                            if (!is_string($openaiApiKey)) {
+                                $openaiApiKey = '';
+                            }
                             ?>
                             
                             <!-- Google Gemini -->
@@ -581,6 +587,54 @@ if (!is_array($smtpConfig)) {
                                         Configure suas credenciais do Resend para envio de emails. 
                                         <a href="https://resend.com/api-keys" target="_blank">
                                             Obtenha sua API Key
+                                            <i class="ti ti-external-link ms-1"></i>
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- OpenAI -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="ti ti-brain me-2"></i>OpenAI - Geração de Conteúdo</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="openai_api_key" class="form-label">
+                                                API Key <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="openai_api_key" 
+                                                       name="openai_api_key" 
+                                                       value="" 
+                                                       placeholder="<?php echo $openaiApiKey ? 'Digite nova chave para alterar' : 'Digite sua API Key da OpenAI'; ?>"
+                                                       autocomplete="new-password">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('openai_api_key', 'toggleOpenAIIcon')">
+                                                    <i class="ti ti-eye" id="toggleOpenAIIcon"></i>
+                                                </button>
+                                            </div>
+                                            <?php if ($openaiApiKey && is_string($openaiApiKey)): ?>
+                                                <div class="alert alert-info mt-2 mb-0">
+                                                    <i class="ti ti-info-circle me-2"></i>
+                                                    <strong>Chave configurada:</strong> 
+                                                    <code><?php echo substr($openaiApiKey, 0, 8); ?>...</code>
+                                                    <br>
+                                                    <small>Deixe o campo acima vazio para manter a chave atual.</small>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        Configure sua API Key da OpenAI para gerar posts otimizados para SEO automaticamente.
+                                        <br>
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        Para criar sua conta e obter sua API Key, acesse: 
+                                        <a href="https://platform.openai.com/api-keys" target="_blank">
+                                            https://platform.openai.com/api-keys
                                             <i class="ti ti-external-link ms-1"></i>
                                         </a>
                                     </small>

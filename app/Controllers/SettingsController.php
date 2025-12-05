@@ -739,13 +739,30 @@ class SettingsController extends Controller
             error_log("Settings: resendApiKey vazio e sem oldResendConfig, não salvando resend_config");
         }
 
+        // OpenAI
+        $openaiApiKey = trim($this->request->input('openai_api_key', ''));
+        $oldOpenaiApiKey = SystemSetting::get('openai_api_key');
+        // Garante que seja string
+        if (!is_string($oldOpenaiApiKey)) {
+            $oldOpenaiApiKey = '';
+        }
+        
+        if (empty($openaiApiKey) && !empty($oldOpenaiApiKey)) {
+            $openaiApiKey = $oldOpenaiApiKey;
+        } else if (!empty($openaiApiKey)) {
+            error_log("Settings: Chamando SystemSetting::set() para openai_api_key...");
+            $result = SystemSetting::set('openai_api_key', $openaiApiKey, 'text', 'integrations', 'API Key da OpenAI');
+            error_log("Settings: SystemSetting::set() para openai_api_key retornou: " . ($result ? "TRUE" : "FALSE"));
+        }
+
         // Registra log (sem mostrar as chaves completas)
         $logData = [
             'gemini_api_key' => ($geminiApiKey && is_string($geminiApiKey)) ? substr($geminiApiKey, 0, 8) . '...' : 'não configurada',
             'apizap_instance_key' => $apizapInstanceKey ?: 'não configurada',
             'apizap_token' => (!empty($apizapConfig['token']) && is_string($apizapConfig['token'])) ? substr($apizapConfig['token'], 0, 8) . '...' : 'não configurada',
             'resend_api_key' => (!empty($resendConfig['api_key']) && is_string($resendConfig['api_key'])) ? substr($resendConfig['api_key'], 0, 8) . '...' : 'não configurada',
-            'resend_from_email' => $resendFromEmail
+            'resend_from_email' => $resendFromEmail,
+            'openai_api_key' => ($openaiApiKey && is_string($openaiApiKey)) ? substr($openaiApiKey, 0, 8) . '...' : 'não configurada'
         ];
         
         SistemaLog::registrar(

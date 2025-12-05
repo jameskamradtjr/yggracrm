@@ -157,6 +157,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/site/manage/analytics', [\App\Controllers\SiteController::class, 'analytics']);
     $router->post('/site/manage/update', [\App\Controllers\SiteController::class, 'updateSite']);
     $router->get('/site/manage/posts/create', [\App\Controllers\SiteController::class, 'createPost']);
+    $router->post('/site/manage/posts/generate-ai', [\App\Controllers\SiteController::class, 'generatePostWithAI']);
     $router->post('/site/manage/posts', [\App\Controllers\SiteController::class, 'storePost']);
     $router->get('/site/manage/posts/{id}/edit', [\App\Controllers\SiteController::class, 'editPost']);
     $router->get('/site/manage/posts/{id}/analytics', [\App\Controllers\SiteController::class, 'postAnalytics']);

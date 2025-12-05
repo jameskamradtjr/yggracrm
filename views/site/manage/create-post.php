@@ -33,7 +33,13 @@ ob_start();
             <div class="row">
                 <div class="col-md-8">
                     <div class="mb-3">
-                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="title" class="form-label mb-0">Título <span class="text-danger">*</span></label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#aiGenerateModal">
+                                <i class="ti ti-sparkles me-1"></i>
+                                Criar com IA
+                            </button>
+                        </div>
                         <input type="text" 
                                class="form-control" 
                                id="title" 
@@ -134,6 +140,77 @@ ob_start();
     </div>
 </div>
 
+<!-- Modal Criar com IA -->
+<div class="modal fade" id="aiGenerateModal" tabindex="-1" aria-labelledby="aiGenerateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aiGenerateModalLabel">
+                    <i class="ti ti-sparkles me-2"></i>
+                    Criar Post com IA
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="aiGenerateForm">
+                    <div class="mb-3">
+                        <label for="ai_keywords" class="form-label">
+                            Palavras-chave <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="ai_keywords" 
+                               name="keywords" 
+                               required
+                               placeholder="Ex: marketing digital, SEO, conteúdo, blog">
+                        <small class="text-muted">Separe as palavras-chave por vírgula</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ai_tone" class="form-label">
+                            Tom de Voz <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="ai_tone" name="tone" required>
+                            <option value="profissional">Profissional</option>
+                            <option value="descontraído">Descontraído</option>
+                            <option value="técnico">Técnico</option>
+                            <option value="conversacional">Conversacional</option>
+                            <option value="formal">Formal</option>
+                            <option value="amigável">Amigável</option>
+                            <option value="persuasivo">Persuasivo</option>
+                            <option value="educativo">Educativo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ai_reference_links" class="form-label">
+                            Links de Referência
+                        </label>
+                        <textarea class="form-control" 
+                                  id="ai_reference_links" 
+                                  name="reference_links" 
+                                  rows="4"
+                                  placeholder="Cole os links de referência, um por linha&#10;Ex:&#10;https://exemplo.com/artigo1&#10;https://exemplo.com/artigo2"></textarea>
+                        <small class="text-muted">Um link por linha (opcional)</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>Como funciona:</strong> A IA irá criar um post otimizado para SEO com base nas palavras-chave, tom de voz e links de referência fornecidos. O conteúdo será preenchido automaticamente no editor.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGenerateAI">
+                    <i class="ti ti-sparkles me-2"></i>
+                    Gerar Post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- TinyMCE -->
 <script src="https://cdn.tiny.cloud/1/o7tsgeqi6ge25a2owg2f57segvoz4ujqxpwajukett59f8af/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
@@ -187,6 +264,88 @@ document.addEventListener('DOMContentLoaded', function() {
         if (editor) {
             editor.save();
         }
+    });
+    
+    // Gerar post com IA
+    document.getElementById('btnGenerateAI').addEventListener('click', function() {
+        const form = document.getElementById('aiGenerateForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const keywords = document.getElementById('ai_keywords').value.trim();
+        const tone = document.getElementById('ai_tone').value;
+        const referenceLinksText = document.getElementById('ai_reference_links').value.trim();
+        
+        if (!keywords) {
+            alert('Por favor, informe as palavras-chave.');
+            return;
+        }
+        
+        // Processa links de referência
+        const referenceLinks = referenceLinksText
+            .split('\n')
+            .map(link => link.trim())
+            .filter(link => link && (link.startsWith('http://') || link.startsWith('https://')));
+        
+        // Desabilita botão e mostra loading
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Gerando...';
+        
+        // Chama API
+        fetch('<?php echo url('/site/manage/posts/generate-ai'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '<?php echo csrf_token(); ?>'
+            },
+            body: JSON.stringify({
+                keywords: keywords,
+                tone: tone,
+                reference_links: referenceLinks
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Preenche título
+                document.getElementById('title').value = data.data.title || '';
+                
+                // Preenche resumo
+                if (data.data.excerpt) {
+                    document.getElementById('excerpt').value = data.data.excerpt;
+                }
+                
+                // Preenche conteúdo no TinyMCE
+                const editor = tinymce.get('content');
+                if (editor) {
+                    editor.setContent(data.data.content || '');
+                } else {
+                    document.getElementById('content').value = data.data.content || '';
+                }
+                
+                // Fecha modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('aiGenerateModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                alert('Post gerado com sucesso! Revise o conteúdo e salve quando estiver pronto.');
+            } else {
+                alert('Erro ao gerar post: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao gerar post. Verifique sua conexão e tente novamente.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
     });
 });
 </script>

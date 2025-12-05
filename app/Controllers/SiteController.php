@@ -10,6 +10,7 @@ use App\Models\SitePost;
 use App\Models\NewsletterSubscriber;
 use App\Models\SiteAnalytics;
 use App\Models\SistemaLog;
+use App\Services\OpenAIService;
 
 class SiteController extends Controller
 {
@@ -454,6 +455,55 @@ class SiteController extends Controller
             'title' => 'Novo Post',
             'site' => $site
         ]);
+    }
+    
+    /**
+     * Gera post usando IA
+     */
+    public function generatePostWithAI(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true) ?? [];
+            
+            $keywords = trim($data['keywords'] ?? '');
+            $tone = trim($data['tone'] ?? 'profissional');
+            $referenceLinks = array_filter(array_map('trim', $data['reference_links'] ?? []));
+            
+            if (empty($keywords)) {
+                json_response([
+                    'success' => false,
+                    'message' => 'Palavras-chave são obrigatórias'
+                ], 400);
+                return;
+            }
+            
+            $openAIService = new OpenAIService();
+            
+            if (!$openAIService->isConfigured()) {
+                json_response([
+                    'success' => false,
+                    'message' => 'API key da OpenAI não configurada. Configure em /settings'
+                ], 400);
+                return;
+            }
+            
+            $result = $openAIService->generatePostContent($keywords, $tone, $referenceLinks);
+            
+            json_response([
+                'success' => true,
+                'data' => $result
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao gerar post com IA: " . $e->getMessage());
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao gerar post: ' . $e->getMessage()
+            ], 500);
+        }
     }
     
     /**
