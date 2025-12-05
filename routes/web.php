@@ -146,6 +146,15 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->post('/knowledge-base/{id}/delete', [\App\Controllers\KnowledgeBaseController::class, 'destroy']);
     
     // Gerenciamento de Site (administrativo - DEVE VIR ANTES das rotas públicas)
+    // Chat
+    $router->get('/chat', [\App\Controllers\ChatController::class, 'index']);
+    $router->get('/api/chat/rooms', [\App\Controllers\ChatController::class, 'getRooms']);
+    $router->get('/api/chat/rooms/{room_id}/messages', [\App\Controllers\ChatController::class, 'getMessages']);
+    $router->post('/api/chat/messages/send', [\App\Controllers\ChatController::class, 'sendMessage']);
+    $router->post('/api/chat/rooms/create', [\App\Controllers\ChatController::class, 'createRoom']);
+    $router->post('/api/chat/rooms/add-member', [\App\Controllers\ChatController::class, 'addMember']);
+    $router->post('/api/chat/users/search', [\App\Controllers\ChatController::class, 'searchUsers']);
+    
     $router->get('/site/manage', [\App\Controllers\SiteController::class, 'manage']);
     $router->get('/site/manage/analytics', [\App\Controllers\SiteController::class, 'analytics']);
     $router->post('/site/manage/update', [\App\Controllers\SiteController::class, 'updateSite']);
