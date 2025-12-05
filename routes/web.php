@@ -23,6 +23,7 @@ use App\Controllers\ProposalController;
 use App\Controllers\AutomationController;
 use App\Controllers\QuizController;
 use App\Controllers\DriveController;
+use App\Controllers\MuralController;
 
 // O router é injetado automaticamente pela Application
 // Não precisa chamar app()->router() aqui
@@ -77,6 +78,14 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     
     // Dashboard
     $router->get('/dashboard', [DashboardController::class, 'index']);
+    
+    // Mural
+    $router->get('/mural', [MuralController::class, 'index']);
+    $router->get('/mural/create', [MuralController::class, 'create']);
+    $router->post('/mural', [MuralController::class, 'store']);
+    $router->get('/mural/{id}/edit', [MuralController::class, 'edit']);
+    $router->post('/mural/{id}', [MuralController::class, 'update']);
+    $router->post('/mural/{id}/delete', [MuralController::class, 'destroy']);
     
     // Perfil do Usuário
     $router->get('/profile', [UserController::class, 'profile']);

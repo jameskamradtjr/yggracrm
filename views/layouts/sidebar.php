@@ -55,6 +55,12 @@
                         <span class="hide-menu">Dashboard</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="<?php echo url('/mural'); ?>">
+                        <span><i class="ti ti-news"></i></span>
+                        <span class="hide-menu">Mural</span>
+                    </a>
+                </li>
 
                 <!-- Financeiro -->
                 <?php if (auth()->check()): ?>
