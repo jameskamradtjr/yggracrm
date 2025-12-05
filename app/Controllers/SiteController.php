@@ -395,7 +395,8 @@ class SiteController extends Controller
             // Processa upload de logo
             if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
                 $tmpFile = $_FILES['logo_file']['tmp_name'];
-                $url = s3_upload_public($tmpFile, $userId, 'logos', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+                $originalName = $_FILES['logo_file']['name'];
+                $url = s3_upload_public($tmpFile, $userId, 'logos', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], $originalName);
                 if ($url) {
                     $data['logo_url'] = $url;
                 }
@@ -404,7 +405,8 @@ class SiteController extends Controller
             // Processa upload de foto
             if (isset($_FILES['photo_file']) && $_FILES['photo_file']['error'] === UPLOAD_ERR_OK) {
                 $tmpFile = $_FILES['photo_file']['tmp_name'];
-                $url = s3_upload_public($tmpFile, $userId, 'avatars', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                $originalName = $_FILES['photo_file']['name'];
+                $url = s3_upload_public($tmpFile, $userId, 'avatars', ['jpg', 'jpeg', 'png', 'gif', 'webp'], $originalName);
                 if ($url) {
                     $data['photo_url'] = $url;
                 }
@@ -544,67 +546,57 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
-            // Processa upload de imagem destacada (igual ao /settings)
+            // Processa upload de imagem destacada (igual ao /site/manage - logo e foto)
             $featuredImageUrl = $data['featured_image'] ?? null;
-            $featuredImageBase64 = trim($this->request->input('featured_image_base64', ''));
             
-            if (!empty($featuredImageBase64) && strlen($featuredImageBase64) > 100) {
-                try {
-                    // Remove prefixo data:image/...;base64,
-                    if (strpos($featuredImageBase64, 'data:image') === 0) {
-                        $featuredImageBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $featuredImageBase64);
-                    }
+            error_log("========== SiteController storePost - Upload de Imagem ==========");
+            error_log("FILES data: " . json_encode(array_keys($_FILES)));
+            
+            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
+                error_log("SiteController: Arquivo de imagem recebido");
+                error_log("SiteController: - Nome original: " . $_FILES['featured_image_file']['name']);
+                error_log("SiteController: - Tamanho: " . $_FILES['featured_image_file']['size'] . " bytes");
+                error_log("SiteController: - Tipo MIME: " . $_FILES['featured_image_file']['type']);
+                
+                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
+                $originalName = $_FILES['featured_image_file']['name'];
+                
+                error_log("SiteController: - Arquivo temporário: {$tmpFile}");
+                error_log("SiteController: - Arquivo existe? " . (file_exists($tmpFile) ? 'SIM' : 'NÃO'));
+                
+                if (file_exists($tmpFile)) {
+                    // Usa o helper s3_upload_public que agora aceita o nome original
+                    // Ele automaticamente renomeia o arquivo temporário se necessário
+                    $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp'], $originalName);
                     
-                    // Decodifica base64
-                    $imageData = base64_decode($featuredImageBase64);
+                    error_log("SiteController: Resultado do s3_upload_public: " . ($url ? "URL: {$url}" : 'FALSE (falhou)'));
                     
-                    if ($imageData !== false && !empty($imageData)) {
-                        // Cria arquivo temporário SEM extensão primeiro
-                        $tempFile = tempnam(sys_get_temp_dir(), 'post_image_');
-                        file_put_contents($tempFile, $imageData);
-                        
-                        // Detecta tipo MIME
-                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                        $mimeType = finfo_file($finfo, $tempFile);
-                        finfo_close($finfo);
-                        
-                        // Mapeia MIME para extensão
-                        $mimeToExtension = [
-                            'image/png' => 'png',
-                            'image/jpeg' => 'jpg',
-                            'image/jpg' => 'jpg',
-                            'image/gif' => 'gif',
-                            'image/webp' => 'webp'
-                        ];
-                        
-                        if (isset($mimeToExtension[$mimeType])) {
-                            $extension = $mimeToExtension[$mimeType];
-                            
-                            // Renomeia arquivo temporário COM extensão
-                            $tempFileWithExt = $tempFile . '.' . $extension;
-                            rename($tempFile, $tempFileWithExt);
-                            
-                            // Upload para S3 público
-                            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                            $url = s3_upload_public($tempFileWithExt, $userId, 'posts', $allowedExtensions);
-                            
-                            // Remove arquivo temporário
-                            @unlink($tempFileWithExt);
-                            
-                            if ($url) {
-                                $featuredImageUrl = $url;
-                            }
-                        } else {
-                            @unlink($tempFile);
-                        }
+                    if ($url && $url !== false) {
+                        error_log("SiteController: ✓ Imagem enviada para S3 com sucesso: {$url}");
+                        $featuredImageUrl = $url;
+                    } else {
+                        $s3 = s3_public();
+                        $errorMsg = $s3->getLastError() ?: 'Erro desconhecido';
+                        error_log("SiteController: ✗ Upload falhou. Erro S3: {$errorMsg}");
                     }
-                } catch (\Exception $e) {
-                    error_log("Erro ao processar imagem do post: " . $e->getMessage());
+                } else {
+                    error_log("SiteController: ✗ Arquivo temporário não existe!");
+                }
+            } else {
+                if (isset($_FILES['featured_image_file'])) {
+                    error_log("SiteController: Erro no upload: " . $_FILES['featured_image_file']['error']);
+                } else {
+                    error_log("SiteController: Nenhum arquivo de imagem enviado");
                 }
             }
             
+            error_log("SiteController: featured_image final que será salvo: " . ($featuredImageUrl ?: 'NULL'));
+            
             $slug = SitePost::generateSlug($data['title'], $site->id);
             $published = !empty($data['published']);
+            
+            error_log("SiteController: Criando post com dados:");
+            error_log("SiteController: - featured_image: " . ($featuredImageUrl ?: 'NULL'));
             
             $post = SitePost::create([
                 'user_site_id' => $site->id,
@@ -620,6 +612,9 @@ class SiteController extends Controller
                 'likes_count' => 0,
                 'views_count' => 0
             ]);
+            
+            error_log("SiteController: Post criado com ID: {$post->id}");
+            error_log("SiteController: Post featured_image após criação: " . ($post->featured_image ?: 'NULL'));
             
             SistemaLog::registrar(
                 'site_posts',
@@ -732,71 +727,58 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
-            // Processa upload de imagem destacada (igual ao /settings)
+            // Processa upload de imagem destacada (igual ao /site/manage - logo e foto)
             $featuredImageUrl = $data['featured_image'] ?? $post->featured_image;
-            $featuredImageBase64 = trim($this->request->input('featured_image_base64', ''));
             
-            if (!empty($featuredImageBase64) && strlen($featuredImageBase64) > 100) {
-                try {
-                    // Remove prefixo data:image/...;base64,
-                    if (strpos($featuredImageBase64, 'data:image') === 0) {
-                        $featuredImageBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $featuredImageBase64);
-                    }
+            error_log("========== SiteController updatePost - Upload de Imagem ==========");
+            error_log("FILES data: " . json_encode(array_keys($_FILES)));
+            
+            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
+                error_log("SiteController: Arquivo de imagem recebido");
+                error_log("SiteController: - Nome original: " . $_FILES['featured_image_file']['name']);
+                error_log("SiteController: - Tamanho: " . $_FILES['featured_image_file']['size'] . " bytes");
+                
+                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
+                $originalName = $_FILES['featured_image_file']['name'];
+                
+                error_log("SiteController: - Arquivo temporário: {$tmpFile}");
+                
+                if (file_exists($tmpFile)) {
+                    // Usa o helper s3_upload_public que agora aceita o nome original
+                    // Ele automaticamente renomeia o arquivo temporário se necessário
+                    $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp'], $originalName);
                     
-                    // Decodifica base64
-                    $imageData = base64_decode($featuredImageBase64);
+                    error_log("SiteController: Resultado do s3_upload_public: " . ($url ? "URL: {$url}" : 'FALSE (falhou)'));
                     
-                    if ($imageData !== false && !empty($imageData)) {
-                        // Cria arquivo temporário SEM extensão primeiro
-                        $tempFile = tempnam(sys_get_temp_dir(), 'post_image_');
-                        file_put_contents($tempFile, $imageData);
+                    if ($url && $url !== false) {
+                        error_log("SiteController: ✓ Imagem enviada para S3 com sucesso: {$url}");
                         
-                        // Detecta tipo MIME
-                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                        $mimeType = finfo_file($finfo, $tempFile);
-                        finfo_close($finfo);
-                        
-                        // Mapeia MIME para extensão
-                        $mimeToExtension = [
-                            'image/png' => 'png',
-                            'image/jpeg' => 'jpg',
-                            'image/jpg' => 'jpg',
-                            'image/gif' => 'gif',
-                            'image/webp' => 'webp'
-                        ];
-                        
-                        if (isset($mimeToExtension[$mimeType])) {
-                            $extension = $mimeToExtension[$mimeType];
-                            
-                            // Renomeia arquivo temporário COM extensão
-                            $tempFileWithExt = $tempFile . '.' . $extension;
-                            rename($tempFile, $tempFileWithExt);
-                            
-                            // Upload para S3 público
-                            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                            $url = s3_upload_public($tempFileWithExt, $userId, 'posts', $allowedExtensions);
-                            
-                            // Remove arquivo temporário
-                            @unlink($tempFileWithExt);
-                            
-                            if ($url) {
-                                // Remove imagem antiga do S3 se existir
-                                if ($post->featured_image && (strpos($post->featured_image, 's3.') !== false || strpos($post->featured_image, 'amazonaws.com') !== false)) {
-                                    if (preg_match('/amazonaws\.com\/(.+)$/', $post->featured_image, $matches)) {
-                                        $oldS3Key = urldecode($matches[1]);
-                                        s3_delete_public($oldS3Key);
-                                    }
-                                }
-                                $featuredImageUrl = $url;
+                        // Remove imagem antiga do S3 se existir
+                        if ($post->featured_image && (strpos($post->featured_image, 's3.') !== false || strpos($post->featured_image, 'amazonaws.com') !== false)) {
+                            if (preg_match('/amazonaws\.com\/(.+)$/', $post->featured_image, $matches)) {
+                                $oldS3Key = urldecode($matches[1]);
+                                s3_delete_public($oldS3Key);
+                                error_log("SiteController: Imagem antiga removida do S3: {$oldS3Key}");
                             }
-                        } else {
-                            @unlink($tempFile);
                         }
+                        $featuredImageUrl = $url;
+                    } else {
+                        $s3 = s3_public();
+                        $errorMsg = $s3->getLastError() ?: 'Erro desconhecido';
+                        error_log("SiteController: ✗ Upload falhou. Erro S3: {$errorMsg}");
                     }
-                } catch (\Exception $e) {
-                    error_log("Erro ao processar imagem do post: " . $e->getMessage());
+                } else {
+                    error_log("SiteController: ✗ Arquivo temporário não existe!");
+                }
+            } else {
+                if (isset($_FILES['featured_image_file'])) {
+                    error_log("SiteController: Erro no upload: " . $_FILES['featured_image_file']['error']);
+                } else {
+                    error_log("SiteController: Nenhum arquivo de imagem enviado");
                 }
             }
+            
+            error_log("SiteController: featured_image final que será salvo: " . ($featuredImageUrl ?: 'NULL'));
             
             // Gera novo slug se o título mudou
             if ($post->title !== $data['title']) {
@@ -815,7 +797,12 @@ class SiteController extends Controller
             $data['published'] = $published;
             $data['featured_image'] = $featuredImageUrl;
             
+            error_log("SiteController: Atualizando post com dados:");
+            error_log("SiteController: - featured_image: " . ($featuredImageUrl ?: 'NULL'));
+            
             $post->update($data);
+            
+            error_log("SiteController: Post atualizado. featured_image após update: " . ($post->featured_image ?: 'NULL'));
             
             SistemaLog::registrar(
                 'site_posts',

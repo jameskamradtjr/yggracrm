@@ -383,27 +383,84 @@ if (!function_exists('s3_upload_public')) {
     /**
      * Faz upload de arquivo público e retorna a URL
      * 
-     * @param string $localFilePath Caminho local do arquivo
+     * @param string $localFilePath Caminho local do arquivo (pode ser arquivo temporário sem extensão)
      * @param int $userId ID do usuário
-     * @param string $subfolder Subpasta opcional (ex: 'avatars', 'logos')
+     * @param string $subfolder Subpasta opcional (ex: 'avatars', 'logos', 'posts')
      * @param array $allowedExtensions Extensões permitidas
+     * @param string|null $originalFileName Nome original do arquivo (opcional, usado quando arquivo temporário não tem extensão)
      * @return string|false URL pública ou false em caso de erro
      */
     function s3_upload_public(
         string $localFilePath,
         int $userId,
         string $subfolder = '',
-        array $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']
+        array $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
+        ?string $originalFileName = null
     ): string|false {
+        error_log("===== s3_upload_public =====");
+        error_log("localFilePath: {$localFilePath}");
+        error_log("userId: {$userId}");
+        error_log("subfolder: {$subfolder}");
+        error_log("originalFileName: " . ($originalFileName ?: 'NULL'));
+        error_log("allowedExtensions: " . implode(', ', $allowedExtensions));
+        
         $s3 = s3_public();
         
+        // Detecta extensão do arquivo local
+        $extension = strtolower(pathinfo($localFilePath, PATHINFO_EXTENSION));
+        error_log("Extensão detectada do caminho: '{$extension}'");
+        
+        // Se o arquivo temporário não tem extensão válida (vazia ou 'tmp'), usa a do nome original
+        $isInvalidExtension = empty($extension) || $extension === 'tmp' || !in_array($extension, $allowedExtensions);
+        error_log("Extensão inválida? " . ($isInvalidExtension ? 'SIM' : 'NÃO'));
+        
+        if ($isInvalidExtension && $originalFileName) {
+            $originalExt = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+            error_log("Extensão do nome original: '{$originalExt}'");
+            
+            if (!empty($originalExt) && in_array($originalExt, $allowedExtensions)) {
+                // Copia o arquivo para um novo com extensão correta
+                $fileWithExt = $localFilePath . '.' . $originalExt;
+                error_log("Tentando copiar para: {$fileWithExt}");
+                
+                if (copy($localFilePath, $fileWithExt)) {
+                    error_log("Arquivo copiado com sucesso");
+                    
+                    // Valida o arquivo copiado
+                    if (!$s3->validateFile($fileWithExt, $allowedExtensions)) {
+                        error_log('S3 Public Upload Validation Error (após cópia): ' . $s3->getLastError());
+                        @unlink($fileWithExt);
+                        return false;
+                    }
+                    
+                    error_log("Validação passou!");
+                    
+                    $s3Key = $s3->generateUniqueKey($userId, $originalFileName, $subfolder);
+                    error_log("S3 Key gerada: {$s3Key}");
+                    
+                    $url = $s3->uploadAndGetUrl($fileWithExt, $s3Key);
+                    error_log("URL retornada: " . ($url ?: 'FALSE'));
+                    
+                    @unlink($fileWithExt); // Remove arquivo temporário
+                    return $url;
+                } else {
+                    error_log("Erro ao copiar arquivo!");
+                }
+            } else {
+                error_log("Extensão original vazia ou não permitida: '{$originalExt}'");
+            }
+        }
+        
+        // Validação normal (arquivo já tem extensão válida)
+        error_log("Tentando validação normal do arquivo: {$localFilePath}");
         if (!$s3->validateFile($localFilePath, $allowedExtensions)) {
             error_log('S3 Public Upload Validation Error: ' . $s3->getLastError());
             return false;
         }
         
-        $originalFileName = basename($localFilePath);
-        $s3Key = $s3->generateUniqueKey($userId, $originalFileName, $subfolder);
+        $fileName = $originalFileName ?: basename($localFilePath);
+        $s3Key = $s3->generateUniqueKey($userId, $fileName, $subfolder);
+        error_log("S3 Key gerada (normal): {$s3Key}");
         
         return $s3->uploadAndGetUrl($localFilePath, $s3Key);
     }

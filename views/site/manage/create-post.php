@@ -27,7 +27,7 @@ ob_start();
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="<?php echo url('/site/manage/posts'); ?>" id="postForm">
+        <form method="POST" action="<?php echo url('/site/manage/posts'); ?>" id="postForm" enctype="multipart/form-data">
             <?php echo csrf_field(); ?>
             
             <div class="row">
@@ -97,21 +97,27 @@ ob_start();
                             
                             <div class="mb-3">
                                 <label for="featured_image_file" class="form-label">Imagem Destacada</label>
+                                <?php if (old('featured_image')): ?>
+                                    <div class="mb-2">
+                                        <img src="<?php echo e(old('featured_image')); ?>" 
+                                             alt="Preview" 
+                                             id="featured_image_preview" 
+                                             style="max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: cover;">
+                                    </div>
+                                <?php endif; ?>
                                 <input type="file" 
                                        class="form-control" 
                                        id="featured_image_file" 
                                        name="featured_image_file" 
                                        accept="image/*"
-                                       onchange="handleImageUpload(this)">
+                                       onchange="previewImage(this, 'featured_image_preview')">
                                 <small class="text-muted">Faça upload da imagem destacada (PNG, JPG, GIF, WEBP)</small>
-                                <div class="mt-2">
-                                    <img id="featured_image_preview" 
-                                         src="<?php echo old('featured_image'); ?>" 
-                                         alt="Preview" 
-                                         style="max-width: 100%; max-height: 200px; border-radius: 8px; <?php echo old('featured_image') ? '' : 'display: none;'; ?>">
-                                </div>
-                                <input type="hidden" id="featured_image_base64" name="featured_image_base64" value="">
-                                <input type="hidden" id="featured_image" name="featured_image" value="<?php echo old('featured_image'); ?>">
+                                <input type="text" 
+                                       class="form-control mt-2" 
+                                       name="featured_image" 
+                                       id="featured_image"
+                                       value="<?php echo old('featured_image'); ?>" 
+                                       placeholder="Ou informe a URL da imagem">
                             </div>
                             
                             <div class="mb-3">
@@ -267,18 +273,10 @@ document.addEventListener('DOMContentLoaded', function() {
         language: 'pt_BR'
     });
     
-    // Form submit handler
-    document.getElementById('postForm').addEventListener('submit', function(e) {
-        const editor = tinymce.get('content');
-        if (editor) {
-            editor.save();
-        }
-    });
     
-    // Preview e conversão para base64 (igual ao /settings)
-    function handleImageUpload(input) {
-        const preview = document.getElementById('featured_image_preview');
-        const base64Input = document.getElementById('featured_image_base64');
+    // Preview de imagem (igual ao /site/manage)
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
         const file = input.files[0];
         
         if (file) {
@@ -299,21 +297,29 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64 = e.target.result;
-                preview.src = base64;
+                if (!preview) {
+                    // Cria elemento de preview se não existir
+                    const container = input.parentElement;
+                    const img = document.createElement('img');
+                    img.id = previewId;
+                    img.style.cssText = 'max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: cover; margin-top: 10px;';
+                    container.appendChild(img);
+                    preview = img;
+                }
+                preview.src = e.target.result;
                 preview.style.display = 'block';
-                base64Input.value = base64;
-            };
-            reader.onerror = function(error) {
-                console.error('Erro ao ler arquivo:', error);
-                alert('Erro ao processar arquivo');
             };
             reader.readAsDataURL(file);
-        } else {
-            preview.style.display = 'none';
-            base64Input.value = '';
         }
     }
+    
+    // Form submit handler
+    document.getElementById('postForm').addEventListener('submit', function(e) {
+        const editor = tinymce.get('content');
+        if (editor) {
+            editor.save();
+        }
+    });
     
     // Gerar post com IA
     document.getElementById('btnGenerateAI').addEventListener('click', function() {
@@ -403,4 +409,5 @@ document.addEventListener('DOMContentLoaded', function() {
 $content = ob_get_clean();
 include base_path('views/layouts/app.php');
 ?>
+
 
