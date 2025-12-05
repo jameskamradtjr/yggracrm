@@ -114,6 +114,61 @@ ob_start();
                     </div>
                 </form>
 
+                <!-- Totais -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-success-subtle border-success">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-1">Total de Entradas</h6>
+                                        <h4 class="mb-0 text-success">
+                                            R$ <?php echo number_format($totals['entradas'] ?? 0, 2, ',', '.'); ?>
+                                        </h4>
+                                    </div>
+                                    <div class="ms-3">
+                                        <i class="ti ti-arrow-down-left fs-1 text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-danger-subtle border-danger">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-1">Total de Saídas</h6>
+                                        <h4 class="mb-0 text-danger">
+                                            R$ <?php echo number_format($totals['saidas'] ?? 0, 2, ',', '.'); ?>
+                                        </h4>
+                                    </div>
+                                    <div class="ms-3">
+                                        <i class="ti ti-arrow-up-right fs-1 text-danger"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card <?php echo ($totals['geral'] ?? 0) >= 0 ? 'bg-primary-subtle border-primary' : 'bg-warning-subtle border-warning'; ?>">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-1">Total Geral</h6>
+                                        <h4 class="mb-0 <?php echo ($totals['geral'] ?? 0) >= 0 ? 'text-primary' : 'text-warning'; ?>">
+                                            R$ <?php echo number_format($totals['geral'] ?? 0, 2, ',', '.'); ?>
+                                        </h4>
+                                    </div>
+                                    <div class="ms-3">
+                                        <i class="ti ti-wallet fs-1 <?php echo ($totals['geral'] ?? 0) >= 0 ? 'text-primary' : 'text-warning'; ?>"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Ações em massa -->
                 <div class="mb-3" id="bulk-actions" style="display: none;">
                     <div class="btn-group" role="group">

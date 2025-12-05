@@ -187,6 +187,22 @@ class FinancialController extends Controller
         $costCenters = CostCenter::where('user_id', $userId)->get();
         $tags = Tag::where('user_id', $userId)->orderBy('name')->get();
         
+        // Calcula totais baseado nos lançamentos filtrados
+        $totalEntradas = 0;
+        $totalSaidas = 0;
+        
+        foreach ($entries as $entry) {
+            $value = (float)$entry->value;
+            if ($entry->type === 'entrada') {
+                $totalEntradas += $value;
+            } elseif ($entry->type === 'saida') {
+                $totalSaidas += $value;
+            }
+            // Transferências não entram no cálculo de totais
+        }
+        
+        $totalGeral = $totalEntradas - $totalSaidas;
+        
         return $this->view('financial/index', [
             'title' => 'Financeiro - Lançamentos',
             'entries' => $entries,
@@ -195,6 +211,11 @@ class FinancialController extends Controller
             'categories' => $categories,
             'costCenters' => $costCenters,
             'tags' => $tags,
+            'totals' => [
+                'entradas' => $totalEntradas,
+                'saidas' => $totalSaidas,
+                'geral' => $totalGeral
+            ],
             'filters' => [
                 'type' => $type,
                 'status' => $status,
