@@ -27,7 +27,7 @@ ob_start();
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="<?php echo url('/site/manage/posts/' . $post->id . '/update'); ?>" id="postForm" enctype="multipart/form-data">
+        <form method="POST" action="<?php echo url('/site/manage/posts/' . $post->id . '/update'); ?>" id="postForm">
             <?php echo csrf_field(); ?>
             
             <div class="row">
@@ -91,7 +91,7 @@ ob_start();
                                        id="featured_image_file" 
                                        name="featured_image_file" 
                                        accept="image/*"
-                                       onchange="previewImage(this, 'featured_image_preview')">
+                                       onchange="handleImageUpload(this)">
                                 <small class="text-muted">Faça upload da imagem destacada (PNG, JPG, GIF, WEBP)</small>
                                 <div class="mt-2">
                                     <img id="featured_image_preview" 
@@ -99,6 +99,7 @@ ob_start();
                                          alt="Preview" 
                                          style="max-width: 100%; max-height: 200px; border-radius: 8px; <?php echo $post->featured_image ? '' : 'display: none;'; ?>">
                                 </div>
+                                <input type="hidden" id="featured_image_base64" name="featured_image_base64" value="">
                                 <input type="hidden" id="featured_image" name="featured_image" value="<?php echo e($post->featured_image ?? ''); ?>">
                             </div>
                             
@@ -192,20 +193,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Preview de imagem
-    function previewImage(input, previewId) {
-        const preview = document.getElementById(previewId);
+    // Preview e conversão para base64 (igual ao /settings)
+    function handleImageUpload(input) {
+        const preview = document.getElementById('featured_image_preview');
+        const base64Input = document.getElementById('featured_image_base64');
         const file = input.files[0];
         
         if (file) {
+            // Validar tamanho (máx 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Arquivo muito grande! Tamanho máximo: 5MB');
+                input.value = '';
+                return;
+            }
+            
+            // Validar tipo
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Tipo de arquivo não permitido! Use PNG, JPG, GIF ou WEBP');
+                input.value = '';
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = function(e) {
-                preview.src = e.target.result;
+                const base64 = e.target.result;
+                preview.src = base64;
                 preview.style.display = 'block';
+                base64Input.value = base64;
+            };
+            reader.onerror = function(error) {
+                console.error('Erro ao ler arquivo:', error);
+                alert('Erro ao processar arquivo');
             };
             reader.readAsDataURL(file);
         } else {
             preview.style.display = 'none';
+            base64Input.value = '';
         }
     }
 });

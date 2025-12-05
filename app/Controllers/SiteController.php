@@ -544,13 +544,62 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
-            // Processa upload de imagem destacada
+            // Processa upload de imagem destacada (igual ao /settings)
             $featuredImageUrl = $data['featured_image'] ?? null;
-            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
-                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
-                $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                if ($url) {
-                    $featuredImageUrl = $url;
+            $featuredImageBase64 = trim($this->request->input('featured_image_base64', ''));
+            
+            if (!empty($featuredImageBase64) && strlen($featuredImageBase64) > 100) {
+                try {
+                    // Remove prefixo data:image/...;base64,
+                    if (strpos($featuredImageBase64, 'data:image') === 0) {
+                        $featuredImageBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $featuredImageBase64);
+                    }
+                    
+                    // Decodifica base64
+                    $imageData = base64_decode($featuredImageBase64);
+                    
+                    if ($imageData !== false && !empty($imageData)) {
+                        // Cria arquivo temporário SEM extensão primeiro
+                        $tempFile = tempnam(sys_get_temp_dir(), 'post_image_');
+                        file_put_contents($tempFile, $imageData);
+                        
+                        // Detecta tipo MIME
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mimeType = finfo_file($finfo, $tempFile);
+                        finfo_close($finfo);
+                        
+                        // Mapeia MIME para extensão
+                        $mimeToExtension = [
+                            'image/png' => 'png',
+                            'image/jpeg' => 'jpg',
+                            'image/jpg' => 'jpg',
+                            'image/gif' => 'gif',
+                            'image/webp' => 'webp'
+                        ];
+                        
+                        if (isset($mimeToExtension[$mimeType])) {
+                            $extension = $mimeToExtension[$mimeType];
+                            
+                            // Renomeia arquivo temporário COM extensão
+                            $tempFileWithExt = $tempFile . '.' . $extension;
+                            rename($tempFile, $tempFileWithExt);
+                            
+                            // Upload para S3 público
+                            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                            $url = s3_upload_public($tempFileWithExt, $userId, 'posts', $allowedExtensions);
+                            
+                            // Remove arquivo temporário
+                            @unlink($tempFileWithExt);
+                            
+                            if ($url) {
+                                $featuredImageUrl = $url;
+                            }
+                        } else {
+                            @unlink($tempFile);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log("Erro ao processar imagem do post: " . $e->getMessage());
                 }
             }
             
@@ -683,20 +732,69 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
-            // Processa upload de imagem destacada
+            // Processa upload de imagem destacada (igual ao /settings)
             $featuredImageUrl = $data['featured_image'] ?? $post->featured_image;
-            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
-                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
-                $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                if ($url) {
-                    // Remove imagem antiga do S3 se existir
-                    if ($post->featured_image && (strpos($post->featured_image, 's3.') !== false || strpos($post->featured_image, 'amazonaws.com') !== false)) {
-                        if (preg_match('/amazonaws\.com\/(.+)$/', $post->featured_image, $matches)) {
-                            $oldS3Key = urldecode($matches[1]);
-                            s3_delete_public($oldS3Key);
+            $featuredImageBase64 = trim($this->request->input('featured_image_base64', ''));
+            
+            if (!empty($featuredImageBase64) && strlen($featuredImageBase64) > 100) {
+                try {
+                    // Remove prefixo data:image/...;base64,
+                    if (strpos($featuredImageBase64, 'data:image') === 0) {
+                        $featuredImageBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $featuredImageBase64);
+                    }
+                    
+                    // Decodifica base64
+                    $imageData = base64_decode($featuredImageBase64);
+                    
+                    if ($imageData !== false && !empty($imageData)) {
+                        // Cria arquivo temporário SEM extensão primeiro
+                        $tempFile = tempnam(sys_get_temp_dir(), 'post_image_');
+                        file_put_contents($tempFile, $imageData);
+                        
+                        // Detecta tipo MIME
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mimeType = finfo_file($finfo, $tempFile);
+                        finfo_close($finfo);
+                        
+                        // Mapeia MIME para extensão
+                        $mimeToExtension = [
+                            'image/png' => 'png',
+                            'image/jpeg' => 'jpg',
+                            'image/jpg' => 'jpg',
+                            'image/gif' => 'gif',
+                            'image/webp' => 'webp'
+                        ];
+                        
+                        if (isset($mimeToExtension[$mimeType])) {
+                            $extension = $mimeToExtension[$mimeType];
+                            
+                            // Renomeia arquivo temporário COM extensão
+                            $tempFileWithExt = $tempFile . '.' . $extension;
+                            rename($tempFile, $tempFileWithExt);
+                            
+                            // Upload para S3 público
+                            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                            $url = s3_upload_public($tempFileWithExt, $userId, 'posts', $allowedExtensions);
+                            
+                            // Remove arquivo temporário
+                            @unlink($tempFileWithExt);
+                            
+                            if ($url) {
+                                // Remove imagem antiga do S3 se existir
+                                if ($post->featured_image && (strpos($post->featured_image, 's3.') !== false || strpos($post->featured_image, 'amazonaws.com') !== false)) {
+                                    if (preg_match('/amazonaws\.com\/(.+)$/', $post->featured_image, $matches)) {
+                                        $oldS3Key = urldecode($matches[1]);
+                                        s3_delete_public($oldS3Key);
+                                    }
+                                }
+                                $featuredImageUrl = $url;
+                            }
+                        } else {
+                            @unlink($tempFile);
                         }
                     }
-                    $featuredImageUrl = $url;
+                } catch (\Exception $e) {
+                    error_log("Erro ao processar imagem do post: " . $e->getMessage());
                 }
             }
             
