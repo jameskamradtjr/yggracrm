@@ -141,6 +141,7 @@ class FinancialController extends Controller
         }
         
         // Filtra por tags se necessário
+        $tagNames = [];
         if ($tagsFilter) {
             // Separa as tags por vírgula e remove espaços
             $tagNames = array_map('trim', explode(',', $tagsFilter));
@@ -192,32 +193,65 @@ class FinancialController extends Controller
         $costCenters = CostCenter::where('user_id', $userId)->get();
         $tags = Tag::where('user_id', $userId)->orderBy('name')->get();
         
-        // Calcula totais baseado nos lançamentos filtrados
-        // IMPORTANTE: Recalcula usando o array final após todos os filtros
+        // Calcula totais usando SQL diretamente (mais confiável e eficiente)
+        // Usa a mesma query base mas com SUM e GROUP BY
+        $totalsSql = "SELECT 
+                        SUM(CASE WHEN `type` = 'entrada' THEN `value` ELSE 0 END) as total_entradas,
+                        SUM(CASE WHEN `type` = 'saida' THEN `value` ELSE 0 END) as total_saidas
+                      FROM `financial_entries` 
+                      {$whereClause}";
+        
+        $totalsResult = $db->query($totalsSql, $params);
         $totalEntradas = 0;
         $totalSaidas = 0;
         
-        // Garante que $entries seja um array indexado numericamente
-        $entriesArray = is_array($entries) ? array_values($entries) : [];
+        if ($totalsResult && isset($totalsResult[0])) {
+            $totalEntradas = (float)($totalsResult[0]['total_entradas'] ?? 0);
+            $totalSaidas = (float)($totalsResult[0]['total_saidas'] ?? 0);
+        }
         
-        // Itera sobre todos os registros para calcular totais
-        foreach ($entriesArray as $entry) {
-            if (!$entry || !is_object($entry)) {
-                continue;
-            }
+        // Se houver filtro de tags, precisa recalcular manualmente
+        if ($tagsFilter && !empty($tagNames)) {
+            // Recalcula apenas se houver filtro de tags (pois tags não estão na query SQL)
+            $totalEntradas = 0;
+            $totalSaidas = 0;
             
-            // Verifica se o objeto tem as propriedades necessárias
-            if (!property_exists($entry, 'value') || !property_exists($entry, 'type')) {
-                continue;
+            $entriesArray = is_array($entries) ? array_values($entries) : [];
+            foreach ($entriesArray as $entry) {
+                if (!$entry || !is_object($entry)) {
+                    continue;
+                }
+                
+                try {
+                    // Tenta acessar o valor de diferentes formas
+                    $value = 0;
+                    if (isset($entry->value)) {
+                        $value = (float)$entry->value;
+                    } elseif (isset($entry->attributes['value'])) {
+                        $value = (float)$entry->attributes['value'];
+                    } elseif (method_exists($entry, 'getAttribute') && $entry->getAttribute('value')) {
+                        $value = (float)$entry->getAttribute('value');
+                    }
+                    
+                    $type = '';
+                    if (isset($entry->type)) {
+                        $type = $entry->type;
+                    } elseif (isset($entry->attributes['type'])) {
+                        $type = $entry->attributes['type'];
+                    } elseif (method_exists($entry, 'getAttribute') && $entry->getAttribute('type')) {
+                        $type = $entry->getAttribute('type');
+                    }
+                    
+                    if ($type === 'entrada') {
+                        $totalEntradas += $value;
+                    } elseif ($type === 'saida') {
+                        $totalSaidas += $value;
+                    }
+                } catch (\Exception $e) {
+                    error_log("Erro ao calcular total: " . $e->getMessage());
+                    continue;
+                }
             }
-            
-            $value = (float)$entry->value;
-            if ($entry->type === 'entrada') {
-                $totalEntradas += $value;
-            } elseif ($entry->type === 'saida') {
-                $totalSaidas += $value;
-            }
-            // Transferências não entram no cálculo de totais
         }
         
         $totalGeral = $totalEntradas - $totalSaidas;
