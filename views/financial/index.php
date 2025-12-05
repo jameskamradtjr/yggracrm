@@ -116,7 +116,7 @@ ob_start();
 
                 <!-- Totais -->
                 <div class="row mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card bg-success-subtle border-success">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -125,6 +125,10 @@ ob_start();
                                         <h4 class="mb-0 text-success">
                                             R$ <?php echo number_format($totals['entradas'] ?? 0, 2, ',', '.'); ?>
                                         </h4>
+                                        <small class="text-muted"><?php 
+                                            $countEntradas = count(array_filter($entries ?? [], function($e) { return $e->type === 'entrada'; }));
+                                            echo $countEntradas . ' registro' . ($countEntradas != 1 ? 's' : '');
+                                        ?></small>
                                     </div>
                                     <div class="ms-3">
                                         <i class="ti ti-arrow-down-left fs-1 text-success"></i>
@@ -133,7 +137,7 @@ ob_start();
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card bg-danger-subtle border-danger">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -142,6 +146,10 @@ ob_start();
                                         <h4 class="mb-0 text-danger">
                                             R$ <?php echo number_format($totals['saidas'] ?? 0, 2, ',', '.'); ?>
                                         </h4>
+                                        <small class="text-muted"><?php 
+                                            $countSaidas = count(array_filter($entries ?? [], function($e) { return $e->type === 'saida'; }));
+                                            echo $countSaidas . ' registro' . ($countSaidas != 1 ? 's' : '');
+                                        ?></small>
                                     </div>
                                     <div class="ms-3">
                                         <i class="ti ti-arrow-up-right fs-1 text-danger"></i>
@@ -150,7 +158,7 @@ ob_start();
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card <?php echo ($totals['geral'] ?? 0) >= 0 ? 'bg-primary-subtle border-primary' : 'bg-warning-subtle border-warning'; ?>">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -159,9 +167,31 @@ ob_start();
                                         <h4 class="mb-0 <?php echo ($totals['geral'] ?? 0) >= 0 ? 'text-primary' : 'text-warning'; ?>">
                                             R$ <?php echo number_format($totals['geral'] ?? 0, 2, ',', '.'); ?>
                                         </h4>
+                                        <small class="text-muted"><?php 
+                                            $countTotal = count($entries ?? []);
+                                            echo $countTotal . ' registro' . ($countTotal != 1 ? 's' : '') . ' no total';
+                                        ?></small>
                                     </div>
                                     <div class="ms-3">
                                         <i class="ti ti-wallet fs-1 <?php echo ($totals['geral'] ?? 0) >= 0 ? 'text-primary' : 'text-warning'; ?>"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info-subtle border-info">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-1">Registros Exibidos</h6>
+                                        <h4 class="mb-0 text-info">
+                                            <?php echo count($entries ?? []); ?>
+                                        </h4>
+                                        <small class="text-muted">na tabela abaixo</small>
+                                    </div>
+                                    <div class="ms-3">
+                                        <i class="ti ti-list fs-1 text-info"></i>
                                     </div>
                                 </div>
                             </div>

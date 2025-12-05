@@ -133,9 +133,12 @@ class FinancialController extends Controller
         $results = $db->query($sql, $params);
         
         // Converte para objetos FinancialEntry
-        $entries = array_map(function($row) {
-            return FinancialEntry::newInstance($row, true);
-        }, $results);
+        $entries = [];
+        if ($results) {
+            foreach ($results as $row) {
+                $entries[] = FinancialEntry::newInstance($row, true);
+            }
+        }
         
         // Filtra por tags se necessário
         if ($tagsFilter) {
@@ -158,6 +161,8 @@ class FinancialController extends Controller
                     }
                     return false;
                 });
+                // Reindexa o array após filtrar
+                $entries = array_values($entries);
             }
         }
         
@@ -188,10 +193,24 @@ class FinancialController extends Controller
         $tags = Tag::where('user_id', $userId)->orderBy('name')->get();
         
         // Calcula totais baseado nos lançamentos filtrados
+        // IMPORTANTE: Recalcula usando o array final após todos os filtros
         $totalEntradas = 0;
         $totalSaidas = 0;
         
-        foreach ($entries as $entry) {
+        // Garante que $entries seja um array indexado numericamente
+        $entriesArray = is_array($entries) ? array_values($entries) : [];
+        
+        // Itera sobre todos os registros para calcular totais
+        foreach ($entriesArray as $entry) {
+            if (!$entry || !is_object($entry)) {
+                continue;
+            }
+            
+            // Verifica se o objeto tem as propriedades necessárias
+            if (!property_exists($entry, 'value') || !property_exists($entry, 'type')) {
+                continue;
+            }
+            
             $value = (float)$entry->value;
             if ($entry->type === 'entrada') {
                 $totalEntradas += $value;
