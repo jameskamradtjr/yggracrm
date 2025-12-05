@@ -40,16 +40,32 @@ ob_start();
                     <?php echo csrf_field(); ?>
                     
                     <div class="mb-3">
-                        <label class="form-label">URL do Site</label>
-                        <div class="input-group">
+                        <label class="form-label">URL Personalizada do Site</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text"><?php echo rtrim(config('app.url') ?? env('APP_URL', ''), '/'); ?>/site/</span>
                             <input type="text" 
                                    class="form-control" 
-                                   value="<?php echo url('/site/' . $site->slug); ?>" 
+                                   name="slug"
+                                   id="slug"
+                                   value="<?php echo e($site->slug); ?>" 
+                                   pattern="[a-z0-9-]+"
+                                   placeholder="exemplo: meu-site"
+                                   required>
+                        </div>
+                        <small class="text-muted">
+                            Apenas letras minúsculas, números e hífens. A URL final será: 
+                            <strong><?php echo rtrim(config('app.url') ?? env('APP_URL', ''), '/'); ?>/site/<span id="slug-preview"><?php echo e($site->slug); ?></span></strong>
+                        </small>
+                        <div class="input-group mt-2">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="full-url"
+                                   value="<?php echo rtrim(config('app.url') ?? env('APP_URL', ''), '/'); ?>/site/<?php echo e($site->slug); ?>" 
                                    readonly>
                             <button class="btn btn-outline-secondary" 
                                     type="button" 
-                                    onclick="copyToClipboard('<?php echo url('/site/' . $site->slug); ?>')">
-                                <i class="ti ti-copy"></i>
+                                    onclick="copyToClipboard(document.getElementById('full-url').value)">
+                                <i class="ti ti-copy"></i> Copiar URL
                             </button>
                         </div>
                     </div>
@@ -333,6 +349,53 @@ function copyToClipboard(text) {
         console.error('Erro ao copiar:', err);
     });
 }
+
+// Atualiza preview da URL quando o slug é alterado
+document.addEventListener('DOMContentLoaded', function() {
+    const slugInput = document.getElementById('slug');
+    const slugPreview = document.getElementById('slug-preview');
+    const fullUrlInput = document.getElementById('full-url');
+    const baseUrl = '<?php echo rtrim(config('app.url') ?? env('APP_URL', ''), '/'); ?>';
+    
+    if (slugInput && slugPreview && fullUrlInput) {
+        slugInput.addEventListener('input', function() {
+            let slug = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            
+            // Remove hífens no início e fim
+            slug = slug.replace(/^-+|-+$/g, '');
+            
+            // Atualiza o input
+            this.value = slug;
+            
+            // Atualiza preview
+            slugPreview.textContent = slug || 'seu-slug';
+            fullUrlInput.value = baseUrl + '/site/' + (slug || 'seu-slug');
+        });
+        
+        // Validação em tempo real
+        slugInput.addEventListener('blur', function() {
+            let slug = this.value.trim();
+            
+            if (!slug) {
+                alert('A URL não pode estar vazia.');
+                this.focus();
+                return;
+            }
+            
+            if (!/^[a-z0-9-]+$/.test(slug)) {
+                alert('A URL deve conter apenas letras minúsculas, números e hífens.');
+                this.focus();
+                return;
+            }
+            
+            if (slug.startsWith('-') || slug.endsWith('-')) {
+                alert('A URL não pode começar ou terminar com hífen.');
+                this.focus();
+                return;
+            }
+        });
+    }
+});
 
 function previewImage(input, previewId, urlInputId) {
     if (input.files && input.files[0]) {

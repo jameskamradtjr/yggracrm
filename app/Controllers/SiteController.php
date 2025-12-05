@@ -348,6 +348,7 @@ class SiteController extends Controller
             $site = UserSite::newInstance($siteRow, true);
             
             $data = $this->validate([
+                'slug' => 'required|string|max:100|regex:/^[a-z0-9-]+$/',
                 'logo_url' => 'nullable|string',
                 'photo_url' => 'nullable|string',
                 'bio' => 'nullable|string',
@@ -360,6 +361,35 @@ class SiteController extends Controller
                 'newsletter_title' => 'nullable|string|max:255',
                 'newsletter_description' => 'nullable|string'
             ]);
+            
+            // Valida se o slug é único (exceto para o próprio site)
+            $slug = strtolower(trim($data['slug']));
+            $existingSite = $db->queryOne(
+                "SELECT id FROM user_sites WHERE slug = ? AND id != ?",
+                [$slug, $site->id]
+            );
+            
+            if ($existingSite) {
+                session()->flash('error', 'Esta URL já está em uso. Escolha outra.');
+                $this->redirect('/site/manage');
+                return;
+            }
+            
+            // Valida formato do slug
+            if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
+                session()->flash('error', 'A URL deve conter apenas letras minúsculas, números e hífens.');
+                $this->redirect('/site/manage');
+                return;
+            }
+            
+            // Valida que não começa ou termina com hífen
+            if (str_starts_with($slug, '-') || str_ends_with($slug, '-')) {
+                session()->flash('error', 'A URL não pode começar ou terminar com hífen.');
+                $this->redirect('/site/manage');
+                return;
+            }
+            
+            $data['slug'] = $slug;
             
             // Processa upload de logo
             if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
