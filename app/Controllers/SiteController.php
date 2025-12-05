@@ -544,6 +544,16 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
+            // Processa upload de imagem destacada
+            $featuredImageUrl = $data['featured_image'] ?? null;
+            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
+                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
+                $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                if ($url) {
+                    $featuredImageUrl = $url;
+                }
+            }
+            
             $slug = SitePost::generateSlug($data['title'], $site->id);
             $published = !empty($data['published']);
             
@@ -555,7 +565,7 @@ class SiteController extends Controller
                 'content' => $data['content'],
                 'type' => $data['type'],
                 'external_url' => $data['external_url'] ?? null,
-                'featured_image' => $data['featured_image'] ?? null,
+                'featured_image' => $featuredImageUrl,
                 'published' => $published,
                 'published_at' => $published ? date('Y-m-d H:i:s') : null,
                 'likes_count' => 0,
@@ -673,6 +683,23 @@ class SiteController extends Controller
                 'published' => 'nullable|boolean'
             ]);
             
+            // Processa upload de imagem destacada
+            $featuredImageUrl = $data['featured_image'] ?? $post->featured_image;
+            if (isset($_FILES['featured_image_file']) && $_FILES['featured_image_file']['error'] === UPLOAD_ERR_OK) {
+                $tmpFile = $_FILES['featured_image_file']['tmp_name'];
+                $url = s3_upload_public($tmpFile, $userId, 'posts', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                if ($url) {
+                    // Remove imagem antiga do S3 se existir
+                    if ($post->featured_image && (strpos($post->featured_image, 's3.') !== false || strpos($post->featured_image, 'amazonaws.com') !== false)) {
+                        if (preg_match('/amazonaws\.com\/(.+)$/', $post->featured_image, $matches)) {
+                            $oldS3Key = urldecode($matches[1]);
+                            s3_delete_public($oldS3Key);
+                        }
+                    }
+                    $featuredImageUrl = $url;
+                }
+            }
+            
             // Gera novo slug se o título mudou
             if ($post->title !== $data['title']) {
                 $slug = SitePost::generateSlug($data['title'], $site->id);
@@ -688,6 +715,7 @@ class SiteController extends Controller
             
             unset($data['published']); // Remove do array para usar o valor processado
             $data['published'] = $published;
+            $data['featured_image'] = $featuredImageUrl;
             
             $post->update($data);
             

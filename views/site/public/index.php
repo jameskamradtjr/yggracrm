@@ -70,6 +70,14 @@ ob_start();
                             <?php echo date('d/m/Y', strtotime($post->published_at ?? $post->created_at)); ?>
                         </div>
                         
+                        <?php if ($post->featured_image): ?>
+                            <div class="post-featured-image mb-3">
+                                <img src="<?php echo e($post->featured_image); ?>" 
+                                     alt="<?php echo e($post->title); ?>" 
+                                     style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px;">
+                            </div>
+                        <?php endif; ?>
+                        
                         <h2 class="post-title"><?php echo e($post->title); ?></h2>
                         
                         <?php if ($post->excerpt): ?>

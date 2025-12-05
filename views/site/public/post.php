@@ -34,6 +34,14 @@ ob_start();
                     </p>
                 <?php endif; ?>
                 
+                <?php if ($post->featured_image): ?>
+                    <div class="post-featured-image mb-5">
+                        <img src="<?php echo e($post->featured_image); ?>" 
+                             alt="<?php echo e($post->title); ?>" 
+                             style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    </div>
+                <?php endif; ?>
+                
                 <!-- Conteúdo do Post -->
                 <div class="post-content mb-5" style="line-height: 1.8; font-size: 1.1rem;">
                     <?php if ($post->type === 'youtube' && $post->external_url): ?>

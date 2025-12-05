@@ -27,7 +27,7 @@ ob_start();
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="<?php echo url('/site/manage/posts/' . $post->id . '/update'); ?>" id="postForm">
+        <form method="POST" action="<?php echo url('/site/manage/posts/' . $post->id . '/update'); ?>" id="postForm" enctype="multipart/form-data">
             <?php echo csrf_field(); ?>
             
             <div class="row">
@@ -85,12 +85,21 @@ ob_start();
                             </div>
                             
                             <div class="mb-3">
-                                <label for="featured_image" class="form-label">Imagem Destacada (URL)</label>
-                                <input type="text" 
+                                <label for="featured_image_file" class="form-label">Imagem Destacada</label>
+                                <input type="file" 
                                        class="form-control" 
-                                       id="featured_image" 
-                                       name="featured_image" 
-                                       value="<?php echo e($post->featured_image ?? ''); ?>">
+                                       id="featured_image_file" 
+                                       name="featured_image_file" 
+                                       accept="image/*"
+                                       onchange="previewImage(this, 'featured_image_preview')">
+                                <small class="text-muted">Faça upload da imagem destacada (PNG, JPG, GIF, WEBP)</small>
+                                <div class="mt-2">
+                                    <img id="featured_image_preview" 
+                                         src="<?php echo e($post->featured_image ?? ''); ?>" 
+                                         alt="Preview" 
+                                         style="max-width: 100%; max-height: 200px; border-radius: 8px; <?php echo $post->featured_image ? '' : 'display: none;'; ?>">
+                                </div>
+                                <input type="hidden" id="featured_image" name="featured_image" value="<?php echo e($post->featured_image ?? ''); ?>">
                             </div>
                             
                             <div class="mb-3">
@@ -182,6 +191,23 @@ document.addEventListener('DOMContentLoaded', function() {
             editor.save();
         }
     });
+    
+    // Preview de imagem
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        const file = input.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    }
 });
 </script>
 
