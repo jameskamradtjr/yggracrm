@@ -44,6 +44,10 @@ class PublicProposalController extends Controller
         // Carrega dados relacionados
         $services = $proposal->services();
         $conditions = $proposal->conditions();
+        $paymentForms = $proposal->getPaymentForms();
+        $testimonials = $proposal->getTestimonials();
+        $technologies = $proposal->getTechnologies();
+        $roadmapSteps = $proposal->getRoadmapSteps();
         $client = $proposal->client();
         $lead = $proposal->lead();
         
@@ -56,11 +60,16 @@ class PublicProposalController extends Controller
             'proposal' => $proposal,
             'services' => $services,
             'conditions' => $conditions,
+            'paymentForms' => $paymentForms,
+            'testimonials' => $testimonials,
+            'technologies' => $technologies,
+            'roadmapSteps' => $roadmapSteps,
             'client' => $client,
             'lead' => $lead,
             'companyName' => $companyName,
             'companyLogo' => $companyLogo,
-            'isPublicView' => true
+            'isPublicView' => true,
+            'token' => $token
         ]);
     }
     

@@ -43,12 +43,6 @@
             padding: 20px;
             margin-bottom: 20px;
         }
-        .pricing-summary {
-            background: #f0f0ff;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 30px 0;
-        }
         .condition-item {
             border-left: 4px solid #007bff;
             padding-left: 15px;
@@ -195,24 +189,6 @@
                         </p>
                     </div>
                 <?php endforeach; ?>
-                
-                <div class="pricing-summary">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <strong>R$ <?php echo number_format($proposal->subtotal ?? 0, 2, ',', '.'); ?></strong>
-                    </div>
-                    <?php if ($proposal->desconto_valor > 0): ?>
-                        <div class="d-flex justify-content-between mb-2 text-success">
-                            <span>Desconto (<?php echo number_format($proposal->desconto_percentual ?? 0, 2, ',', '.'); ?>%):</span>
-                            <strong>- R$ <?php echo number_format($proposal->desconto_valor, 2, ',', '.'); ?></strong>
-                        </div>
-                    <?php endif; ?>
-                    <hr>
-                    <div class="d-flex justify-content-between">
-                        <span><strong>Total:</strong></span>
-                        <strong class="fs-4">R$ <?php echo number_format($proposal->total ?? 0, 2, ',', '.'); ?></strong>
-                    </div>
-                </div>
             </div>
         <?php endif; ?>
         
@@ -246,10 +222,76 @@
             </div>
         <?php endif; ?>
         
-        <?php if (!empty($conditions)): ?>
+        <?php 
+        // Separa condições normais de formas de pagamento
+        $normalConditions = [];
+        if (!empty($conditions)) {
+            foreach ($conditions as $c) {
+                if (!$c->isPaymentForm()) {
+                    $normalConditions[] = $c;
+                }
+            }
+        }
+        $paymentForms = $paymentForms ?? [];
+        ?>
+        
+        <?php if (!empty($paymentForms)): ?>
+            <div class="mb-4">
+                <h3>Formas de Pagamento</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <?php foreach ($paymentForms as $index => $form): ?>
+                        <div class="payment-form-card" 
+                             data-form-id="<?php echo $form->id; ?>"
+                             style="background: white; border: 2px solid <?php echo $form->is_selected ? '#007bff' : '#e0e0e0'; ?>; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; position: relative;"
+                             onclick="selectPaymentForm(<?php echo $form->id; ?>, this)"
+                             onmouseover="if (!this.querySelector('span[style*=\"CONTRATO\"]')) { this.style.borderColor='#007bff'; this.style.boxShadow='0 4px 8px rgba(0,123,255,0.2)'; }"
+                             onmouseout="if (!this.querySelector('span[style*=\"CONTRATO\"]')) { this.style.borderColor='<?php echo $form->is_selected ? '#007bff' : '#e0e0e0'; ?>'; this.style.boxShadow='none'; }">
+                            <?php if ($form->is_selected): ?>
+                                <span style="position: absolute; top: 10px; right: 10px; background: #007bff; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">CONTRATO</span>
+                            <?php endif; ?>
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 18px; font-weight: 600;">
+                                <?php echo ($index + 1) . '° ' . e($form->titulo); ?>
+                            </h4>
+                            <?php if ($form->descricao): ?>
+                                <p style="color: #666; font-size: 14px; margin-bottom: 15px; line-height: 1.5;">
+                                    <?php echo nl2br(e($form->descricao)); ?>
+                                </p>
+                            <?php endif; ?>
+                            <div style="margin-top: 15px;">
+                                <?php if ($form->valor_original && $form->valor_final): ?>
+                                    <div style="margin-bottom: 5px;">
+                                        <span style="text-decoration: line-through; color: #999; font-size: 14px;">
+                                            R$ <?php echo number_format($form->valor_original, 2, ',', '.'); ?>
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #007bff;">
+                                        R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                    </div>
+                                <?php elseif ($form->parcelas && $form->valor_parcela): ?>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        <?php echo $form->parcelas; ?>x de R$ <?php echo number_format($form->valor_parcela, 2, ',', '.'); ?>
+                                    </div>
+                                    <?php if ($form->valor_final): ?>
+                                        <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                            Total: R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php elseif ($form->valor_final): ?>
+                                    <div style="font-size: 24px; font-weight: bold; color: #007bff;">
+                                        R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (!empty($normalConditions)): ?>
             <div class="mb-4">
                 <h3>Condições</h3>
-                <?php foreach ($conditions as $condition): ?>
+                <?php foreach ($normalConditions as $condition): ?>
                     <div class="condition-item">
                         <h5><?php echo e($condition->titulo); ?></h5>
                         <?php if ($condition->descricao): ?>
@@ -257,6 +299,107 @@
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (!empty($testimonials)): ?>
+            <div class="mb-4">
+                <h3>O que nossos clientes dizem</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <?php foreach ($testimonials as $testimonial): ?>
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 25px; border-left: 4px solid #007bff;">
+                            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <?php if ($testimonial['photo_url']): ?>
+                                    <img src="<?php echo e($testimonial['photo_url']); ?>" 
+                                         alt="<?php echo e($testimonial['client_name']); ?>"
+                                         style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px;">
+                                <?php else: ?>
+                                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin-right: 15px;">
+                                        <?php echo strtoupper(substr($testimonial['client_name'], 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 16px;"><?php echo e($testimonial['client_name']); ?></div>
+                                    <?php if ($testimonial['company']): ?>
+                                        <div style="color: #666; font-size: 14px;"><?php echo e($testimonial['company']); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <p style="color: #333; line-height: 1.6; font-style: italic; margin: 0;">
+                                "<?php echo nl2br(e($testimonial['testimonial'])); ?>"
+                            </p>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
+        <?php 
+        // Logos das tecnologias
+        $techLogos = [
+            'PHP' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg',
+            'MySQL' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg',
+            'Figma' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg',
+            'AWS' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg',
+            'Python' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg',
+            'N8N' => 'https://n8n.io/favicon.ico',
+            'Hostinger' => 'https://www.hostinger.com.br/favicon.ico',
+            'VPS' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linux/linux-original.svg',
+            'JavaScript' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg',
+            'React' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg',
+            'Node.js' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg',
+            'Laravel' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/laravel/laravel-original.svg',
+            'Docker' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg',
+            'PostgreSQL' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg',
+            'MongoDB' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg',
+            'Redis' => 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg',
+        ];
+        $technologies = $technologies ?? [];
+        ?>
+        
+        <?php if (!empty($technologies)): ?>
+            <div class="mb-4">
+                <h3>Tecnologias Utilizadas</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px;">
+                    <?php foreach ($technologies as $tech): ?>
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 10px 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                            <?php if (isset($techLogos[$tech])): ?>
+                                <img src="<?php echo $techLogos[$tech]; ?>" alt="<?php echo e($tech); ?>" style="width: 24px; height: 24px;">
+                            <?php endif; ?>
+                            <span style="font-weight: 500;"><?php echo e($tech); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
+        <?php $roadmapSteps = $roadmapSteps ?? []; ?>
+        <?php if (!empty($roadmapSteps)): ?>
+            <div class="mb-4">
+                <h3>Cronograma / Roadmap</h3>
+                <div style="margin-top: 20px;">
+                    <?php foreach ($roadmapSteps as $index => $step): ?>
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">
+                                <?php echo $index + 1; ?>
+                            </div>
+                            <div style="flex: 1; margin-left: 15px; padding-bottom: 20px; <?php echo $index < count($roadmapSteps) - 1 ? 'border-left: 2px solid #e0e0e0; margin-left: 35px; padding-left: 35px;' : ''; ?>">
+                                <div style="margin-top: -5px;">
+                                    <h4 style="margin: 0 0 5px 0; font-size: 18px; font-weight: 600;"><?php echo e($step['title']); ?></h4>
+                                    <?php if (!empty($step['estimated_date'])): ?>
+                                        <span style="display: inline-block; background: #e8f4fd; color: #0066cc; padding: 3px 10px; border-radius: 12px; font-size: 13px; margin-bottom: 8px;">
+                                            <i class="ti ti-calendar" style="margin-right: 4px;"></i>
+                                            <?php echo date('d/m/Y', strtotime($step['estimated_date'])); ?>
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($step['description'])): ?>
+                                        <p style="color: #666; margin: 10px 0 0 0; line-height: 1.6;"><?php echo nl2br(e($step['description'])); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
         
@@ -330,8 +473,9 @@
     const proposalTitle = '<?php echo addslashes($proposal->titulo); ?>';
     
     // URLs dinâmicas - usa APP_URL do .env
-    const urlAccept = '<?php echo url("/proposals/{$proposal->id}/public/{$proposal->token_publico}/accept"); ?>';
-    const urlReject = '<?php echo url("/proposals/{$proposal->id}/public/{$proposal->token_publico}/reject"); ?>';
+    const urlAccept = `<?php echo url("/proposals"); ?>/${proposalId}/public/${proposalToken}/accept`;
+    const urlReject = `<?php echo url("/proposals"); ?>/${proposalId}/public/${proposalToken}/reject`;
+    const urlSelectPayment = `<?php echo url("/proposals"); ?>/${proposalId}/public/${proposalToken}/select-payment`;
     
     function enviarMensagem() {
         // Tenta abrir WhatsApp se houver número configurado
@@ -411,6 +555,53 @@
             console.error('Erro:', error);
             alert('❌ Erro ao processar sua resposta. Tente novamente.');
         }
+    }
+    
+    function selectPaymentForm(conditionId, cardElement) {
+        fetch(urlSelectPayment, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                condition_id: conditionId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Atualiza visualmente os cards
+                document.querySelectorAll('.payment-form-card').forEach(card => {
+                    card.style.borderColor = '#e0e0e0';
+                    card.style.boxShadow = 'none';
+                    const existingBadge = card.querySelector('span[style*="CONTRATO"]');
+                    if (existingBadge) {
+                        existingBadge.remove();
+                    }
+                });
+                
+                // Marca o card selecionado
+                const selectedCard = cardElement || document.querySelector(`.payment-form-card[data-form-id="${conditionId}"]`);
+                if (selectedCard) {
+                    selectedCard.style.borderColor = '#007bff';
+                    selectedCard.style.boxShadow = '0 4px 8px rgba(0,123,255,0.2)';
+                    
+                    // Adiciona badge CONTRATO
+                    const badge = document.createElement('span');
+                    badge.style.cssText = 'position: absolute; top: 10px; right: 10px; background: #007bff; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;';
+                    badge.textContent = 'CONTRATO';
+                    selectedCard.appendChild(badge);
+                }
+                
+                alert('✅ Forma de pagamento selecionada!');
+            } else {
+                alert('Erro: ' + (data.message || 'Erro ao selecionar forma de pagamento'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao selecionar forma de pagamento.');
+        });
     }
     </script>
 </body>

@@ -41,6 +41,18 @@ $title = $title ?? 'Nova Proposta';
                 </div>
                 
                 <div class="col-md-6 mb-3">
+                    <label for="lead_id" class="form-label">Lead</label>
+                    <?php 
+                    $id = 'lead_id';
+                    $name = 'lead_id';
+                    $placeholder = 'Digite para buscar lead...';
+                    include base_path('views/components/tom-select-lead.php'); 
+                    ?>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label for="project_id" class="form-label">Projeto</label>
                     <select name="project_id" id="project_id" class="form-select">
                         <option value="">Selecione um projeto...</option>

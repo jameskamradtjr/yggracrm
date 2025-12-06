@@ -30,26 +30,94 @@ class ProposalController extends Controller
         $userId = auth()->getDataUserId();
         $status = $this->request->query('status', 'all');
         $search = $this->request->query('search');
+        $tagName = trim($this->request->query('tag_name', ''));
+        $archivedParam = $this->request->query('archived');
+        $showArchived = $archivedParam === '1' || $archivedParam === 1;
         
-        $query = Proposal::where('user_id', $userId);
+        // Usa query direta para ter controle total sobre os filtros
+        $db = \Core\Database::getInstance();
         
-        if ($status !== 'all') {
-            $query = $query->where('status', $status);
+        // Se houver filtro de tag por nome, precisa fazer JOIN
+        if ($tagName) {
+            $whereConditions = ["p.`user_id` = ?"];
+            $params = [$userId];
+            
+            // Filtro de arquivadas
+            if ($showArchived) {
+                $whereConditions[] = "p.`is_archived` = 1";
+            } else {
+                $whereConditions[] = "(p.`is_archived` = 0 OR p.`is_archived` IS NULL)";
+            }
+            
+            // Filtro de status
+            if ($status !== 'all') {
+                $whereConditions[] = "p.`status` = ?";
+                $params[] = $status;
+            }
+            
+            // Filtro de tag por nome
+            $whereConditions[] = "t.`name` LIKE ? AND tg.`taggable_type` = 'Proposal'";
+            $params[] = "%{$tagName}%";
+            
+            // Busca
+            if ($search) {
+                $searchTerm = "%{$search}%";
+                $whereConditions[] = "(p.`titulo` LIKE ? OR p.`numero_proposta` LIKE ? OR p.`identificacao` LIKE ?)";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            $whereClause = "WHERE " . implode(' AND ', $whereConditions);
+            $sql = "SELECT DISTINCT p.* FROM `proposals` p 
+                    INNER JOIN `taggables` tg ON p.`id` = tg.`taggable_id` 
+                    INNER JOIN `tags` t ON tg.`tag_id` = t.`id`
+                    {$whereClause} 
+                    ORDER BY p.`created_at` DESC";
+            $results = $db->query($sql, $params);
+        } else {
+            // Sem filtro de tag, query normal
+            $whereConditions = ["`user_id` = ?"];
+            $params = [$userId];
+            
+            // Filtro de arquivadas
+            if ($showArchived) {
+                $whereConditions[] = "`is_archived` = 1";
+            } else {
+                $whereConditions[] = "(`is_archived` = 0 OR `is_archived` IS NULL)";
+            }
+            
+            // Filtro de status
+            if ($status !== 'all') {
+                $whereConditions[] = "`status` = ?";
+                $params[] = $status;
+            }
+            
+            // Busca
+            if ($search) {
+                $searchTerm = "%{$search}%";
+                $whereConditions[] = "(`titulo` LIKE ? OR `numero_proposta` LIKE ? OR `identificacao` LIKE ?)";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            $whereClause = "WHERE " . implode(' AND ', $whereConditions);
+            $sql = "SELECT * FROM `proposals` {$whereClause} ORDER BY `created_at` DESC";
+            $results = $db->query($sql, $params);
         }
         
-        if ($search) {
-            $query = $query->where('titulo', 'LIKE', "%{$search}%")
-                ->orWhere('numero_proposta', 'LIKE', "%{$search}%")
-                ->orWhere('identificacao', 'LIKE', "%{$search}%");
-        }
-        
-        $proposals = $query->orderBy('created_at', 'DESC')->get();
+        $proposals = array_map(function($row) {
+            return Proposal::newInstance($row, true);
+        }, $results ?: []);
 
         return $this->view('proposals/index', [
             'title' => 'Propostas',
             'proposals' => $proposals,
             'status' => $status,
-            'search' => $search
+            'search' => $search,
+            'showArchived' => $showArchived,
+            'tagName' => $tagName
         ]);
     }
 
@@ -152,6 +220,25 @@ class ProposalController extends Controller
             
             $proposal->save();
             
+            // Processa tecnologias se fornecidas
+            if (isset($data['technologies']) && is_array($data['technologies'])) {
+                $proposal->setTechnologies($data['technologies']);
+            }
+            
+            // Processa roadmap steps se fornecidos
+            if (isset($data['roadmap_steps']) && is_array($data['roadmap_steps'])) {
+                foreach ($data['roadmap_steps'] as $index => $step) {
+                    if (!empty($step['title'])) {
+                        $proposal->addRoadmapStep(
+                            $step['title'],
+                            $step['description'] ?? null,
+                            $step['estimated_date'] ?? null,
+                            $step['order'] ?? $index
+                        );
+                    }
+                }
+            }
+            
             // Dispara evento de automação
             AutomationEventDispatcher::onProposal('created', $proposal->id, auth()->getDataUserId());
             
@@ -224,6 +311,11 @@ class ProposalController extends Controller
         
         $services = $proposal->services();
         $conditions = $proposal->conditions();
+        $paymentForms = $proposal->getPaymentForms();
+        $testimonials = $proposal->getTestimonials();
+        $technologies = $proposal->getTechnologies();
+        $roadmapSteps = $proposal->getRoadmapSteps();
+        $tags = $proposal->getTags();
         $client = $proposal->client();
         $lead = $proposal->lead();
         $project = $proposal->project();
@@ -233,6 +325,11 @@ class ProposalController extends Controller
             'proposal' => $proposal,
             'services' => $services,
             'conditions' => $conditions,
+            'paymentForms' => $paymentForms,
+            'testimonials' => $testimonials,
+            'technologies' => $technologies,
+            'roadmapSteps' => $roadmapSteps,
+            'tags' => $tags,
             'client' => $client,
             'lead' => $lead,
             'project' => $project
@@ -380,6 +477,42 @@ class ProposalController extends Controller
             
             // Recalcula totais
             $proposal->calcularTotais();
+            
+            // Processa tecnologias se fornecidas
+            if (isset($input['technologies']) && is_array($input['technologies'])) {
+                $proposal->setTechnologies($input['technologies']);
+            }
+            
+            // Processa tags se fornecidas
+            if (isset($input['tags']) && !empty($input['tags'])) {
+                $tagIds = is_array($input['tags']) 
+                    ? $input['tags'] 
+                    : explode(',', $input['tags']);
+                $tagIds = array_filter(array_map('intval', $tagIds));
+                $proposal->setTags($tagIds);
+            } elseif (isset($input['tags']) && empty($input['tags'])) {
+                // Se tags vazio, remove todas
+                $proposal->removeAllTags();
+            }
+            
+            // Processa roadmap steps se fornecidos
+            if (isset($input['roadmap_steps']) && is_array($input['roadmap_steps'])) {
+                // Remove todas as etapas existentes
+                $db = \Core\Database::getInstance();
+                $db->execute("DELETE FROM proposal_roadmap_steps WHERE proposal_id = ?", [$proposal->id]);
+                
+                // Adiciona as novas etapas
+                foreach ($input['roadmap_steps'] as $index => $step) {
+                    if (!empty($step['title'])) {
+                        $proposal->addRoadmapStep(
+                            $step['title'],
+                            $step['description'] ?? null,
+                            $step['estimated_date'] ?? null,
+                            $step['order'] ?? $index
+                        );
+                    }
+                }
+            }
             
             $proposal->save();
             
@@ -635,6 +768,57 @@ class ProposalController extends Controller
             json_response(['success' => false, 'message' => 'Erro ao adicionar condição: ' . $e->getMessage()], 500);
         }
     }
+    
+    /**
+     * Remove condição (ou forma de pagamento)
+     */
+    public function deleteCondition(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $conditionId = (int)$this->request->input('condition_id');
+        
+        if (!$conditionId) {
+            json_response(['success' => false, 'message' => 'ID da condição não fornecido'], 400);
+            return;
+        }
+        
+        try {
+            $condition = ProposalCondition::find($conditionId);
+            
+            if (!$condition || $condition->proposal_id != $proposal->id) {
+                json_response(['success' => false, 'message' => 'Condição não encontrada'], 404);
+                return;
+            }
+            
+            $condition->delete();
+            
+            json_response(['success' => true, 'message' => 'Condição removida com sucesso!']);
+        } catch (\Exception $e) {
+            error_log("Erro ao remover condição: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao remover condição'], 500);
+        }
+    }
 
     /**
      * Preview da proposta (como o cliente verá)
@@ -657,14 +841,20 @@ class ProposalController extends Controller
         
         $services = $proposal->services();
         $conditions = $proposal->conditions();
+        $paymentForms = $proposal->getPaymentForms();
+        $testimonials = $proposal->getTestimonials();
         $client = $proposal->client();
+        $lead = $proposal->lead();
 
         return $this->view('proposals/preview', [
             'title' => 'Preview - ' . ($proposal->numero_proposta ?? 'Proposta'),
             'proposal' => $proposal,
             'services' => $services,
             'conditions' => $conditions,
-            'client' => $client
+            'paymentForms' => $paymentForms,
+            'testimonials' => $testimonials,
+            'client' => $client,
+            'lead' => $lead
         ]);
     }
 
@@ -880,6 +1070,509 @@ class ProposalController extends Controller
         
         // Força download
         \App\Services\PdfService::download($filePath, $filename);
+    }
+    
+    /**
+     * Adiciona forma de pagamento
+     */
+    public function addPaymentForm(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $titulo = trim($this->request->input('titulo', ''));
+        $descricao = trim($this->request->input('descricao', ''));
+        $valorOriginal = $this->request->input('valor_original') ? (float)$this->request->input('valor_original') : null;
+        $valorFinal = $this->request->input('valor_final') ? (float)$this->request->input('valor_final') : null;
+        $parcelas = $this->request->input('parcelas') ? (int)$this->request->input('parcelas') : null;
+        $valorParcela = $this->request->input('valor_parcela') ? (float)$this->request->input('valor_parcela') : null;
+        $ordem = (int)$this->request->input('ordem', 0);
+        
+        if (empty($titulo)) {
+            json_response(['success' => false, 'message' => 'Título é obrigatório'], 400);
+            return;
+        }
+        
+        try {
+            $condition = ProposalCondition::create([
+                'proposal_id' => $proposal->id,
+                'titulo' => $titulo,
+                'descricao' => $descricao ?: null,
+                'tipo' => 'pagamento',
+                'valor_original' => $valorOriginal,
+                'valor_final' => $valorFinal,
+                'parcelas' => $parcelas,
+                'valor_parcela' => $valorParcela,
+                'ordem' => $ordem,
+                'is_selected' => false
+            ]);
+            
+            json_response([
+                'success' => true,
+                'message' => 'Forma de pagamento adicionada com sucesso!',
+                'data' => $condition->toArray()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao adicionar forma de pagamento: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao adicionar forma de pagamento'], 500);
+        }
+    }
+    
+    /**
+     * Adiciona prova social
+     */
+    public function addTestimonial(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $clientName = trim($this->request->input('client_name', ''));
+        $testimonial = trim($this->request->input('testimonial', ''));
+        $company = trim($this->request->input('company', ''));
+        $order = (int)$this->request->input('order', 0);
+        
+        if (empty($clientName) || empty($testimonial)) {
+            json_response(['success' => false, 'message' => 'Nome do cliente e depoimento são obrigatórios'], 400);
+            return;
+        }
+        
+        // Processa upload de foto se houver
+        $photoUrl = null;
+        if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['photo'];
+            $tmpFile = $file['tmp_name'];
+            $originalName = $file['name'];
+            
+            // Upload para S3 público
+            $url = s3_upload_public($tmpFile, $userId, 'proposals/testimonials', ['jpg', 'jpeg', 'png', 'gif', 'webp'], $originalName);
+            
+            if ($url) {
+                $photoUrl = $url;
+            }
+        }
+        
+        try {
+            $testimonialId = $proposal->addTestimonial($clientName, $testimonial, $company ?: null, $photoUrl, $order);
+            
+            if ($testimonialId) {
+                $testimonialObj = \App\Models\ProposalTestimonial::find($testimonialId);
+                json_response([
+                    'success' => true,
+                    'message' => 'Prova social adicionada com sucesso!',
+                    'data' => $testimonialObj ? $testimonialObj->toArray() : null
+                ]);
+            } else {
+                json_response(['success' => false, 'message' => 'Limite de 3 provas sociais atingido'], 400);
+            }
+        } catch (\Exception $e) {
+            error_log("Erro ao adicionar prova social: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao adicionar prova social'], 500);
+        }
+    }
+    
+    /**
+     * Remove prova social
+     */
+    public function removeTestimonial(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $testimonialId = (int)$this->request->input('testimonial_id');
+        
+        if ($proposal->removeTestimonial($testimonialId)) {
+            json_response(['success' => true, 'message' => 'Prova social removida com sucesso!']);
+        } else {
+            json_response(['success' => false, 'message' => 'Erro ao remover prova social'], 500);
+        }
+    }
+    
+    /**
+     * Seleciona forma de pagamento (pelo cliente na proposta pública)
+     */
+    public function selectPaymentForm(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $proposal = Proposal::find($params['id']);
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        // Verifica token público
+        $token = $params['token'] ?? null;
+        if (!$token || $proposal->token_publico !== $token) {
+            json_response(['success' => false, 'message' => 'Token inválido'], 403);
+            return;
+        }
+        
+        $conditionId = (int)$this->request->input('condition_id');
+        
+        // Desmarca todas as formas de pagamento desta proposta
+        $db = \Core\Database::getInstance();
+        $db->execute(
+            "UPDATE proposal_conditions SET is_selected = 0 WHERE proposal_id = ? AND tipo = 'pagamento'",
+            [$proposal->id]
+        );
+        
+        // Marca a selecionada
+        $db->execute(
+            "UPDATE proposal_conditions SET is_selected = 1 WHERE id = ? AND proposal_id = ? AND tipo = 'pagamento'",
+            [$conditionId, $proposal->id]
+        );
+        
+        json_response(['success' => true, 'message' => 'Forma de pagamento selecionada com sucesso!']);
+    }
+    
+    /**
+     * Arquivar/Desarquivar proposta
+     */
+    public function archive(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $isArchived = (bool)$this->request->input('archived', false);
+        $proposal->is_archived = $isArchived;
+        $proposal->save();
+        
+        SistemaLog::registrar(
+            'proposals',
+            'UPDATE',
+            $proposal->id,
+            $isArchived ? "Proposta arquivada" : "Proposta desarquivada",
+            null,
+            ['is_archived' => $isArchived]
+        );
+        
+        json_response([
+            'success' => true,
+            'message' => $isArchived ? 'Proposta arquivada com sucesso!' : 'Proposta desarquivada com sucesso!'
+        ]);
+    }
+    
+    /**
+     * Atualizar status da proposta
+     */
+    public function updateStatus(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $status = $this->request->input('status');
+        $allowedStatuses = ['rascunho', 'enviada', 'aprovada', 'rejeitada', 'cancelada'];
+        
+        if (!in_array($status, $allowedStatuses)) {
+            json_response(['success' => false, 'message' => 'Status inválido'], 400);
+            return;
+        }
+        
+        $oldStatus = $proposal->status;
+        $proposal->status = $status;
+        
+        if ($status === 'enviada' && !$proposal->data_envio) {
+            $proposal->data_envio = date('Y-m-d');
+        }
+        
+        $proposal->save();
+        
+        SistemaLog::registrar(
+            'proposals',
+            'UPDATE',
+            $proposal->id,
+            "Status alterado de {$oldStatus} para {$status}",
+            ['status' => $oldStatus],
+            ['status' => $status]
+        );
+        
+        // Dispara evento de automação
+        AutomationEventDispatcher::onProposal('status_changed', $proposal->id, $userId);
+        
+        json_response([
+            'success' => true,
+            'message' => 'Status atualizado com sucesso!'
+        ]);
+    }
+    
+    /**
+     * Adicionar etapa ao roadmap
+     */
+    public function addRoadmapStepAction(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $title = trim($this->request->input('title', ''));
+        if (empty($title)) {
+            json_response(['success' => false, 'message' => 'O título é obrigatório'], 400);
+            return;
+        }
+        
+        $description = trim($this->request->input('description', ''));
+        $estimatedDate = $this->request->input('estimated_date') ?: null;
+        
+        // Pega a próxima ordem
+        $db = \Core\Database::getInstance();
+        $lastStep = $db->queryOne(
+            "SELECT MAX(`order`) as max_order FROM proposal_roadmap_steps WHERE proposal_id = ?",
+            [$proposal->id]
+        );
+        $order = ($lastStep['max_order'] ?? 0) + 1;
+        
+        $stepId = $proposal->addRoadmapStep($title, $description, $estimatedDate, $order);
+        
+        if ($stepId) {
+            json_response([
+                'success' => true,
+                'message' => 'Etapa adicionada com sucesso!',
+                'step_id' => $stepId
+            ]);
+        } else {
+            json_response(['success' => false, 'message' => 'Erro ao adicionar etapa'], 500);
+        }
+    }
+    
+    /**
+     * Remover etapa do roadmap
+     */
+    public function removeRoadmapStep(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $stepId = (int)$this->request->input('step_id');
+        if (!$stepId) {
+            json_response(['success' => false, 'message' => 'ID da etapa é obrigatório'], 400);
+            return;
+        }
+        
+        if ($proposal->removeRoadmapStep($stepId)) {
+            json_response([
+                'success' => true,
+                'message' => 'Etapa removida com sucesso!'
+            ]);
+        } else {
+            json_response(['success' => false, 'message' => 'Erro ao remover etapa'], 500);
+        }
+    }
+    
+    /**
+     * Enviar proposta por email
+     */
+    public function sendEmail(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        if (!verify_csrf($this->request->input('_csrf_token'))) {
+            json_response(['success' => false, 'message' => 'Token de segurança inválido'], 403);
+            return;
+        }
+        
+        $userId = auth()->getDataUserId();
+        $proposal = Proposal::where('id', $params['id'])
+            ->where('user_id', $userId)
+            ->first();
+        
+        if (!$proposal) {
+            json_response(['success' => false, 'message' => 'Proposta não encontrada'], 404);
+            return;
+        }
+        
+        $email = trim($this->request->input('email', ''));
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_response(['success' => false, 'message' => 'E-mail inválido'], 400);
+            return;
+        }
+        
+        try {
+            // Gera link público
+            $appUrl = rtrim(config('app.url', 'http://localhost'), '/');
+            $publicUrl = $appUrl . '/proposals/' . $proposal->id . '/public/' . $proposal->token_publico;
+            
+            // Envia email
+            $smtpService = new \App\Services\SMTPService();
+            
+            $subject = "Proposta: " . $proposal->titulo;
+            $body = "
+                <h1>Proposta Comercial</h1>
+                <p>Olá!</p>
+                <p>Segue o link para visualizar a proposta <strong>{$proposal->titulo}</strong>:</p>
+                <p><a href='{$publicUrl}' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Visualizar Proposta</a></p>
+                <p>Ou acesse diretamente: <a href='{$publicUrl}'>{$publicUrl}</a></p>
+                <br>
+                <p>Atenciosamente.</p>
+            ";
+            
+            $result = $smtpService->sendEmail($email, $subject, $body);
+            
+            if ($result['success']) {
+                // Atualiza status se for rascunho
+                if ($proposal->status === 'rascunho') {
+                    $proposal->status = 'enviada';
+                    $proposal->data_envio = date('Y-m-d');
+                    $proposal->save();
+                }
+                
+                SistemaLog::registrar(
+                    'proposals',
+                    'EMAIL',
+                    $proposal->id,
+                    "Proposta enviada por e-mail para: {$email}",
+                    null,
+                    ['email' => $email]
+                );
+                
+                json_response([
+                    'success' => true,
+                    'message' => 'E-mail enviado com sucesso!'
+                ]);
+            } else {
+                json_response(['success' => false, 'message' => $result['message'] ?? 'Erro ao enviar e-mail'], 500);
+            }
+        } catch (\Exception $e) {
+            error_log("Erro ao enviar proposta por email: " . $e->getMessage());
+            json_response(['success' => false, 'message' => 'Erro ao enviar e-mail: ' . $e->getMessage()], 500);
+        }
     }
 }
 

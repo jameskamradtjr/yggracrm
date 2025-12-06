@@ -12,12 +12,26 @@ class ProposalCondition extends Model
     protected bool $multiTenant = false; // Relacionado via proposal_id
     
     protected array $fillable = [
-        'proposal_id', 'titulo', 'descricao', 'ordem'
+        'proposal_id', 'titulo', 'descricao', 'ordem', 
+        'tipo', 'valor_original', 'valor_final', 'parcelas', 'valor_parcela', 'is_selected'
     ];
     
     protected array $casts = [
-        'ordem' => 'integer'
+        'ordem' => 'integer',
+        'valor_original' => 'float',
+        'valor_final' => 'float',
+        'valor_parcela' => 'float',
+        'parcelas' => 'integer',
+        'is_selected' => 'boolean'
     ];
+    
+    /**
+     * Verifica se é uma forma de pagamento
+     */
+    public function isPaymentForm(): bool
+    {
+        return isset($this->tipo) && $this->tipo === 'pagamento';
+    }
     
     /**
      * Relacionamento com proposta

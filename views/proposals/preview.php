@@ -185,25 +185,72 @@ $title = $title ?? 'Preview da Proposta';
             </div>
         <?php endif; ?>
         
-        <?php if ($proposal->forma_pagamento): ?>
+        <?php 
+        // Separa condições normais de formas de pagamento
+        $normalConditions = [];
+        if (!empty($conditions)) {
+            foreach ($conditions as $c) {
+                if (!$c->isPaymentForm()) {
+                    $normalConditions[] = $c;
+                }
+            }
+        }
+        $paymentForms = $paymentForms ?? [];
+        ?>
+        
+        <?php if (!empty($paymentForms)): ?>
             <div class="mb-4">
-                <h3>Pagamento</h3>
-                <p><strong>Forma de pagamento:</strong> 
-                    <?php 
-                    $formas = [
-                        'a_vista' => 'À vista',
-                        'parcelado' => 'Parcelado'
-                    ];
-                    echo $formas[$proposal->forma_pagamento] ?? $proposal->forma_pagamento;
-                    ?>
-                </p>
+                <h3>Formas de Pagamento</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <?php foreach ($paymentForms as $index => $form): ?>
+                        <div class="payment-form-card" 
+                             style="background: white; border: 2px solid <?php echo $form->is_selected ? '#007bff' : '#e0e0e0'; ?>; border-radius: 8px; padding: 20px; position: relative;">
+                            <?php if ($form->is_selected): ?>
+                                <span style="position: absolute; top: 10px; right: 10px; background: #007bff; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">CONTRATO</span>
+                            <?php endif; ?>
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 18px; font-weight: 600;">
+                                <?php echo ($index + 1) . '° ' . e($form->titulo); ?>
+                            </h4>
+                            <?php if ($form->descricao): ?>
+                                <p style="color: #666; font-size: 14px; margin-bottom: 15px; line-height: 1.5;">
+                                    <?php echo nl2br(e($form->descricao)); ?>
+                                </p>
+                            <?php endif; ?>
+                            <div style="margin-top: 15px;">
+                                <?php if ($form->valor_original && $form->valor_final): ?>
+                                    <div style="margin-bottom: 5px;">
+                                        <span style="text-decoration: line-through; color: #999; font-size: 14px;">
+                                            R$ <?php echo number_format($form->valor_original, 2, ',', '.'); ?>
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #007bff;">
+                                        R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                    </div>
+                                <?php elseif ($form->parcelas && $form->valor_parcela): ?>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        <?php echo $form->parcelas; ?>x de R$ <?php echo number_format($form->valor_parcela, 2, ',', '.'); ?>
+                                    </div>
+                                    <?php if ($form->valor_final): ?>
+                                        <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                            Total: R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php elseif ($form->valor_final): ?>
+                                    <div style="font-size: 24px; font-weight: bold; color: #007bff;">
+                                        R$ <?php echo number_format($form->valor_final, 2, ',', '.'); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
         
-        <?php if (!empty($conditions)): ?>
+        <?php if (!empty($normalConditions)): ?>
             <div class="mb-4">
                 <h3>Condições</h3>
-                <?php foreach ($conditions as $condition): ?>
+                <?php foreach ($normalConditions as $condition): ?>
                     <div class="condition-item">
                         <h5><?php echo e($condition->titulo); ?></h5>
                         <?php if ($condition->descricao): ?>
@@ -211,6 +258,38 @@ $title = $title ?? 'Preview da Proposta';
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (!empty($testimonials)): ?>
+            <div class="mb-4">
+                <h3>O que nossos clientes dizem</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <?php foreach ($testimonials as $testimonial): ?>
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 25px; border-left: 4px solid #007bff;">
+                            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <?php if (!empty($testimonial['photo_url'])): ?>
+                                    <img src="<?php echo e($testimonial['photo_url']); ?>" 
+                                         alt="<?php echo e($testimonial['client_name']); ?>"
+                                         style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px;">
+                                <?php else: ?>
+                                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin-right: 15px;">
+                                        <?php echo strtoupper(substr($testimonial['client_name'], 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 16px;"><?php echo e($testimonial['client_name']); ?></div>
+                                    <?php if (!empty($testimonial['company'])): ?>
+                                        <div style="color: #666; font-size: 14px;"><?php echo e($testimonial['company']); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <p style="color: #333; line-height: 1.6; font-style: italic; margin: 0;">
+                                "<?php echo nl2br(e($testimonial['testimonial'])); ?>"
+                            </p>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
         

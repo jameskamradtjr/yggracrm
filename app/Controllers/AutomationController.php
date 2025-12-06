@@ -341,6 +341,68 @@ class AutomationController extends Controller
     }
     
     /**
+     * Cria ou busca uma tag existente
+     */
+    public function createTag(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!auth()->check()) {
+            json_response(['success' => false, 'message' => 'Não autenticado'], 401);
+            return;
+        }
+        
+        try {
+            $input = $this->request->json() ?? [];
+            $tagName = trim($input['name'] ?? '');
+            
+            if (empty($tagName)) {
+                json_response(['success' => false, 'message' => 'Nome da tag é obrigatório'], 400);
+                return;
+            }
+            
+            $userId = auth()->getDataUserId();
+            
+            // Busca tag existente
+            $existingTag = \App\Models\Tag::where('user_id', $userId)
+                ->where('name', $tagName)
+                ->first();
+            
+            if ($existingTag) {
+                json_response([
+                    'success' => true,
+                    'tag' => [
+                        'id' => $existingTag->id,
+                        'name' => $existingTag->name
+                    ]
+                ]);
+                return;
+            }
+            
+            // Cria nova tag
+            $tag = \App\Models\Tag::create([
+                'name' => $tagName,
+                'user_id' => $userId,
+                'color' => '#0dcaf0'
+            ]);
+            
+            json_response([
+                'success' => true,
+                'tag' => [
+                    'id' => $tag->id,
+                    'name' => $tag->name
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erro ao criar tag: " . $e->getMessage());
+            json_response([
+                'success' => false,
+                'message' => 'Erro ao criar tag: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
      * API: Obtém usuários para selects dinâmicos
      */
     public function getUsers(): void

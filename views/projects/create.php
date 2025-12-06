@@ -101,14 +101,13 @@ $title = $title ?? 'Novo Projeto';
                 
                 <div class="col-md-6 mb-3">
                     <label for="lead_id" class="form-label">Lead</label>
-                    <select class="form-select" id="lead_id" name="lead_id">
-                        <option value="">Selecione um lead (opcional)</option>
-                        <?php foreach ($leads as $lead): ?>
-                            <option value="<?php echo $lead->id; ?>" <?php echo old('lead_id') == $lead->id ? 'selected' : ''; ?>>
-                                <?php echo e($lead->nome); ?> - <?php echo e($lead->email); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?php 
+                    $id = 'lead_id';
+                    $name = 'lead_id';
+                    $placeholder = 'Digite para buscar lead...';
+                    $selected = old('lead_id');
+                    include base_path('views/components/tom-select-lead.php'); 
+                    ?>
                 </div>
             </div>
             

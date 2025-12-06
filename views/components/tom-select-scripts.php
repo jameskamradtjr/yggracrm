@@ -39,6 +39,14 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
         
+        var type = "<?php echo $config['type'] ?? 'client'; ?>";
+        var searchUrl = type === 'lead' 
+            ? "<?php echo url('/drive/search/leads'); ?>"
+            : "<?php echo url('/drive/search/clients'); ?>";
+        var noResultsText = type === 'lead' 
+            ? "Nenhum lead encontrado"
+            : "Nenhum cliente encontrado";
+        
         var tomSelect = new TomSelect("#<?php echo $config['id']; ?>", {
             valueField: "id",
             labelField: "text",
@@ -51,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     return callback();
                 }
                 
-                var url = "<?php echo url('/drive/search/clients'); ?>?q=" + encodeURIComponent(query) + "&page=1";
+                var url = searchUrl + "?q=" + encodeURIComponent(query) + "&page=1";
                 
                 fetch(url)
                     .then(response => response.json())
@@ -59,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         callback(json.results || []);
                     })
                     .catch(error => {
-                        console.error("Erro na busca de clientes:", error);
+                        console.error("Erro na busca:", error);
                         callback();
                     });
             },
@@ -71,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     return "<div>" + escape(data.text) + "</div>";
                 },
                 no_results: function(data, escape) {
-                    return "<div class='no-results'>Nenhum cliente encontrado</div>";
+                    return "<div class='no-results'>" + noResultsText + "</div>";
                 }
             },
             onItemAdd: function(value) {

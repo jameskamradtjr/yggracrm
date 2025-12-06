@@ -41,6 +41,7 @@ $router->get('/', function() {
 $router->get('/proposals/{id}/public/{token}', [\App\Controllers\PublicProposalController::class, 'show']);
 $router->post('/proposals/{id}/public/{token}/accept', [\App\Controllers\PublicProposalController::class, 'accept']);
 $router->post('/proposals/{id}/public/{token}/reject', [\App\Controllers\PublicProposalController::class, 'reject']);
+$router->post('/proposals/{id}/public/{token}/select-payment', [\App\Controllers\ProposalController::class, 'selectPaymentForm']);
 $router->get('/contracts/{id}/public/{token}', [\App\Controllers\PublicContractController::class, 'show']);
 
 // Rotas públicas do Quiz customizado (devem vir antes da rota genérica)
@@ -202,10 +203,19 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/proposals/{id}', [\App\Controllers\ProposalController::class, 'show']);
     $router->get('/proposals/{id}/preview', [\App\Controllers\ProposalController::class, 'preview']);
     $router->post('/proposals/{id}', [\App\Controllers\ProposalController::class, 'update']);
+    $router->post('/proposals/{id}/archive', [\App\Controllers\ProposalController::class, 'archive']);
+    $router->post('/proposals/{id}/update-status', [\App\Controllers\ProposalController::class, 'updateStatus']);
     $router->post('/proposals/{id}/delete', [\App\Controllers\ProposalController::class, 'destroy']);
     $router->post('/proposals/{id}/add-service', [\App\Controllers\ProposalController::class, 'addService']);
     $router->post('/proposals/{id}/add-condition', [\App\Controllers\ProposalController::class, 'addCondition']);
+    $router->post('/proposals/{id}/add-payment-form', [\App\Controllers\ProposalController::class, 'addPaymentForm']);
+    $router->post('/proposals/{id}/add-testimonial', [\App\Controllers\ProposalController::class, 'addTestimonial']);
+    $router->post('/proposals/{id}/remove-testimonial', [\App\Controllers\ProposalController::class, 'removeTestimonial']);
+    $router->post('/proposals/{id}/delete-condition', [\App\Controllers\ProposalController::class, 'deleteCondition']);
+    $router->post('/proposals/{id}/add-roadmap-step', [\App\Controllers\ProposalController::class, 'addRoadmapStepAction']);
+    $router->post('/proposals/{id}/remove-roadmap-step', [\App\Controllers\ProposalController::class, 'removeRoadmapStep']);
     $router->post('/proposals/{id}/send', [\App\Controllers\ProposalController::class, 'send']);
+    $router->post('/proposals/{id}/send-email', [\App\Controllers\ProposalController::class, 'sendEmail']);
     $router->post('/proposals/{id}/duplicate', [\App\Controllers\ProposalController::class, 'duplicate']);
     $router->get('/proposals/{id}/pdf', [\App\Controllers\ProposalController::class, 'generatePdf']);
     
@@ -350,6 +360,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     $router->get('/api/automations/email-templates', [AutomationController::class, 'getEmailTemplates']);
     $router->get('/api/automations/whatsapp-templates', [AutomationController::class, 'getWhatsAppTemplates']);
     $router->get('/api/tags', [AutomationController::class, 'getTags']);
+    $router->post('/api/tags/create', [AutomationController::class, 'createTag']);
     $router->get('/api/users', [AutomationController::class, 'getUsers']);
     $router->get('/api/lead-origins', [AutomationController::class, 'getLeadOrigins']);
     $router->get('/api/automations/automations', [AutomationController::class, 'getAutomations']);
@@ -369,6 +380,7 @@ $router->group(['middleware' => [\App\Middleware\AuthMiddleware::class]], functi
     // Rotas do Drive
     // AJAX endpoints para Select2 (devem vir ANTES das rotas com {id})
     $router->get('/drive/search/clients', [DriveController::class, 'searchClients']);
+    $router->get('/drive/search/leads', [DriveController::class, 'searchLeads']);
     $router->get('/drive/search/users', [DriveController::class, 'searchUsers']);
     $router->get('/drive/search/tags', [DriveController::class, 'searchTags']);
     

@@ -195,7 +195,59 @@ class DriveController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Busca leads via AJAX para Tom Select
+     */
+    public function searchLeads(): void
+    {
+        try {
+            if (!auth()->check()) {
+                json_response(['results' => []], 401);
+                return;
+            }
 
+            $userId = auth()->getDataUserId();
+            $search = trim($this->request->get('q', ''));
+            $page = (int) $this->request->get('page', 1);
+            $perPage = 20;
+            $offset = ($page - 1) * $perPage;
+
+            $db = \Core\Database::getInstance();
+            
+            if (!empty($search)) {
+                $searchLike = "%{$search}%";
+                
+                $sql = "SELECT id, nome, email, telefone 
+                        FROM leads 
+                        WHERE user_id = ? 
+                        AND (nome LIKE ? OR email LIKE ? OR telefone LIKE ?)
+                        ORDER BY nome ASC 
+                        LIMIT ? OFFSET ?";
+                $leads = $db->query($sql, [$userId, $searchLike, $searchLike, $searchLike, $perPage, $offset]);
+            } else {
+                $sql = "SELECT id, nome, email, telefone 
+                        FROM leads 
+                        WHERE user_id = ? 
+                        ORDER BY nome ASC 
+                        LIMIT ? OFFSET ?";
+                $leads = $db->query($sql, [$userId, $perPage, $offset]);
+            }
+
+            $results = array_map(function($lead) {
+                return [
+                    'id' => (int)$lead['id'],
+                    'text' => $lead['nome'] . ($lead['email'] ? ' (' . $lead['email'] . ')' : '')
+                ];
+            }, $leads ?: []);
+
+            json_response(['results' => $results]);
+        } catch (\Exception $e) {
+            error_log("Drive searchLeads ERROR: " . $e->getMessage());
+            json_response(['results' => []], 500);
+        }
+    }
+    
     /**
      * Busca usuários via AJAX para Select2
      */
